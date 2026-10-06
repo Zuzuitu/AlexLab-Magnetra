@@ -175,6 +175,17 @@ def check_android_baseline(config: dict) -> None:
     if actual_target_java is not None:
         require_equal(int(actual_target_java), expected_java, "Java target compatibility")
 
+    expected_jbr_version = nested(config, "android_baseline", "ci_gradle_daemon_java")
+    expected_jbr_vendor = nested(config, "android_baseline", "ci_gradle_daemon_vendor")
+    daemon_config = ROOT / "gradle" / "gradle-daemon-jvm.properties"
+    require_file(daemon_config)
+    if daemon_config.is_file():
+        daemon_text = daemon_config.read_text(encoding="utf-8")
+        if f"toolchainVersion={expected_jbr_version}" not in daemon_text:
+            fail("Gradle daemon JDK version differs from protected CI toolchain")
+        if f"toolchainVendor={str(expected_jbr_vendor).upper()}" not in daemon_text:
+            fail("Gradle daemon JVM vendor differs from protected CI toolchain")
+
     expected_variants = nested(config, "android_baseline", "build_variants") or []
     variant_patterns = {
         "debug": r"(?m)^\s*debug\s*\{",
@@ -200,6 +211,8 @@ def check_workflow_guards(config: dict) -> None:
             continue
 
         text = path.read_text(encoding="utf-8")
+        if "distribution: 'jetbrains'" not in text or "java-version: '21'" not in text:
+            fail(f"{relative}: missing JBR 21 Gradle daemon setup required by gradle/gradle-daemon-jvm.properties")
         guard_index = text.find(command)
         if guard_index < 0:
             fail(f"{relative}: invariant guard command is missing")
