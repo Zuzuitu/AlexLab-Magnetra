@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "project": {
+    "product_name": "AlexLab Magnetra",
+    "repository": "Zuzuitu/AlexLab-Magnetra",
+    "upstream_repository": "prajwalch/TorrentSearch",
+    "default_branch": "main",
+    "license": "MIT"
+  },
+  "cost_policy": {
+    "unapproved_paid_services_allowed": false,
+    "max_unapproved_recurring_cost_eur": 0
+  },
+  "architecture": {
+    "android_source_root": "app",
+    "planned_web_source_root": "web",
+    "planned_backend_source_root": "worker",
+    "preserve_upstream_android_baseline": true
+  },
+  "android_baseline": {
+    "application_id": "com.prajwalch.torrentsearch",
+    "min_sdk": 25,
+    "target_sdk": 37,
+    "java_version": 17,
+    "build_variants": ["debug", "staging", "release"]
+  },
+  "security": {
+    "frontend_must_not_contain_secrets": true,
+    "forbid_committed_private_keys": true,
+    "forbid_committed_keystores": true,
+    "forbid_committed_env_files": true,
+    "release_signing_secrets_external_only": true
+  },
+  "delivery": {
+    "material_changes_via_pull_request": true,
+    "direct_main_changes_prohibited": true,
+    "invariant_check_command": "python3 scripts/check-project-invariants.py",
+    "guarded_workflows": [
+      ".github/workflows/debug_build.yml",
+      ".github/workflows/staging_build.yml",
+      ".github/workflows/release_build.yml"
+    ],
+    "allowed_cron_expressions": []
+  },
+  "cleanup": {
+    "forbidden_globs": [
+      "*.patch",
+      "*.rej",
+      "*.orig",
+      "*.tmp",
+      "*.bak",
+      ".DS_Store"
+    ]
+  }
+}
