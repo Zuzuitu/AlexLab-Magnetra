@@ -20,7 +20,7 @@ async function getSearch(url) {
  const category=url.searchParams.get("category")||"all";
  if(!CATEGORIES.has(category))return error("Invalid category.");
  const ids=(url.searchParams.get("providers")||DEFAULT_IDS.join(",")).split(",").filter(Boolean);
- if(ids.length>15||ids.length===0||new Set(ids).size!==ids.length)return error("Choose 1–15 distinct providers.");
+ if(ids.length>46||ids.length===0||new Set(ids).size!==ids.length)return error("Choose 1–46 distinct providers.");
  if(ids.some(id=>!PROVIDER_MAP.has(id)))return error("Unknown provider.");
  if(ids.some(id=>!hasAdapter(id)))return error("One or more selected providers are not ported yet.");
  const results=[],errors=[],stats=[];
