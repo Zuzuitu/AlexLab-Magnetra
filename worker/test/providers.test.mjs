@@ -99,3 +99,13 @@ test("AniLibria fetches release torrent lists through its original two-stage API
  assert.equal(results[0].name,"Anime 1080p");
  assert.equal(results[0].seeders,12);
 });
+
+test("PWA manifest and service worker keep API/network commands out of offline cache",()=>{
+ const manifest=JSON.parse(readFileSync(new URL("../../web/manifest.webmanifest",import.meta.url),"utf8"));
+ assert.equal(manifest.name,"AlexLab Magnetra");
+ assert.equal(manifest.display,"standalone");
+ assert.ok(manifest.icons.length);
+ const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
+ assert.ok(sw.includes('u.pathname.startsWith("/api/")'));
+ assert.ok(sw.includes('e.request.method!=="GET"'));
+});
