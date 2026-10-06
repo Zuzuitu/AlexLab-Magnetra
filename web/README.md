@@ -7,7 +7,7 @@ This folder contains the first web port of the upstream Android search experienc
 - `web/`: static PWA (vanilla JS, manifest, service worker, offline app shell).
 - `worker/`: Cloudflare Worker for explicit provider adapters and an allowlisted Flud Companion Remote relay bridge.
 - `worker/src/catalog.mjs`: all **46** upstream built-in sources, including transparent `ported: false` flags for unfinished adapters.
-- `worker/src/providers.mjs`: first **11** individually implemented adapters; **35 remain to port and verify**.
+- `worker/src/providers.mjs`: first **21** individually implemented adapters; **35 remain to port and verify**.
 - `worker/src/index.mjs`: `/api/providers`, `/api/search`, `/api/companion/status`, `/api/companion/magnet`.
 
 ## Development
