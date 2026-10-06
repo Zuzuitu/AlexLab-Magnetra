@@ -197,6 +197,18 @@ function init(){
   state.selected=new Set(state.providers.filter(p=>p.ported).map(p=>p.id).slice(0,15));
   save(STORAGE.selected,[...state.selected]);renderProviders();updateProviderCount();
  });
+ $("importPairing").addEventListener("click",()=>{
+  try{
+   const u=new URL($("pairLink").value.trim());
+   if(u.origin!=="https://flud-remote.alexlab.media")throw Error("Only the approved Flud Companion relay is supported.");
+   const params=new URLSearchParams(u.hash.replace(/^#/,""));
+   const device=params.get("device")||"",token=params.get("token")||"";
+   if(!/^[A-Za-z0-9_-]{16,128}$/.test(device)||token.length<20)throw Error("Remote QR link has no valid pairing credentials.");
+   $("companionDevice").value=device;$("companionToken").value=token;
+   $("pairLink").value="";
+   toast("QR pairing imported. Tap Save pairing.");
+  }catch(e){toast(e.message||"Invalid Remote QR URL");}
+ });
  $("companionForm").addEventListener("submit",e=>{
   e.preventDefault();
   const deviceId=$("companionDevice").value.trim(),token=$("companionToken").value.trim();
