@@ -60,6 +60,30 @@ function catFromKnaben(values) {
   return Object.entries(KNABEN_CATEGORIES).find(([,num])=>n>=num&&n<num+1000000)?.[0]||"all";
 }
 export const adapters=Object.freeze({
+  async anilibria(q,_category,fetcher) {
+    const base="https://anilibria.top/api/v1";
+    const releases=await requestJson(base+"/app/search/releases?query="+encodeURIComponent(q),{},fetcher);
+    if(!Array.isArray(releases))throw Error("unexpected AniLibria releases payload");
+    const ids=releases.slice(0,15).map(x=>Number(x.id)).filter(x=>Number.isSafeInteger(x)&&x>0);
+    const items=[];
+    for(let i=0;i<ids.length;i+=3) {
+      const fetched=await Promise.all(ids.slice(i,i+3).map(async id=>{
+        const d=await requestJson(base+"/anime/torrents/release/"+id,{},fetcher);
+        return Array.isArray(d)?d:[];
+      }));
+      for(const releasesTorrents of fetched) {
+        for(const x of releasesTorrents) {
+          const name=x.label||x.release?.name?.english||x.release?.name?.main;
+          const alias=x.release?.alias;
+          items.push({id:x.id||x.hash,name,magnet:x.magnet||magnetFromHash(x.hash),
+            size:bytes(x.size),seeders:x.seeders,peers:x.leechers,date:x.created_at,category:"anime",
+            details:alias?"https://www.anilibria.top/anime/releases/release/"+encodeURIComponent(alias):null
+          });
+        }
+      }
+    }
+    return parsed(items,"anilibria");
+  },
   async knaben(q,category,fetcher) {
     const body={query:q,size:100,order_by:"seeders",order_direction:"desc",hide_unsafe:true,hide_xxx:category!=="porn"};
     if(KNABEN_CATEGORIES[category])body.categories=[KNABEN_CATEGORIES[category]];
