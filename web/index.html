@@ -54,6 +54,8 @@
 <dialog id="settingsDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">DIRECT HANDOFF</div><h2>Flud Companion</h2><p class="muted">Send a magnet directly to your NVIDIA Shield via your existing Remote relay.</p></div><button class="close-btn" data-close="settingsDialog" aria-label="Close">×</button></div>
   <form id="companionForm">
+    <label class="setting-label">Quick pairing (Remote QR link)<input id="pairLink" spellcheck="false" autocomplete="off" placeholder="Paste the Remote QR URL here"></label>
+    <button type="button" class="secondary" id="importPairing">Import QR pairing</button>
     <label class="setting-label">Device ID<input id="companionDevice" spellcheck="false" autocomplete="off" placeholder="Remote Device ID" required></label>
     <label class="setting-label">Remote token<input id="companionToken" type="password" spellcheck="false" autocomplete="off" placeholder="Remote bearer token" required></label>
     <label class="switch-row"><span><strong>Auto-start in Flud</strong><small>Only send automatically when the Companion accessibility helper is ready.</small></span><input type="checkbox" id="companionAuto"></label>
