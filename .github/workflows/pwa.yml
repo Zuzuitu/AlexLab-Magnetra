@@ -1,0 +1,24 @@
+name: PWA and provider contracts
+
+on:
+  push:
+    branches: [ "main", "feat/**", "fix/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  pwa-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+      - name: Check project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: node --check worker/src/index.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check web/app.js && node --check web/sw.js
+      - name: Test provider contracts and Companion safety
+        run: node --test worker/test/*.test.mjs

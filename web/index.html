@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080d15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Magnetra">
+<meta name="description" content="AlexLab Magnetra — torrent metasearch and Flud Companion handoff.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="/styles.css">
+<title>AlexLab Magnetra — Search. Magnet. Done.</title>
+<script src="/app.js" defer></script>
+</head>
+<body>
+<div class="site-shell">
+<header class="masthead">
+  <div class="brand">
+    <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 13v13a12 12 0 0 0 24 0V13" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M12 10h9m6 0h9M12 10v8m24-8v8" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div>
+    <div><div class="brand-eyebrow">ALEXLAB / SEARCH SYSTEM</div><div class="brand-title">Magnetra<span class="brand-period">.</span></div></div>
+  </div>
+  <button class="icon-btn" id="settingsButton" aria-label="Configure Flud Companion" title="Flud Companion settings"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-2.76 2.76-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.1 1.57V21H10v-.03a1.7 1.7 0 0 0-1.1-1.57 1.7 1.7 0 0 0-1.88.34l-.06.06-2.76-2.76.06-.06a1.7 1.7 0 0 0 .34-1.88A1.7 1.7 0 0 0 3.03 14H3v-4h.03a1.7 1.7 0 0 0 1.57-1.1 1.7 1.7 0 0 0-.34-1.88L4.2 6.96 6.96 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.03V3h4v.03a1.7 1.7 0 0 0 1.1 1.57 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.76 2.76-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.97 10H21v4h-.03a1.7 1.7 0 0 0-1.57 1.1Z"/></svg></button>
+</header>
+<main>
+  <div class="hero">
+    <div class="eyebrow"><span class="pulse"></span> METASEARCH ENGINE <span class="eyebrow-divider">/</span> ALEXLAB</div>
+    <h1>Find what you need.<br><em>Send it anywhere.</em></h1>
+    <p class="hero-copy">One search, multiple indexers. Discover magnet links and send them straight to your Flud Companion.</p>
+  </div>
+  <section class="search-panel" aria-label="Search torrents">
+    <form id="searchForm">
+      <div class="search-line"><span class="search-glyph" aria-hidden="true">⌕</span><input id="query" name="query" type="search" minlength="2" maxlength="180" placeholder="Search torrents..." aria-label="Search torrents" autocomplete="off" required><button type="submit" id="searchButton">Search <span aria-hidden="true">→</span></button></div>
+      <div class="search-options"><div class="field"><label for="category">CATEGORY</label><select id="category"><option value="all">All categories</option><option value="movies">Movies</option><option value="series">Series</option><option value="apps">Apps</option><option value="games">Games</option><option value="anime">Anime</option><option value="music">Music</option><option value="books">Books</option><option value="other">Other</option><option value="porn">Adult</option></select></div>
+      <div class="field"><label for="sort">SORT BY</label><select id="sort"><option value="seeders">Most seeders</option><option value="date">Newest first</option><option value="size">Largest first</option><option value="name">Name A–Z</option></select></div>
+      <button type="button" class="providers-trigger" id="providersButton">Indexers <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
+    </form>
+  </section>
+  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
+  <section class="results-section"><div class="section-top"><div><div class="section-overline">DISCOVERY</div><h2 id="resultsTitle">Search results</h2></div><div class="result-count" id="resultCount">READY</div></div><div class="notice" id="notice" role="status" aria-live="polite">Enter a search to see results from your enabled indexers.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
+</main>
+<footer class="footer"><span>© AlexLab · Magnetra</span><span>Search. Magnet. Done.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Based on TorrentSearch (MIT) ↗</a></footer>
+</div>
+
+<dialog id="providersDialog" class="sheet">
+  <div class="sheet-head"><div><div class="section-overline">SEARCH SOURCES</div><h2>Indexers</h2><p id="catalogSummary" class="muted">Loading source catalog…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Close">×</button></div>
+  <p class="muted">All 46 upstream sources are inventoried. Sources still being ported are shown transparently and cannot be selected yet.</p>
+  <div class="provider-grid" id="providerGrid"></div>
+  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select working</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>
+</dialog>
+
+<dialog id="settingsDialog" class="sheet">
+  <div class="sheet-head"><div><div class="section-overline">DIRECT HANDOFF</div><h2>Flud Companion</h2><p class="muted">Send a magnet directly to your NVIDIA Shield via your existing Remote relay.</p></div><button class="close-btn" data-close="settingsDialog" aria-label="Close">×</button></div>
+  <form id="companionForm">
+    <label class="setting-label">Device ID<input id="companionDevice" spellcheck="false" autocomplete="off" placeholder="Remote Device ID" required></label>
+    <label class="setting-label">Remote token<input id="companionToken" type="password" spellcheck="false" autocomplete="off" placeholder="Remote bearer token" required></label>
+    <label class="switch-row"><span><strong>Auto-start in Flud</strong><small>Only send automatically when the Companion accessibility helper is ready.</small></span><input type="checkbox" id="companionAuto"></label>
+    <p class="muted">Pair once. Credentials stay in this browser's local storage and are sent only to the fixed Flud Companion relay through our same-origin API. Never put them in a URL.</p>
+    <div class="sheet-actions"><button type="button" class="secondary" id="forgetCompanion">Forget pairing</button><button class="primary" type="submit">Save pairing</button></div>
+  </form>
+  <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
+  <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

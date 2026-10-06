@@ -44,7 +44,8 @@
     "guarded_workflows": [
       ".github/workflows/debug_build.yml",
       ".github/workflows/staging_build.yml",
-      ".github/workflows/release_build.yml"
+      ".github/workflows/release_build.yml",
+      ".github/workflows/pwa.yml"
     ],
     "allowed_cron_expressions": []
   },
@@ -57,5 +58,18 @@
       "*.bak",
       ".DS_Store"
     ]
+  },
+  "provider_parity": {
+    "required_builtin_count": 46,
+    "original_registry": "app/src/main/kotlin/com/prajwalch/torrentsearch/di/BuiltinSearchProvidersModule.kt",
+    "web_catalog": "worker/src/catalog.mjs",
+    "no_silent_unported_results": true
+  },
+  "companion": {
+    "allowed_remote_relay_origin": "https://flud-remote.alexlab.media",
+    "fixed_origin_proxy_only": true,
+    "magnet_length_limit": 12000,
+    "idempotent_request_id_required": true,
+    "credentials_in_url_forbidden": true
   }
 }
