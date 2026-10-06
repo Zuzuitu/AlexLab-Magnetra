@@ -82,6 +82,7 @@ Protected baseline values:
 - minSdk: `25`
 - targetSdk: `37`
 - Java source/target compatibility: `17`
+- CI Gradle daemon runtime: **JetBrains Runtime 21**, installed separately from Temurin 17 and required by `gradle/gradle-daemon-jvm.properties`.
 
 These values are protected because they describe the known-good starting point. They may change later only as an intentional coordinated decision.
 
@@ -117,6 +118,8 @@ These values are protected because they describe the known-good starting point. 
 No AlexLab-specific product regression has been fixed yet because this fork is at its initial baseline.
 
 The first repository-safety issue identified at project start was that existing build workflows had no project-invariant gate, and the release workflow could materialize signing material before any repository-policy validation. This memory-system change adds an invariant guard before build/release-sensitive steps.
+
+Initial upstream CI regression (2026-10-07): both Debug and Staging failed before Android compilation with Foojay HTTP 400 while attempting to download JetBrains Runtime 21. Root cause: existing workflows only installed Temurin 17 although the committed Gradle daemon JVM criteria require vendor JETBRAINS/version 21. Fix: explicitly provision JBR 21 with `actions/setup-java` after JDK 17; keep Android Java 17 source/target compatibility unchanged. Guard: require correct Gradle daemon vendor/version and JBR setup in all Android workflows.
 
 Future fixed regressions with durable lessons must be recorded here with:
 - symptom;
