@@ -20,7 +20,7 @@ export const PROVIDERS = Object.freeze([
     "id": "animetosho",
     "name": "AnimeTosho",
     "url": "https://animetosho.org",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": true
   },
   {
@@ -34,7 +34,7 @@ export const PROVIDERS = Object.freeze([
     "id": "btdigg",
     "name": "BTDigg",
     "url": "https://btdig.com",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -76,7 +76,7 @@ export const PROVIDERS = Object.freeze([
     "id": "dmhy",
     "name": "Dmhy",
     "url": "https://share.dmhy.org",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -132,7 +132,7 @@ export const PROVIDERS = Object.freeze([
     "id": "limetorrents",
     "name": "LimeTorrents",
     "url": "https://limetorrents.fun",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -153,7 +153,7 @@ export const PROVIDERS = Object.freeze([
     "id": "mikanproject",
     "name": "Mikan",
     "url": "https://mikanani.me",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -167,7 +167,7 @@ export const PROVIDERS = Object.freeze([
     "id": "nekobt",
     "name": "NekoBT",
     "url": "https://nekobt.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -195,7 +195,7 @@ export const PROVIDERS = Object.freeze([
     "id": "rutorinfo",
     "name": "Rutor",
     "url": "https://rutor.info",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -258,7 +258,7 @@ export const PROVIDERS = Object.freeze([
     "id": "torrentdownloadinfo",
     "name": "TorrentDownload",
     "url": "https://torrentdownload.info",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -272,7 +272,7 @@ export const PROVIDERS = Object.freeze([
     "id": "torrentkitty",
     "name": "TorrentKitty",
     "url": "https://torrentkitty.tv",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -307,7 +307,7 @@ export const PROVIDERS = Object.freeze([
     "id": "xxxtracker",
     "name": "XXXTracker",
     "url": "https://xxxtor.com",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
