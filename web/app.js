@@ -50,7 +50,7 @@ function renderProviders(){
   input.type="checkbox";input.value=p.id;input.checked=state.selected.has(p.id);input.disabled=!p.ported;
   input.addEventListener("change",()=>{
     if(input.checked){
-      if(state.selected.size>=15){input.checked=false;toast("Maximum 15 indexers per search.");return;}
+      if(state.selected.size>=state.providers.length){input.checked=false;toast("All available indexers are already selected.");return;}
       state.selected.add(p.id);
     }else state.selected.delete(p.id);
     save(STORAGE.selected,[...state.selected]);updateProviderCount();
@@ -204,7 +204,7 @@ function init(){
   renderResults();
  });
  $("selectWorking").addEventListener("click",()=>{
-  state.selected=new Set(state.providers.filter(p=>p.ported).map(p=>p.id).slice(0,15));
+  state.selected=new Set(state.providers.filter(p=>p.ported).map(p=>p.id));
   save(STORAGE.selected,[...state.selected]);renderProviders();updateProviderCount();
  });
  $("importPairing").addEventListener("click",()=>{
