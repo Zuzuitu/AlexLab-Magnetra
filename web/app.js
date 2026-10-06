@@ -146,19 +146,29 @@ async function search(){
  state.searching=true;state.bookmarksMode=false;state.items=[];
  $("searchButton").disabled=true;$("searchButton").textContent="Searching…";
  $("notice").textContent="Searching "+state.selected.size+" indexers…";$("providerErrors").replaceChildren();renderResults();
+ const ids=[...state.selected],failures=[];let completed=0;
  try{
-   const url=new URL("/api/search",location.origin);
-   url.searchParams.set("q",query);url.searchParams.set("category",$("category").value);
-   url.searchParams.set("providers",[...state.selected].join(","));
-   const data=await api(url.pathname+url.search);
-   state.items=data.results||[];
-   const failed=(data.errors||[]).map(e=>(state.providers.find(p=>p.id===e.provider)?.name||e.provider)+": "+e.error);
-   if(failed.length)$("providerErrors").textContent=failed.join(" · ");
-   if(!state.items.length)$("notice").textContent=failed.length?"No results; some sources failed.":"No matching results in selected indexers.";
- }catch(e){$("notice").textContent=e.message;toast("Search failed: "+e.message);}
- finally{
-   state.searching=false;$("searchButton").disabled=false;$("searchButton").textContent="Search →";renderResults();
-   $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
+  for(let i=0;i<ids.length;i+=3){
+   await Promise.all(ids.slice(i,i+3).map(async id=>{
+    const url=new URL("/api/search",location.origin);
+    url.searchParams.set("q",query);url.searchParams.set("category",$("category").value);
+    url.searchParams.set("providers",id);
+    try{
+     const data=await api(url.pathname+url.search);
+     state.items.push(...(data.results||[]));
+     for(const e of data.errors||[])failures.push({provider:e.provider,error:e.error});
+    }catch(e){failures.push({provider:id,error:e.message});}
+    completed++;
+    renderResults();
+    $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" results found.";
+    $("providerErrors").textContent=failures.map(e=>(state.providers.find(p=>p.id===e.provider)?.name||e.provider)+": "+e.error).join(" · ");
+   }));
+  }
+  if(!state.items.length)$("notice").textContent=failures.length?"No results; some indexers failed.":"No matching results in selected indexers.";
+  else $("notice").textContent="";
+ }finally{
+  state.searching=false;$("searchButton").disabled=false;$("searchButton").textContent="Search →";renderResults();
+  $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
  }
 }
 async function status(){
