@@ -89,8 +89,8 @@ These values are protected because they describe the known-good starting point. 
 ## First PWA implementation (2026-10-07)
 
 - Full canonical inventory: exactly **46 built-in upstream indexers**, derived from `BuiltinSearchProvidersModule.kt`. Guard checks matching upstream provider IDs, not merely count.
-- Explicitly ported adapters in the first milestone (**10**): `Knaben`, `TorrentsCSV`, `ThePirateBay`, `YTS`, `Internet Archive`, `BangumiMoe`, `SubsPlease`, `Btsow`, `Nyaa` and `Sukebei`. These are implemented adapters, **not yet live-tested against every provider**; real-world availability remains an external dependency.
-- The remaining **36** providers are inventoried and visible as **PORT PENDING**, not represented as working. Full functional parity remains an outstanding explicit product requirement; never count catalog coverage as adapter parity.
+- Explicitly ported adapters in the first milestone (**11**): `AniLibria`, `Knaben`, `TorrentsCSV`, `ThePirateBay`, `YTS`, `Internet Archive`, `BangumiMoe`, `SubsPlease`, `Btsow`, `Nyaa` and `Sukebei`. These are implemented adapters, **not yet live-tested against every provider**; real-world availability remains an external dependency.
+- The remaining **35** providers are inventoried and visible as **PORT PENDING**, not represented as working. Full functional parity remains an outstanding explicit product requirement; never count catalog coverage as adapter parity.
 - Search worker accepts an allowlisted set of provider IDs, a bounded query and category, with provider-specific adapters, up to 15 selected sources and at most three concurrent outbound searches.
 - PWA displays source, size, seeders, peers, date, magnet, copy/share, torrent link when provided, bookmarks, and per-provider errors.
 - Remote Flud Companion handoff uses a same-origin Worker endpoint which forwards only to `https://flud-remote.alexlab.media` and reuses the verified public Flud Companion `/api/v1/device/:deviceId/magnet` contract. It sends a stable request ID per command for duplicate protection.
@@ -148,7 +148,7 @@ Future fixed regressions with durable lessons must be recorded here with:
 - Fork created successfully.
 - Fork main currently matches upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`.
 - Technical-memory guard baseline is established in main and enforced in CI.
-- PWA web shell and first 10 provider adapters implemented; live integration validation pending.
+- PWA web shell and first 11 provider adapters implemented; live integration validation pending.
 - PWA backend/proxy implemented with fixed allowlisted upstream endpoints; not yet deployed.
 - Full 46-provider functional parity: **not complete**, still required and to be advanced via separate tested batches.
 - Production PWA deployment: none.
