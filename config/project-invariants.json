@@ -45,7 +45,8 @@
       ".github/workflows/debug_build.yml",
       ".github/workflows/staging_build.yml",
       ".github/workflows/release_build.yml",
-      ".github/workflows/pwa.yml"
+      ".github/workflows/pwa.yml",
+      ".github/workflows/deploy-pwa.yml"
     ],
     "allowed_cron_expressions": []
   },
