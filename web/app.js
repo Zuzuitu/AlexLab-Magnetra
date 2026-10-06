@@ -121,6 +121,12 @@ function renderResults(){
    const actions=el("div","result-actions");
    addAction(actions,"Send to Flud",function(){sendMagnet(item,this)},"send");
    addAction(actions,"Copy",()=>copyMagnet(item.magnet));
+   addAction(actions,"Share",async()=>{
+     if(navigator.share){
+       try{await navigator.share({title:item.name,text:item.magnet});}
+       catch(e){if(e?.name!=="AbortError")copyMagnet(item.magnet);}
+     }else await copyMagnet(item.magnet);
+   });
    const magnet=el("a","action","Magnet");magnet.href=item.magnet;magnet.rel="noopener noreferrer";magnet.title="Open in your installed torrent client";actions.append(magnet);
    if(item.torrentFile)downloadAction(actions,".torrent ↗",item.torrentFile);
    if(item.details)downloadAction(actions,"Details ↗",item.details);
