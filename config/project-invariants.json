@@ -22,7 +22,13 @@
     "min_sdk": 25,
     "target_sdk": 37,
     "java_version": 17,
-    "build_variants": ["debug", "staging", "release"]
+    "build_variants": [
+      "debug",
+      "staging",
+      "release"
+    ],
+    "ci_gradle_daemon_vendor": "jetbrains",
+    "ci_gradle_daemon_java": 21
   },
   "security": {
     "frontend_must_not_contain_secrets": true,
