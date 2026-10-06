@@ -1,3 +1,4 @@
+import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
 // Source-specific ports of the upstream Kotlin provider contracts.
 // These adapters intentionally use fixed endpoints, never a user-selected proxy URL.
 const MAX_RESULTS = 100;
@@ -60,6 +61,7 @@ function catFromKnaben(values) {
   return Object.entries(KNABEN_CATEGORIES).find(([,num])=>n>=num&&n<num+1000000)?.[0]||"all";
 }
 export const adapters=Object.freeze({
+  ...Object.fromEntries(Object.keys(HTML_PROVIDER_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await runHtmlAdapter(id,q,category,fetcher),id)])),
   async anilibria(q,_category,fetcher) {
     const base="https://anilibria.top/api/v1";
     const releases=await requestJson(base+"/app/search/releases?query="+encodeURIComponent(q),{},fetcher);
