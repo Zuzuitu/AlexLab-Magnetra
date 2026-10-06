@@ -1,3 +1,4 @@
+import {HTML_PROVIDER_SPECS} from "../src/html-adapters.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
@@ -108,4 +109,18 @@ test("PWA manifest and service worker keep API/network commands out of offline c
  const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
  assert.ok(sw.includes('u.pathname.startsWith("/api/")'));
  assert.ok(sw.includes('e.request.method!=="GET"'));
+});
+
+test("ten fixed-endpoint HTML adapter contracts are registered and encoded",()=>{
+ assert.equal(Object.keys(HTML_PROVIDER_SPECS).length,10);
+ for(const [id,spec] of Object.entries(HTML_PROVIDER_SPECS)){
+  assert.equal(hasAdapter(id),true);
+  assert.equal(PROVIDER_MAP.get(id).ported,true);
+  assert.ok(spec.rows&&spec.name);
+  assert.ok(spec.magnet||spec.hashFromFile||spec.hashFromDetails);
+  const url=new URL(spec.search("foo & bar","all"));
+  assert.equal(url.origin,spec.host);
+  assert.ok(url.toString().includes("foo"));
+  assert.ok(url.toString().includes("%26"),id+": search query was not encoded");
+ }
 });
