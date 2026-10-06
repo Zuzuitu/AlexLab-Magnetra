@@ -81,3 +81,21 @@ test("Companion forwards only to fixed allowlisted endpoint, with idempotency ID
   assert.equal(res.status,202);assert.equal((await res.json()).queued,true);assert.equal(called,true);
  }finally{globalThis.fetch=previous;}
 });
+
+test("AniLibria fetches release torrent lists through its original two-stage API",async()=>{
+ const calls=[];
+ const fetcher=async(url)=>{
+  calls.push(url);
+  if(url.includes("/app/search/releases"))return response([{id:4}]);
+  if(url.endsWith("/anime/torrents/release/4"))return response([{
+   id:9,hash,magnet,label:"Anime 1080p",size:1048576,seeders:12,leechers:2,
+   release:{alias:"anime-show",name:{main:"Anime"}}
+  }]);
+  throw Error("unexpected URL");
+ };
+ const results=await searchProvider("anilibria","anime","anime",fetcher);
+ assert.equal(calls.length,2);
+ assert.equal(results.length,1);
+ assert.equal(results[0].name,"Anime 1080p");
+ assert.equal(results[0].seeders,12);
+});
