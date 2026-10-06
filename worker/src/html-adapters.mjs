@@ -106,7 +106,7 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
   torrentdownloadinfo:{
     host:"https://torrentdownload.info",
     search:q=>"https://torrentdownload.info/search?q="+encodeURIComponent(q),
-    rows:"table.table2 > tbody > tr:has(span.smallish)",
+    rows:"table.table2 > tbody > tr",
     name:"td:nth-child(1) > div.tt-name > a",
     details:"td:nth-child(1) > div.tt-name > a",
     hashFromDetails:true,
