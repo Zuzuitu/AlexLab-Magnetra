@@ -6,7 +6,7 @@ export const PROVIDERS = Object.freeze([
     "id": "anilibria",
     "name": "AniLibria",
     "url": "https://www.anilibria.top",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
