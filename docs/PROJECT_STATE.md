@@ -24,7 +24,7 @@ Current production code is still the upstream Android application:
 - Build system: Gradle / Android Gradle Plugin
 - CI: GitHub Actions
 
-The first PWA implementation has been added in the current feature branch (pending merge and live deployment). The separation is:
+The first PWA implementation is included in this repository; production deployment and real-device validation are still pending. The separation is:
 
 - `app/` — upstream-compatible Android implementation
 - `web/` — installable, standalone mobile-first PWA with IndexedDB-like local bookmark persistence (currently localStorage), full indexer inventory and magnet actions
@@ -147,8 +147,8 @@ Future fixed regressions with durable lessons must be recorded here with:
 
 - Fork created successfully.
 - Fork main currently matches upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`.
-- Technical-memory system is being introduced before PWA implementation.
-- PWA web shell and first 10 provider adapters implemented in `feat/pwa-and-companion`, pending CI/PR merge.
+- Technical-memory guard baseline is established in main and enforced in CI.
+- PWA web shell and first 10 provider adapters implemented; live integration validation pending.
 - PWA backend/proxy implemented with fixed allowlisted upstream endpoints; not yet deployed.
 - Full 46-provider functional parity: **not complete**, still required and to be advanced via separate tested batches.
 - Production PWA deployment: none.
@@ -156,7 +156,7 @@ Future fixed regressions with durable lessons must be recorded here with:
 
 ## Next relevant steps
 
-1. Establish and merge the technical-memory/invariant guard baseline.
+1. Maintain the canonical technical-memory baseline and keep its CI guard green.
 2. Validate the first PWA + API on a real Cloudflare Workers environment and verify remote Companion handoff without compromising pairing credentials.
 3. Port and test the remaining 36 indexers, prioritized by supported upstream functionality and practical compatibility; never silently omit or mark them ready early.
 4. Verify real iPhone browser/PWA behavior and Shield integration, especially device offline/queue/Auto-start.
