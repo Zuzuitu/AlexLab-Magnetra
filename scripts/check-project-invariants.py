@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""Fail-fast guard for AlexLab Magnetra's repository invariants.
+
+Uses only Python's standard library so it can run before build toolchains are
+installed or signing material is materialized.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG_PATH = ROOT / "config" / "project-invariants.json"
+STATE_PATH = ROOT / "docs" / "PROJECT_STATE.md"
+AGENTS_PATH = ROOT / "AGENTS.md"
+ANDROID_GRADLE = ROOT / "app" / "build.gradle.kts"
+
+ERRORS: list[str] = []
+
+
+def fail(message: str) -> None:
+    ERRORS.append(message)
+
+
+def require_file(path: Path) -> None:
+    if not path.is_file():
+        fail(f"required file missing: {path.relative_to(ROOT)}")
+
+
+def load_config() -> dict:
+    try:
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        fail("config/project-invariants.json is missing")
+    except json.JSONDecodeError as exc:
+        fail(f"config/project-invariants.json is invalid JSON: {exc}")
+    return {}
+
+
+def nested(data: dict, *keys: str):
+    cur = data
+    for key in keys:
+        if not isinstance(cur, dict) or key not in cur:
+            fail("missing invariant key: " + ".".join(keys))
+            return None
+        cur = cur[key]
+    return cur
+
+
+def require_equal(actual, expected, label: str) -> None:
+    if actual != expected:
+        fail(f"{label}: expected {expected!r}, found {actual!r}")
+
+
+def first_regex(text: str, pattern: str, label: str):
+    match = re.search(pattern, text, flags=re.MULTILINE)
+    if not match:
+        fail(f"could not locate {label} in app/build.gradle.kts")
+        return None
+    return match.group(1)
+
+
+def check_required_memory_files(config: dict) -> None:
+    for path in (STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
+        require_file(path)
+
+    if not STATE_PATH.is_file() or not AGENTS_PATH.is_file():
+        return
+
+    state = STATE_PATH.read_text(encoding="utf-8")
+    agents = AGENTS_PATH.read_text(encoding="utf-8")
+
+    product_name = nested(config, "project", "product_name")
+    repository = nested(config, "project", "repository")
+    upstream = nested(config, "project", "upstream_repository")
+
+    for value, label in (
+        (product_name, "product name"),
+        (repository, "canonical repository"),
+        (upstream, "upstream repository"),
+    ):
+        if value and value not in state:
+            fail(f"PROJECT_STATE.md does not mention canonical {label}: {value}")
+
+    for required_reference in (
+        "docs/PROJECT_STATE.md",
+        "config/project-invariants.json",
+        "scripts/check-project-invariants.py",
+    ):
+        if required_reference not in agents:
+            fail(f"AGENTS.md must reference {required_reference}")
+
+
+def check_project_identity(config: dict) -> None:
+    require_equal(nested(config, "schema_version"), 1, "schema_version")
+    require_equal(nested(config, "project", "product_name"), "AlexLab Magnetra", "product name")
+    require_equal(
+        nested(config, "project", "repository"),
+        "Zuzuitu/AlexLab-Magnetra",
+        "canonical repository",
+    )
+    require_equal(
+        nested(config, "project", "upstream_repository"),
+        "prajwalch/TorrentSearch",
+        "upstream repository",
+    )
+    require_equal(nested(config, "project", "default_branch"), "main", "default branch")
+    require_equal(nested(config, "project", "license"), "MIT", "license")
+
+    github_repo = os.environ.get("GITHUB_REPOSITORY")
+    if github_repo and github_repo != nested(config, "project", "repository"):
+        fail(
+            "CI repository does not match project invariant: "
+            f"GITHUB_REPOSITORY={github_repo!r}"
+        )
+
+    license_path = ROOT / "LICENSE"
+    require_file(license_path)
+    if license_path.is_file() and "MIT License" not in license_path.read_text(
+        encoding="utf-8", errors="replace"
+    ):
+        fail("LICENSE no longer contains the MIT License baseline")
+
+
+def check_cost_policy(config: dict) -> None:
+    require_equal(
+        nested(config, "cost_policy", "unapproved_paid_services_allowed"),
+        False,
+        "unapproved paid services policy",
+    )
+    require_equal(
+        nested(config, "cost_policy", "max_unapproved_recurring_cost_eur"),
+        0,
+        "maximum unapproved recurring cost",
+    )
+
+
+def check_android_baseline(config: dict) -> None:
+    if not ANDROID_GRADLE.is_file():
+        return
+
+    text = ANDROID_GRADLE.read_text(encoding="utf-8")
+    expected_app_id = nested(config, "android_baseline", "application_id")
+    expected_min_sdk = nested(config, "android_baseline", "min_sdk")
+    expected_target_sdk = nested(config, "android_baseline", "target_sdk")
+    expected_java = nested(config, "android_baseline", "java_version")
+
+    actual_app_id = first_regex(text, r'applicationId\s*=\s*"([^"]+)"', "applicationId")
+    actual_min_sdk = first_regex(text, r'\bminSdk\s*=\s*(\d+)', "minSdk")
+    actual_target_sdk = first_regex(text, r'\btargetSdk\s*=\s*(\d+)', "targetSdk")
+    actual_source_java = first_regex(
+        text,
+        r'sourceCompatibility\s*=\s*JavaVersion\.VERSION_(\d+)',
+        "Java sourceCompatibility",
+    )
+    actual_target_java = first_regex(
+        text,
+        r'targetCompatibility\s*=\s*JavaVersion\.VERSION_(\d+)',
+        "Java targetCompatibility",
+    )
+
+    if actual_app_id is not None:
+        require_equal(actual_app_id, expected_app_id, "Android applicationId")
+    if actual_min_sdk is not None:
+        require_equal(int(actual_min_sdk), expected_min_sdk, "Android minSdk")
+    if actual_target_sdk is not None:
+        require_equal(int(actual_target_sdk), expected_target_sdk, "Android targetSdk")
+    if actual_source_java is not None:
+        require_equal(int(actual_source_java), expected_java, "Java source compatibility")
+    if actual_target_java is not None:
+        require_equal(int(actual_target_java), expected_java, "Java target compatibility")
+
+    expected_variants = nested(config, "android_baseline", "build_variants") or []
+    variant_patterns = {
+        "debug": r"(?m)^\s*debug\s*\{",
+        "release": r"(?m)^\s*release\s*\{",
+        "staging": r'create\("staging"\)\s*\{',
+    }
+    for variant in expected_variants:
+        pattern = variant_patterns.get(variant)
+        if pattern is None:
+            fail(f"guard has no validation rule for configured build variant {variant!r}")
+        elif not re.search(pattern, text):
+            fail(f"required Android build variant is missing: {variant}")
+
+
+def check_workflow_guards(config: dict) -> None:
+    command = nested(config, "delivery", "invariant_check_command")
+    workflows = nested(config, "delivery", "guarded_workflows") or []
+
+    for relative in workflows:
+        path = ROOT / relative
+        require_file(path)
+        if not path.is_file() or not command:
+            continue
+
+        text = path.read_text(encoding="utf-8")
+        guard_index = text.find(command)
+        if guard_index < 0:
+            fail(f"{relative}: invariant guard command is missing")
+            continue
+
+        sensitive_markers = (
+            "./gradlew",
+            "npm run build",
+            "pnpm build",
+            "yarn build",
+            "wrangler deploy",
+            "pages deploy",
+            "base64-to-file@",
+        )
+        for marker in sensitive_markers:
+            marker_index = text.find(marker)
+            if marker_index >= 0 and guard_index > marker_index:
+                fail(
+                    f"{relative}: invariant guard must run before sensitive step containing {marker!r}"
+                )
+
+    workflows_dir = ROOT / ".github" / "workflows"
+    configured = {str(Path(p)) for p in workflows}
+    if workflows_dir.is_dir():
+        for path in sorted(workflows_dir.glob("*.y*ml")):
+            text = path.read_text(encoding="utf-8")
+            has_build_or_deploy = any(
+                marker in text
+                for marker in ("./gradlew", "npm run build", "pnpm build", "yarn build", "wrangler deploy")
+            )
+            if has_build_or_deploy:
+                relative = str(path.relative_to(ROOT))
+                if relative not in configured:
+                    fail(
+                        f"{relative}: build/deploy workflow is not listed in delivery.guarded_workflows"
+                    )
+
+
+def extract_crons() -> list[str]:
+    results: list[str] = []
+    workflows_dir = ROOT / ".github" / "workflows"
+    if not workflows_dir.is_dir():
+        return results
+    cron_re = re.compile(r"""\bcron\s*:\s*['"]?([^'"\n#]+)""")
+    for path in workflows_dir.glob("*.y*ml"):
+        text = path.read_text(encoding="utf-8")
+        for match in cron_re.finditer(text):
+            results.append(match.group(1).strip())
+    return sorted(set(results))
+
+
+def check_crons(config: dict) -> None:
+    allowed = sorted(nested(config, "delivery", "allowed_cron_expressions") or [])
+    actual = extract_crons()
+    if actual != allowed:
+        fail(f"cron schedules differ from invariant: expected {allowed!r}, found {actual!r}")
+
+
+def iter_repo_files():
+    ignored_parts = {".git", ".gradle", "build", "node_modules", "dist", ".idea"}
+    for path in ROOT.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(ROOT)
+        if any(part in ignored_parts for part in relative.parts):
+            continue
+        yield path, relative
+
+
+def check_forbidden_files(config: dict) -> None:
+    forbidden_globs = nested(config, "cleanup", "forbidden_globs") or []
+
+    for path, relative in iter_repo_files():
+        rel = relative.as_posix()
+        for pattern in forbidden_globs:
+            if fnmatch.fnmatch(path.name, pattern) or fnmatch.fnmatch(rel, pattern):
+                fail(f"forbidden temporary/debug artifact committed: {rel}")
+                break
+
+        lower_name = path.name.lower()
+        if lower_name == ".env" or (
+            lower_name.startswith(".env.") and lower_name not in {".env.example", ".env.sample"}
+        ):
+            fail(f"real environment file must not be committed: {rel}")
+
+        if path.suffix.lower() in {".jks", ".keystore", ".p12", ".pfx", ".pem", ".key"}:
+            fail(f"private key/keystore-like file must not be committed: {rel}")
+
+        if re.fullmatch(r"(service[-_]?account|credentials)([-_.].*)?\.json", lower_name):
+            fail(f"credential/service-account file must not be committed: {rel}")
+
+
+def check_secret_content(config: dict) -> None:
+    if not nested(config, "security", "frontend_must_not_contain_secrets"):
+        return
+
+    textual_suffixes = {
+        ".kt", ".kts", ".java", ".js", ".jsx", ".ts", ".tsx", ".json", ".yml", ".yaml",
+        ".md", ".properties", ".toml", ".xml", ".html", ".css", ".py", ".sh", ".txt"
+    }
+
+    secret_patterns = [
+        ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
+        ("GitHub classic token", re.compile(r"\bghp_[A-Za-z0-9]{30,}\b")),
+        ("GitHub fine-grained token", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{40,}\b")),
+        ("AWS access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+        ("Stripe live secret", re.compile(r"\bsk_live_[A-Za-z0-9]{20,}\b")),
+    ]
+
+    for path, relative in iter_repo_files():
+        if path.suffix.lower() not in textual_suffixes:
+            continue
+        try:
+            if path.stat().st_size > 1_000_000:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            fail(f"could not scan {relative.as_posix()}: {exc}")
+            continue
+
+        for label, pattern in secret_patterns:
+            if pattern.search(text):
+                fail(f"possible {label} committed in {relative.as_posix()}")
+
+        if relative.parts and relative.parts[0] == "web":
+            if re.search(
+                r"\bVITE_[A-Z0-9_]*(?:SECRET|PASSWORD|PRIVATE_KEY|ACCESS_TOKEN)[A-Z0-9_]*\b",
+                text,
+            ):
+                fail(
+                    f"frontend references a secret-class VITE_* variable: {relative.as_posix()}"
+                )
+
+
+def check_architecture_roots(config: dict) -> None:
+    android_root = nested(config, "architecture", "android_source_root")
+    preserve = nested(config, "architecture", "preserve_upstream_android_baseline")
+    if preserve is not True:
+        fail("architecture.preserve_upstream_android_baseline must remain true")
+    if android_root and not (ROOT / android_root).is_dir():
+        fail(f"protected Android source root is missing: {android_root}")
+
+    web_root = nested(config, "architecture", "planned_web_source_root")
+    worker_root = nested(config, "architecture", "planned_backend_source_root")
+    if web_root == android_root or worker_root == android_root:
+        fail("PWA/backend roots must remain separate from the protected Android source root")
+
+
+def main() -> int:
+    for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
+        require_file(required)
+
+    config = load_config()
+    if config:
+        check_project_identity(config)
+        check_cost_policy(config)
+        check_required_memory_files(config)
+        check_architecture_roots(config)
+        check_android_baseline(config)
+        check_workflow_guards(config)
+        check_crons(config)
+        check_forbidden_files(config)
+        check_secret_content(config)
+
+    if ERRORS:
+        print("Project invariant check FAILED:", file=sys.stderr)
+        for index, error in enumerate(ERRORS, start=1):
+            print(f"  {index}. {error}", file=sys.stderr)
+        return 1
+
+    print("Project invariant check PASSED")
+    print("Protected: identity, cost policy, Android baseline, CI ordering, cron policy, secrets, cleanup.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
