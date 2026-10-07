@@ -1,13 +1,16 @@
-name: Deploy Magnetra PWA (manual)
+name: Deploy Magnetra PWA
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 permissions:
   contents: read
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy-pwa]')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
