@@ -211,7 +211,7 @@ def check_workflow_guards(config: dict) -> None:
             continue
 
         text = path.read_text(encoding="utf-8")
-        if "distribution: 'jetbrains'" not in text or "java-version: '21'" not in text:
+        if "./gradlew" in text and ("distribution: 'jetbrains'" not in text or "java-version: '21'" not in text):
             fail(f"{relative}: missing JBR 21 Gradle daemon setup required by gradle/gradle-daemon-jvm.properties")
         guard_index = text.find(command)
         if guard_index < 0:
@@ -361,6 +361,88 @@ def check_architecture_roots(config: dict) -> None:
         fail("PWA/backend roots must remain separate from the protected Android source root")
 
 
+def check_web_parity_and_companion(config: dict) -> None:
+    parity = nested(config, "provider_parity")
+    companion = nested(config, "companion")
+    if not parity or not companion:
+        return
+
+    registry = ROOT / parity["original_registry"]
+    catalog = ROOT / parity["web_catalog"]
+    source_worker = ROOT / "worker" / "src" / "index.mjs"
+    frontend = ROOT / "web" / "app.js"
+    web_ci = ROOT / ".github" / "workflows" / "pwa.yml"
+    for path in (registry, catalog, source_worker, frontend, web_ci):
+        require_file(path)
+    if not all(x.is_file() for x in (registry, catalog, source_worker, frontend, web_ci)):
+        return
+
+    classes = re.findall(
+        r"^\s+([A-Za-z0-9]+)\(networkClient\),$",
+        registry.read_text(encoding="utf-8"),
+        re.MULTILINE
+    )
+    expected_ids = set()
+    for class_name in classes:
+        source = ROOT / "app" / "src" / "main" / "kotlin" / "com" / "prajwalch" / "torrentsearch" / "providers" / (class_name + ".kt")
+        require_file(source)
+        if not source.is_file():
+            continue
+        match = re.search(r'override val id\s*=\s*"([^"]+)"', source.read_text(encoding="utf-8"))
+        if not match:
+            fail("upstream provider has no parseable ID: " + class_name)
+        else:
+            expected_ids.add(match.group(1))
+
+    raw_catalog = catalog.read_text(encoding="utf-8")
+    actual_ids = re.findall(r'^\s+"id": "([^"]+)"', raw_catalog, re.MULTILINE)
+    count = parity["required_builtin_count"]
+    if len(classes) != count or len(expected_ids) != count:
+        fail(f"upstream indexer inventory diverged: expected {count}, registered {len(classes)}, IDs {len(expected_ids)}")
+    if len(actual_ids) != count or len(set(actual_ids)) != count:
+        fail(f"PWA indexer registry must contain exactly {count} distinct IDs, got {len(actual_ids)}")
+    if set(actual_ids) != expected_ids:
+        fail(f"PWA indexer registry differs from upstream IDs (missing={sorted(expected_ids-set(actual_ids))}, extra={sorted(set(actual_ids)-expected_ids)})")
+
+    worker_text = source_worker.read_text(encoding="utf-8")
+    origin = companion["allowed_remote_relay_origin"]
+    if f'COMPANION_RELAY_ORIGIN="{origin}"' not in worker_text:
+        fail("Flud Companion relay must remain fixed to the approved HTTPS origin")
+    if 'crypto.randomUUID()' not in worker_text or '"requestId"' not in worker_text and "requestId:" not in worker_text:
+        fail("Companion command must use an idempotent request ID")
+    if "checkSameOrigin(request)" not in worker_text:
+        fail("Companion API must retain same-origin submission checks")
+    frontend_text = frontend.read_text(encoding="utf-8")
+    if 'searchParams.set("token"' in frontend_text or "location.hash=" in frontend_text:
+        fail("PWA must not serialize remote Companion credentials into URLs")
+    if "python3 scripts/check-project-invariants.py" not in web_ci.read_text(encoding="utf-8"):
+        fail("PWA CI must run the invariant gate before JS tests")
+
+
+    deployment = nested(config, "deployment")
+    if deployment:
+        wrangler = ROOT / "worker" / "wrangler.jsonc"
+        deploy_ci = ROOT / ".github" / "workflows" / "deploy-pwa.yml"
+        for path in (wrangler, deploy_ci):
+            require_file(path)
+        if wrangler.is_file():
+            wrangler_text = wrangler.read_text(encoding="utf-8")
+            domain = deployment["production_domain"]
+            if f'"pattern": "{domain}"' not in wrangler_text or '"custom_domain": true' not in wrangler_text:
+                fail("Cloudflare Worker must retain the canonical custom domain binding")
+        if deploy_ci.is_file():
+            deploy_text = deploy_ci.read_text(encoding="utf-8")
+            marker = deployment["explicit_commit_marker"]
+            if marker not in deploy_text:
+                fail("production deploy workflow must require the explicit deploy marker")
+            if 'branches: [ "main" ]' not in deploy_text:
+                fail("production push deploy must remain limited to main")
+            if "CLOUDFLARE_API_TOKEN" not in deploy_text or "CLOUDFLARE_ACCOUNT_ID" not in deploy_text:
+                fail("production deploy must use external Cloudflare credentials")
+            if "python3 scripts/check-project-invariants.py" not in deploy_text:
+                fail("production deploy must run invariants before deployment")
+
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
@@ -376,6 +458,7 @@ def main() -> int:
         check_crons(config)
         check_forbidden_files(config)
         check_secret_content(config)
+        check_web_parity_and_companion(config)
 
     if ERRORS:
         print("Project invariant check FAILED:", file=sys.stderr)

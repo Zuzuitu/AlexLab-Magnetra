@@ -48,6 +48,13 @@ Never leave the checkpoint behind the code.
 - Preserve magnet/copy/share behavior and expose `.torrent` downloads when a provider supplies them.
 - The PWA is not a BitTorrent engine unless the owner explicitly approves a future architecture change.
 
+## Provider parity and Companion-specific protections
+
+- Upstream source of truth is `app/src/main/kotlin/com/prajwalch/torrentsearch/di/BuiltinSearchProvidersModule.kt`: 46 registered providers today. Preserve all IDs in `worker/src/catalog.mjs` and update the manifest/guard if upstream changes.
+- **Do not misrepresent inventory entries as functional adapters.** Only mark a provider `ported: true` after a real provider implementation exists and suitable tests pass. Full 46/46 functional coverage remains the target.
+- Never use an arbitrary URL proxy. Companion remote relay calls are routed to one allowlisted HTTPS host. Keep tokens out of URLs, service worker caches and logs.
+- Companion magnet commands must use idempotency request IDs; don't claim queued means downloaded. Never modify the proven Flood/Flud Auto-start boundary in another repository as part of a PWA convenience feature.
+
 ## Technical-memory maintenance
 
 Update `docs/PROJECT_STATE.md` naturally after important milestones when any of these appear:

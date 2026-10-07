@@ -24,11 +24,11 @@ Current production code is still the upstream Android application:
 - Build system: Gradle / Android Gradle Plugin
 - CI: GitHub Actions
 
-The PWA has **not been implemented yet**. The intended separation is:
+The first PWA implementation is included in this repository; production deployment and real-device validation are still pending. The separation is:
 
 - `app/` — upstream-compatible Android implementation
-- `web/` — future AlexLab Magnetra PWA
-- `worker/` — future server-side/provider proxy or API layer when browser restrictions require it
+- `web/` — installable, standalone mobile-first PWA with IndexedDB-like local bookmark persistence (currently localStorage), full indexer inventory and magnet actions
+- `worker/` — Cloudflare Workers-compatible search/API and fixed-origin Flud Companion remote relay bridge
 
 The PWA must not be implemented by destructively converting or replacing the Android codebase.
 
@@ -56,9 +56,9 @@ Branding of the future PWA is AlexLab Magnetra. Android package/application iden
 - Unapproved recurring infrastructure cost is capped at **€0**.
 - GitHub/GitHub Actions are currently used.
 - No Lovable dependency is part of this project.
-- No PWA hosting/backend provider has been canonically selected or deployed yet.
+- Cloudflare Workers is the selected runtime. Canonical production domain: **`https://index.alexlab.media`**. Deployment must remain on the free/no-paid baseline unless the owner explicitly approves otherwise.
 
-A future Cloudflare Worker or equivalent server-side proxy may be used if needed for CORS/provider compatibility, but that is an implementation decision to be documented when selected.
+Cloudflare Worker source under `worker/` serves static web assets and same-origin `/api/*` endpoints. `worker/wrangler.jsonc` binds the Worker to **`index.alexlab.media`** as a Cloudflare Custom Domain. No subscription or paid tier is authorized.
 
 ## Definitive technical decisions
 
@@ -85,6 +85,20 @@ Protected baseline values:
 - CI Gradle daemon runtime: **JetBrains Runtime 21**, installed separately from Temurin 17 and required by `gradle/gradle-daemon-jvm.properties`.
 
 These values are protected because they describe the known-good starting point. They may change later only as an intentional coordinated decision.
+
+## First PWA implementation (2026-10-07)
+
+- Full canonical inventory: exactly **46 built-in upstream indexers**, derived from `BuiltinSearchProvidersModule.kt`. Guard checks matching upstream provider IDs, not merely count.
+- Explicitly ported adapters in the first milestone (**21**): `AniLibria`, `Knaben`, `TorrentsCSV`, `ThePirateBay`, `YTS`, `Internet Archive`, `BangumiMoe`, `SubsPlease`, `Btsow`, `Nyaa` and `Sukebei`; plus `BTDigg`, `Dmhy`, `NekoBT`, `Mikan`, `TorrentKitty`, `Rutor`, `XXXTracker`, `AnimeTosho`, `LimeTorrents`, `TorrentDownload` (HTMLRewriter). These are implemented adapters, **not yet live-tested against every provider**; real-world availability remains an external dependency.
+- The remaining **25** providers are inventoried and visible as **PORT PENDING**, not represented as working. Full functional parity remains an outstanding explicit product requirement; never count catalog coverage as adapter parity.
+- Search worker accepts an allowlisted set of provider IDs, a bounded query and category, with provider-specific adapters, up to all 46 registered sources (once ported), with at most three simultaneous per-provider fetches to bound load.
+- PWA displays source, size, seeders, peers, date, magnet, copy/share, torrent link when provided, bookmarks, and per-provider errors.
+- Remote Flud Companion handoff uses a same-origin Worker endpoint which forwards only to `https://flud-remote.alexlab.media` and reuses the verified public Flud Companion `/api/v1/device/:deviceId/magnet` contract. It sends a stable request ID per command for duplicate protection.
+- The Companion pairing credentials are stored only in the user's browser local storage; relay forwarding is via HTTPS and the Worker does not persist tokens. Never print or expose credentials in logs, URLs or public artifacts.
+- Auto-start is optional and must respect Companion's already validated accessibility/helper state; do not alter Flud Companion's hardware-verified preflight/single-handoff rules.
+- Hosted HTTPS PWA to plaintext LAN bridge can be blocked by mixed-content and private-network restrictions. Primary 1-tap integration is the HTTPS Remote relay; fallback is Copy magnet + open Companion PWA.
+- The search backend must stay a fixed-provider metasearch service, not an arbitrary HTTP proxy.
+- HTML ports are source-based, syntax/bundle-checked and contract-checked but external layouts and challenge pages still require integration validation. No production deploy has occurred. Online CORS, provider availability, responsive phone hardware and Shield Auto-start must still be verified before declaring production readiness.
 
 ## Data and security rules
 
@@ -121,6 +135,8 @@ The first repository-safety issue identified at project start was that existing 
 
 Initial upstream CI regression (2026-10-07): both Debug and Staging failed before Android compilation with Foojay HTTP 400 while attempting to download JetBrains Runtime 21. Root cause: existing workflows only installed Temurin 17 although the committed Gradle daemon JVM criteria require vendor JETBRAINS/version 21. Fix: explicitly provision JBR 21 with `actions/setup-java` after JDK 17; keep Android Java 17 source/target compatibility unchanged. Guard: require correct Gradle daemon vendor/version and JBR setup in all Android workflows.
 
+PWA CI invariant-guard regression (2026-10-07): adding the PWA job to `delivery.guarded_workflows` initially caused CI to fail because the JBR 21 prerequisite was checked for every guarded workflow, including Node-only tests. Root cause: guard scope was too broad. Fix: enforce JBR 21 only on workflows containing a Gradle build (`./gradlew`), while still requiring the general invariant gate for all guarded workflows.
+
 Future fixed regressions with durable lessons must be recorded here with:
 - symptom;
 - root cause;
@@ -131,18 +147,19 @@ Future fixed regressions with durable lessons must be recorded here with:
 
 - Fork created successfully.
 - Fork main currently matches upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`.
-- Technical-memory system is being introduced before PWA implementation.
-- PWA code: not started.
-- PWA backend/proxy: not started.
-- Production PWA deployment: none.
+- Technical-memory guard baseline is established in main and enforced in CI.
+- PWA web shell and first 21 provider adapters implemented; live integration validation pending.
+- PWA backend/proxy implemented with fixed allowlisted upstream endpoints; not yet deployed.
+- Full 46-provider functional parity: **not complete**, still required and to be advanced via separate tested batches.
+- Production target: **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Deploy is owner-authorized for this milestone and triggered only by manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
 - Paid services: none approved.
 
 ## Next relevant steps
 
-1. Establish and merge the technical-memory/invariant guard baseline.
-2. Scaffold `web/` as an installable mobile-first PWA.
-3. Add the provider API layer in `worker/` only where browser restrictions require it.
-4. Port the simplest API-backed providers first, then HTML/scraping providers.
+1. Maintain the canonical technical-memory baseline and keep its CI guard green.
+2. Deploy and validate the first PWA + API at `https://index.alexlab.media`, then verify remote Companion handoff without compromising pairing credentials.
+3. Port and test the remaining 25 indexers, prioritized by supported upstream functionality and practical compatibility; never silently omit or mark them ready early.
+4. Verify real iPhone browser/PWA behavior and Shield integration, especially device offline/queue/Auto-start.
 5. Implement result actions: open magnet, copy/share magnet, `.torrent` download where available.
 6. Add provider-specific tests and document every stable workaround/invariant discovered.
 7. Select deployment only after verifying cost, provider compatibility, and secret boundaries.
