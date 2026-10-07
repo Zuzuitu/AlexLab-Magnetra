@@ -419,6 +419,30 @@ def check_web_parity_and_companion(config: dict) -> None:
         fail("PWA CI must run the invariant gate before JS tests")
 
 
+    deployment = nested(config, "deployment")
+    if deployment:
+        wrangler = ROOT / "worker" / "wrangler.jsonc"
+        deploy_ci = ROOT / ".github" / "workflows" / "deploy-pwa.yml"
+        for path in (wrangler, deploy_ci):
+            require_file(path)
+        if wrangler.is_file():
+            wrangler_text = wrangler.read_text(encoding="utf-8")
+            domain = deployment["production_domain"]
+            if f'"pattern": "{domain}"' not in wrangler_text or '"custom_domain": true' not in wrangler_text:
+                fail("Cloudflare Worker must retain the canonical custom domain binding")
+        if deploy_ci.is_file():
+            deploy_text = deploy_ci.read_text(encoding="utf-8")
+            marker = deployment["explicit_commit_marker"]
+            if marker not in deploy_text:
+                fail("production deploy workflow must require the explicit deploy marker")
+            if 'branches: [ "main" ]' not in deploy_text:
+                fail("production push deploy must remain limited to main")
+            if "CLOUDFLARE_API_TOKEN" not in deploy_text or "CLOUDFLARE_ACCOUNT_ID" not in deploy_text:
+                fail("production deploy must use external Cloudflare credentials")
+            if "python3 scripts/check-project-invariants.py" not in deploy_text:
+                fail("production deploy must run invariants before deployment")
+
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
