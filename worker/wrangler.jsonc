@@ -8,5 +8,11 @@
   },
   "observability": {
     "enabled": false
-  }
+  },
+  "routes": [
+    {
+      "pattern": "index.alexlab.media",
+      "custom_domain": true
+    }
+  ]
 }
