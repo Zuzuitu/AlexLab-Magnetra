@@ -72,5 +72,14 @@
     "magnet_length_limit": 12000,
     "idempotent_request_id_required": true,
     "credentials_in_url_forbidden": true
+  },
+  "deployment": {
+    "provider": "cloudflare-workers",
+    "production_domain": "index.alexlab.media",
+    "production_url": "https://index.alexlab.media",
+    "custom_domain_required": true,
+    "automatic_main_deploy": false,
+    "explicit_commit_marker": "[deploy-pwa]",
+    "paid_tier_required": false
   }
 }
