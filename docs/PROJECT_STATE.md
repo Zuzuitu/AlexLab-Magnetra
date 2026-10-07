@@ -56,9 +56,9 @@ Branding of the future PWA is AlexLab Magnetra. Android package/application iden
 - Unapproved recurring infrastructure cost is capped at **€0**.
 - GitHub/GitHub Actions are currently used.
 - No Lovable dependency is part of this project.
-- A Cloudflare Workers-compatible runtime has been selected for the first web implementation. Deployment has **not** been performed or paid hosting enabled.
+- Cloudflare Workers is the selected runtime. Canonical production domain: **`https://index.alexlab.media`**. Deployment must remain on the free/no-paid baseline unless the owner explicitly approves otherwise.
 
-Cloudflare Worker source exists under `worker/` and serves static web assets and the same-origin `/api/*` endpoints. Actual live hosting is pending an owner-controlled Cloudflare deploy. No subscription or paid tier is authorized.
+Cloudflare Worker source under `worker/` serves static web assets and same-origin `/api/*` endpoints. `worker/wrangler.jsonc` binds the Worker to **`index.alexlab.media`** as a Cloudflare Custom Domain. No subscription or paid tier is authorized.
 
 ## Definitive technical decisions
 
@@ -151,14 +151,14 @@ Future fixed regressions with durable lessons must be recorded here with:
 - PWA web shell and first 21 provider adapters implemented; live integration validation pending.
 - PWA backend/proxy implemented with fixed allowlisted upstream endpoints; not yet deployed.
 - Full 46-provider functional parity: **not complete**, still required and to be advanced via separate tested batches.
-- Production PWA deployment: none.
+- Production target: **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Deploy is owner-authorized for this milestone and triggered only by manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
 - Paid services: none approved.
 
 ## Next relevant steps
 
 1. Maintain the canonical technical-memory baseline and keep its CI guard green.
-2. Validate the first PWA + API on a real Cloudflare Workers environment and verify remote Companion handoff without compromising pairing credentials.
-3. Port and test the remaining 36 indexers, prioritized by supported upstream functionality and practical compatibility; never silently omit or mark them ready early.
+2. Deploy and validate the first PWA + API at `https://index.alexlab.media`, then verify remote Companion handoff without compromising pairing credentials.
+3. Port and test the remaining 25 indexers, prioritized by supported upstream functionality and practical compatibility; never silently omit or mark them ready early.
 4. Verify real iPhone browser/PWA behavior and Shield integration, especially device offline/queue/Auto-start.
 5. Implement result actions: open magnet, copy/share magnet, `.torrent` download where available.
 6. Add provider-specific tests and document every stable workaround/invariant discovered.
