@@ -25,11 +25,11 @@ The local preview is accessible via the URL printed by Wrangler. The Cloudflare 
 
 ## Deployment
 
-Cloudflare deployment is **not automatic**. The owner controls a manual `workflow_dispatch` workflow:
+Canonical production URL: **`https://index.alexlab.media`**. Cloudflare deployment is guarded: normal `main` pushes do not deploy. It runs by manual `workflow_dispatch` or by a `main` commit explicitly containing `[deploy-pwa]`:
 
 `.github/workflows/deploy-pwa.yml`
 
-Provide `CLOUDFLARE_API_TOKEN` (Workers deploy permission) and `CLOUDFLARE_ACCOUNT_ID` **as GitHub Actions secrets**, never in source code, chat, or URLs. Trigger the workflow manually after tests are green. No paid subscription is authorized; use the free tier only.
+Provide `CLOUDFLARE_API_TOKEN` (Workers deploy permission) and `CLOUDFLARE_ACCOUNT_ID` **as GitHub Actions secrets**, never in source code, chat, or URLs. No paid subscription is authorized; use the free tier only. The custom domain is declared in `worker/wrangler.jsonc` with `custom_domain: true`.
 
 ## Flud Companion
 
