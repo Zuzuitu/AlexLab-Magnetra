@@ -2,9 +2,9 @@ import {LEGACY_SPECS,legacySearchUrl} from "./legacy-specs.mjs";
 
 const MAX_HTML = 3_000_000;
 const TIMEOUT = 11_000;
-function allowedExternal(url,host) {
+function allowedExternal(url,host,base=host) {
   try {
-    const u=new URL(url,host);
+    const u=new URL(url,base);
     const expected=new URL(host);
     return u.protocol==="https:" && u.origin===expected.origin && !u.username && !u.password &&
       u.hash==="" && u.href.length<=1500 ? u.toString():null;
@@ -100,13 +100,13 @@ export async function legacySearch(id,query,category,fetcher=fetch){
   for(const [i,row] of records.entries()){
     const name=String(row.name||"").trim().replace(/\s+/g," ");
     if(!name)continue;
-    const details=allowedExternal(row.details,spec.host);
-    const magnetSource=allowedExternal(row.magnetSource,spec.host);
+    const details=allowedExternal(row.details,spec.host,url);
+    const magnetSource=allowedExternal(row.magnetSource,spec.host,url);
     const hash=fromHashUrl(row.details,spec.hashFromDetailsSuffix?"filemood":spec.magnetHashLink?"torrentdatabase":null);
     let magnet=String(row.magnet||"").trim();
     if(!magnet.startsWith("magnet:?"))magnet=hash||"";
     if(!magnet&&spec.magnetHashLink)magnet=fromHashUrl(row.magnetHashLink,"torrentdatabase")||"";
-    const torrentFile=allowedExternal(row.torrentFile,spec.host);
+    const torrentFile=allowedExternal(row.torrentFile,spec.host,url);
     if(!magnet&&!details&&!magnetSource)continue;
     const swarm=(row.swarm||"").split("/");
     result.push({
