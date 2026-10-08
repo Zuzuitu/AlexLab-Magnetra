@@ -1,3 +1,22 @@
+## Third production audit — after audit-aware source selection
+
+_Observation: 2026-10-08, verified Cloudflare deployment workflow **37827913584** (PR #8 / merge `bd09a0eb60b679e9e661f0dc1f34613605db2838`), one `ubuntu` search per original provider._
+
+| Outcome | Sources | Change from preceding audit |
+| --- | ---: | ---: |
+| Returned search results | **12** | 0 |
+| Empty / unverified | **14** | +2 |
+| Provider errors | **20** | −2 |
+| API transport failures | **0** | 0 |
+
+All **12** result-positive source IDs were unchanged: `audiobookbay`, `dmhy`, `btsow`, `epublibre`, `internetarchive`, `knaben`, `linuxtracker`, `nonameclub`, `thepiratebay`, `therarbag`, `torrentscsv`, `0magnet`.
+
+BTDigg was still `TIMEOUT`; Nyaa was still `RATE_LIMIT` (429). TokyoToshokan now supplied `ACCESS_DENIED` (403) instead of `UNCLASSIFIED`. Individual provider error/empty transitions are external outcomes and are not automatically proof of app improvements or regression.
+
+**PWA snapshot policy:** `worker/src/source-audit.mjs` is an explicitly dated source snapshot from workflow **37816874771**. It retains the historical 12/12/22 counts, not the latest 12/14/20 audit; this difference is intentional and must be displayed/understood as a dated observation, never an uptime claim. The result-positive selection remained identical in the latest test. Do not silently rewrite the source snapshot without a versioned PR, tests and deployment.
+
+---
+
 # Provider availability audit — AlexLab Magnetra
 
 ## Machine-readable snapshot used by the PWA
