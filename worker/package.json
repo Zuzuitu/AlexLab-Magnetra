@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check": "node --check src/index.mjs && node --check src/catalog.mjs && node --check src/providers.mjs && node --check ../web/app.js",
+    "check": "node --check src/index.mjs && node --check src/catalog.mjs && node --check src/providers.mjs && node --check ../web/app.js && node --check src/legacy-specs.mjs && node --check src/legacy-adapters.mjs",
     "dev": "npx wrangler dev --config wrangler.jsonc",
     "deploy": "npx wrangler deploy --config wrangler.jsonc"
   }

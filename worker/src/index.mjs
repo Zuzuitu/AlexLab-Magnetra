@@ -1,3 +1,5 @@
+import {LEGACY_SPECS} from "./legacy-specs.mjs";
+import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 
@@ -42,6 +44,22 @@ async function getSearch(url) {
  }
  // Preserve source identities and identical hashes across providers for traceability.
  return json({query:q,category,results,stats,errors,total:results.length});
+}
+async function resolveMagnet(request){
+ if(!checkSameOrigin(request))return error("Cross-origin submission not permitted.",403);
+ let payload;
+ try{payload=await safeBody(request,3500);}catch{return error("Invalid JSON request.");}
+ const {provider,details}=payload||{};
+ if(typeof provider!=="string"||!Object.hasOwn(LEGACY_SPECS,provider))
+   return error("Provider has no approved deferred magnet resolver.");
+ if(typeof details!=="string"||!validateLegacyDetail(provider,details))
+   return error("Details URL is not in the provider allowlist.");
+ try{
+   const result=await resolveLegacy(provider,details);
+   return json({provider,magnet:result.magnet});
+ }catch(e){
+   return error("Provider could not resolve magnet: "+String(e?.message||e).slice(0,170),502);
+ }
 }
 function checkSameOrigin(request){
  const origin=request.headers.get("origin");
@@ -91,6 +109,7 @@ export default {
    if(url.pathname==="/api/health" && request.method==="GET")return json({ok:true,product:"AlexLab Magnetra",ported:PROVIDERS.filter(x=>x.ported).length,total:PROVIDERS.length});
    if(url.pathname==="/api/providers" && request.method==="GET")return json({providers:PROVIDERS});
    if(url.pathname==="/api/search" && request.method==="GET")return getSearch(url);
+   if(url.pathname==="/api/resolve" && request.method==="POST")return resolveMagnet(request);
    if(url.pathname==="/api/companion/magnet" && request.method==="POST")return companion(request,"magnet");
    if(url.pathname==="/api/companion/status" && request.method==="POST")return companion(request,"status");
    if(url.pathname.startsWith("/api/"))return error("Not found.",404);

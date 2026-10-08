@@ -404,6 +404,37 @@ def check_web_parity_and_companion(config: dict) -> None:
     if set(actual_ids) != expected_ids:
         fail(f"PWA indexer registry differs from upstream IDs (missing={sorted(expected_ids-set(actual_ids))}, extra={sorted(set(actual_ids)-expected_ids)})")
 
+    legacy_specs = ROOT / parity.get("legacy_specs_path", "")
+    legacy_module = ROOT / "worker" / "src" / "legacy-adapters.mjs"
+    provider_impl = ROOT / "worker" / "src" / "providers.mjs"
+    selector_worker = ROOT / "worker" / "test" / "selectors.worker.mjs"
+    selector_config = ROOT / "worker" / "test" / "wrangler-selector.jsonc"
+    for path in (legacy_specs, legacy_module, provider_impl, selector_worker, selector_config):
+        require_file(path)
+    if legacy_specs.is_file() and provider_impl.is_file():
+        legacy_text = legacy_specs.read_text(encoding="utf-8")
+        legacy_ids = set(re.findall(r'^  "([^"]+)": \{', legacy_text, re.MULTILINE))
+        expected_count = parity.get("legacy_adapter_count")
+        if len(legacy_ids) != expected_count:
+            fail(f"legacy provider specs count changed: expected {expected_count}, found {len(legacy_ids)}")
+        catalog_active = len(re.findall(r'"ported": true', raw_catalog))
+        required_active = parity.get("required_executable_adapter_count")
+        if catalog_active != required_active:
+            fail(f"active provider adapters changed: expected {required_active}, found {catalog_active}")
+        if '"ported": false' in raw_catalog and required_active == count:
+            fail("an original indexer was silently marked as missing after full-parity port")
+        if "legacySearch(id,q,category,fetcher)" not in provider_impl.read_text(encoding="utf-8"):
+            fail("provider registry does not attach the legacy adapter implementations")
+        if "deferred_magnet_resolution_required" in parity and parity["deferred_magnet_resolution_required"]:
+            if not legacy_module.is_file() or "resolveLegacy" not in legacy_module.read_text(encoding="utf-8"):
+                fail("deferred magnet resolver has been removed")
+    if selector_config.is_file() and selector_worker.is_file() and web_ci.is_file():
+        config_text = selector_config.read_text(encoding="utf-8")
+        if '"main": "./selectors.worker.mjs"' not in config_text:
+            fail("CI selector validation must use dedicated workerd entrypoint, not PWA assets")
+        if 'x.checked!==35' not in web_ci.read_text(encoding="utf-8"):
+            fail("CI must validate the actual JSON result for all 35 HTML selector adapters")
+
     worker_text = source_worker.read_text(encoding="utf-8")
     origin = companion["allowed_remote_relay_origin"]
     if f'COMPANION_RELAY_ORIGIN="{origin}"' not in worker_text:
@@ -412,11 +443,27 @@ def check_web_parity_and_companion(config: dict) -> None:
         fail("Companion command must use an idempotent request ID")
     if "checkSameOrigin(request)" not in worker_text:
         fail("Companion API must retain same-origin submission checks")
+    if '"/api/resolve"' not in worker_text:
+        fail("deferred magnet resolution endpoint missing in Worker")
+    if "validateLegacyDetail(provider,details)" not in worker_text:
+        fail("deferred magnet resolution lost provider origin allowlisting")
     frontend_text = frontend.read_text(encoding="utf-8")
+    if companion.get("command_receipt_polling_required") and "verifyCompanionReceipt" not in frontend_text:
+        fail("Companion command acknowledgement polling was removed")
+    if companion.get("queued_is_not_delivery_confirmation") and "Shield acknowledged" not in frontend_text:
+        fail("Companion UI no longer separates queue acceptance from Shield acknowledgement")
     if 'searchParams.set("token"' in frontend_text or "location.hash=" in frontend_text:
         fail("PWA must not serialize remote Companion credentials into URLs")
     if "python3 scripts/check-project-invariants.py" not in web_ci.read_text(encoding="utf-8"):
         fail("PWA CI must run the invariant gate before JS tests")
+    audit_path = ROOT / parity.get("production_audit_script", "")
+    require_file(audit_path)
+    deploy_workflow = ROOT / ".github" / "workflows" / "deploy-pwa.yml"
+    if deploy_workflow.is_file() and parity.get("production_audit_script"):
+        expected_audit = "python3 " + parity["production_audit_script"]
+        if expected_audit not in deploy_workflow.read_text(encoding="utf-8"):
+            fail("explicit production deploy must audit all 46 source search responses")
+
 
 
     deployment = nested(config, "deployment")

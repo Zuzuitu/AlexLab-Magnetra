@@ -65,14 +65,23 @@
     "required_builtin_count": 46,
     "original_registry": "app/src/main/kotlin/com/prajwalch/torrentsearch/di/BuiltinSearchProvidersModule.kt",
     "web_catalog": "worker/src/catalog.mjs",
-    "no_silent_unported_results": true
+    "no_silent_unported_results": true,
+    "required_executable_adapter_count": 46,
+    "legacy_adapter_count": 25,
+    "legacy_specs_path": "worker/src/legacy-specs.mjs",
+    "deferred_magnet_resolution_required": true,
+    "live_provider_verification_is_separate": true,
+    "production_audit_script": "scripts/audit-live-providers.py",
+    "audit_is_live_availability_check_not_contract_proof": true
   },
   "companion": {
     "allowed_remote_relay_origin": "https://flud-remote.alexlab.media",
     "fixed_origin_proxy_only": true,
     "magnet_length_limit": 12000,
     "idempotent_request_id_required": true,
-    "credentials_in_url_forbidden": true
+    "credentials_in_url_forbidden": true,
+    "command_receipt_polling_required": true,
+    "queued_is_not_delivery_confirmation": true
   },
   "deployment": {
     "provider": "cloudflare-workers",

@@ -1,3 +1,5 @@
+import {LEGACY_SPECS} from "./legacy-specs.mjs";
+import {legacySearch,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
 // Source-specific ports of the upstream Kotlin provider contracts.
 // These adapters intentionally use fixed endpoints, never a user-selected proxy URL.
@@ -6,7 +8,7 @@ const REQUEST_TIMEOUT_MS = 11000;
 const KNABEN_CATEGORIES = { music:1000000,series:2000000,movies:3000000,apps:4000000,porn:5000000,anime:6000000,games:7000000,books:9000000,other:10000000 };
 
 function clean(value) { return String(value ?? "").trim(); }
-function numeric(value) { const n=Number(value); return Number.isFinite(n)&&n>=0 ? Math.floor(n) : null; }
+function numeric(value) { if(value===null||value===undefined||String(value).trim()==="")return null; const n=Number(String(value).trim().replace(/,/g,"")); return Number.isFinite(n)&&n>=0 ? Math.floor(n) : null; }
 function bytes(value) {
   const n=Number(value);
   if (!Number.isFinite(n)||n<0) return null;
@@ -22,15 +24,18 @@ export function magnetFromHash(hash) {
 function normalize(item,provider) {
   if (!item || !clean(item.name)) return null;
   const magnet=clean(item.magnet);
-  if (!magnet.toLowerCase().startsWith("magnet:?") || magnet.length > 12000) return null;
-  const details=clean(item.details),torrentFile=clean(item.torrentFile);
+  if (magnet && (!magnet.toLowerCase().startsWith("magnet:?") || magnet.length > 12000)) return null;
+  const details=clean(item.details),torrentFile=clean(item.torrentFile),source=clean(item.magnetSource);
+  const allowedDetails=provider in LEGACY_SPECS ? validateLegacyDetail(provider,details) : /^https:\/\//.test(details)?details:null;
+  const allowedSource=provider in LEGACY_SPECS ? validateLegacyDetail(provider,source) : null;
+  if (!magnet && !allowedDetails && !allowedSource) return null;
   return {
     id:provider+":"+(clean(item.id)||magnet.slice(0,180)),
     provider,name:clean(item.name).slice(0,600),
     size: clean(item.size)||null,
     seeders:numeric(item.seeders),peers:numeric(item.peers),
     date:clean(item.date)||null,category:clean(item.category)||"all",
-    magnet,details:/^https:\/\//.test(details)?details:null,
+    magnet:magnet||null,details:allowedDetails,magnetSource:allowedSource,
     torrentFile:/^https:\/\//.test(torrentFile)?torrentFile:null
   };
 }
@@ -61,6 +66,7 @@ function catFromKnaben(values) {
   return Object.entries(KNABEN_CATEGORIES).find(([,num])=>n>=num&&n<num+1000000)?.[0]||"all";
 }
 export const adapters=Object.freeze({
+  ...Object.fromEntries(Object.keys(LEGACY_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await legacySearch(id,q,category,fetcher),id)])),
   ...Object.fromEntries(Object.keys(HTML_PROVIDER_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await runHtmlAdapter(id,q,category,fetcher),id)])),
   async anilibria(q,_category,fetcher) {
     const base="https://anilibria.top/api/v1";

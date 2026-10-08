@@ -7,8 +7,9 @@ This folder contains the first web port of the upstream Android search experienc
 - `web/`: static PWA (vanilla JS, manifest, service worker, offline app shell).
 - `worker/`: Cloudflare Worker for explicit provider adapters and an allowlisted Flud Companion Remote relay bridge.
 - `worker/src/catalog.mjs`: all **46** upstream built-in sources, including transparent `ported: false` flags for unfinished adapters.
-- `worker/src/providers.mjs`: first **21** individually implemented adapters; **25 remain to port and verify**.
-- `worker/src/index.mjs`: `/api/providers`, `/api/search`, `/api/companion/status`, `/api/companion/magnet`.
+- `worker/src/providers.mjs`: dispatches all **46** executable source adapters (21 pre-existing and 25 additional source-specific implementations).
+- `worker/src/legacy-specs.mjs` + `legacy-adapters.mjs`: 25 additional legacy-source contracts, including detail-page magnet resolution.
+- `worker/src/index.mjs`: `/api/providers`, `/api/search`, `/api/resolve`, `/api/companion/status`, `/api/companion/magnet`.
 
 ## Development
 
@@ -37,20 +38,24 @@ Pair once in the Settings sheet with your existing **Remote Device ID** and **Re
 
 `https://flud-remote.alexlab.media/api/v1/device/<deviceId>/magnet`
 
-No dynamic target hosts or generic proxy paths are accepted. The browser retains pairing credentials locally. The Worker does not store credentials. The Remote relay only accepts commands while the Shield/Companion is online, and a `202 queued` response means **queued**, not downloaded or confirmed by Flud.
+No dynamic target hosts or generic proxy paths are accepted. The browser retains pairing credentials locally. The Worker does not store credentials. The PWA Settings sheet includes a read-only **Test Shield connection** action. The Remote relay only accepts commands while the Shield/Companion is online, and a `202 queued` response means **queued**, not downloaded or confirmed by Flud.
 
 Auto-start uses the Companion's existing validated helper; the PWA does not implement an independent or duplicate magnet handoff. If an iPhone browser cannot open `magnet:` locally, use **Send to Flud** via the Remote relay or **Copy** and open the existing Companion PWA.
 
 ## Provider coverage policy
 
-Catalog coverage is not functional parity. When an upstream provider changes:
+**All 46 source adapters are coded**, but implementation does not prove they currently work against every upstream site. Full live validation remains mandatory. Catalog coverage is not verified uptime. When an upstream provider changes:
 
 1. Update the corresponding Worker adapter; do not silently fall back to unrelated search results.
 2. Add source-specific fixtures/tests.
-3. Mark `ported: true` only once the port exists and is tested.
+3. Mark `ported: true` only once the adapter exists and passes test contracts. **This flag is not provider-live-verified**.
 4. Maintain all 46 upstream IDs (or deliberately reconcile additions/removals with the owner).
 5. Document Cloudflare/CORS/provider limits in `docs/PROJECT_STATE.md`.
 
 Production is deployed at **https://index.alexlab.media** (2026-10-08). GitHub-hosted smoke checks passed HTTP+TLS, homepage, manifest, health and 46-entry provider catalog. Provider-level live search reliability, mobile PWA installation and Shield handoff still require independent end-to-end validation.
 
 `python3 scripts/check-production-smoke.py` verifies the public site and is run automatically after canonical Cloudflare deploys. The standalone workflow `.github/workflows/production-smoke.yml` also checks the public endpoint.
+
+### Production provider audit
+
+After each explicitly marked `[deploy-pwa]` deployment, `scripts/audit-live-providers.py` checks all 46 indexers with a benign `ubuntu` search, capped at three concurrent searches, without fetching torrent files or opening magnets. Outcomes distinguish results, empty/unverified, provider errors and request errors. Upstream blocking does not falsely mark repository CI as broken; review job logs for follow-up fixes.

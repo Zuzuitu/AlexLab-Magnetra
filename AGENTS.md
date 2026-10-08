@@ -51,9 +51,10 @@ Never leave the checkpoint behind the code.
 ## Provider parity and Companion-specific protections
 
 - Upstream source of truth is `app/src/main/kotlin/com/prajwalch/torrentsearch/di/BuiltinSearchProvidersModule.kt`: 46 registered providers today. Preserve all IDs in `worker/src/catalog.mjs` and update the manifest/guard if upstream changes.
-- **Do not misrepresent inventory entries as functional adapters.** Only mark a provider `ported: true` after a real provider implementation exists and suitable tests pass. Full 46/46 functional coverage remains the target.
+- **Do not misrepresent inventory entries as functional adapters.** Only mark a provider `ported: true` after a real adapter exists and suitable tests pass. All 46 have adapters as of the second milestone, but individual source availability/live parity remains unverified.
+- The deferred magnet endpoint must reject off-origin details links and external redirects; the PWA must never silently drop a deferred-magnet listing solely because the search page lacks a magnet. Workerd selector tests must validate actual JSON from a dedicated test Worker, not HTTP 200 from the deployed PWA assets.
 - Never use an arbitrary URL proxy. Companion remote relay calls are routed to one allowlisted HTTPS host. Keep tokens out of URLs, service worker caches and logs.
-- Companion magnet commands must use idempotency request IDs; don't claim queued means downloaded. Never modify the proven Flood/Flud Auto-start boundary in another repository as part of a PWA convenience feature.
+- Companion magnet commands must use idempotency request IDs; distinguish queue acceptance from the matching remote Shield/Bridge acknowledgement, and never claim queued or acknowledged means downloaded. Never modify the proven Flood/Flud Auto-start boundary in another repository as part of a PWA convenience feature.
 
 ## Technical-memory maintenance
 

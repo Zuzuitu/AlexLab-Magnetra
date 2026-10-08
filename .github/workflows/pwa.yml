@@ -19,8 +19,25 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check worker/src/index.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check web/app.js && node --check web/sw.js
+        run: node --check worker/src/index.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check web/app.js && node --check web/sw.js
       - name: Test provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
+      - name: Validate provider selectors in real Cloudflare workerd runtime
+        run: |
+          npx --yes wrangler@4.45.4 dev --config worker/test/wrangler-selector.jsonc --port 8789 > "$RUNNER_TEMP/magnetra-selectors.log" 2>&1 &
+          WORKER_PID=$!
+          trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 35); do
+            if curl --max-time 4 -fsS http://127.0.0.1:8789/ > "$RUNNER_TEMP/magnetra-selector-results.json"; then
+              if node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(x.ok!==true||x.checked!==35||x.invalid?.length)process.exit(1)' "$RUNNER_TEMP/magnetra-selector-results.json"; then
+                cat "$RUNNER_TEMP/magnetra-selector-results.json"
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/magnetra-selectors.log"
+          test -f "$RUNNER_TEMP/magnetra-selector-results.json" && cat "$RUNNER_TEMP/magnetra-selector-results.json"
+          exit 1
       - name: Verify Cloudflare Worker bundle and static PWA assets
         run: npx --yes wrangler@4.45.4 deploy --config worker/wrangler.jsonc --dry-run --outdir .wrangler-magnetra-preview
