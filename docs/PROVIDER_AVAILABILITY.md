@@ -1,5 +1,25 @@
 # Provider availability audit — AlexLab Magnetra
 
+## Second production audit — deployed source recovery
+
+_Observation: 2026-10-08, deploy workflow run **37816874771**, commit `060ce27a2ba36310e7e5bc814c025633aba10cff`._
+
+| Outcome | Count | Change vs previous |
+| --- | ---: | --- |
+| Search returned results | **12** | No change |
+| Empty / unverified | **12** | −1 |
+| Provider-side error | **22** | +1 |
+| API transport failure | **0** | No change |
+
+BTDigg: `TIMEOUT`; the API includes an owned-source browser link. Other errors are mostly `ACCESS_DENIED` (HTTP 403), with `REDIRECT_BLOCKED`, `RATE_LIMIT`, `UPSTREAM_ERROR` and some `TIMEOUT` statuses.
+
+Sukebei Nyaa moved from empty/unverified to timeout, accounting for the increase from 21 to 22 errors. Most remaining classifications were consistent with earlier audit observations. One TokyoToshokan response lacked the typed code (`UNCLASSIFIED`) although the underlying error was HTTP 403; this needs re-verification rather than an invented explanation.
+
+Cloudflare HTTPS, homepage, manifest, health API and all 46 catalog entries passed. Those checks establish deployment integrity, **not live success for all torrent indexers**. Source fallback is manual direct-browser search and correctly attributed independent alternatives. The new clipboard-to-Flud action still requires the owner's on-device confirmation.
+
+---
+
+
 _Observation: 2026-10-08, Cloudflare production deployment workflow run 37769029530. Query: `ubuntu` (single bounded call per indexer). This is a snapshot, not an uptime guarantee._
 
 ## Summary
