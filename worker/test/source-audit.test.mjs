@@ -40,3 +40,13 @@ test("source-selection UI never treats all implemented adapters as verified work
  assert.ok(html.includes('Select last-audit results'));
  assert.ok(html.includes('not live uptime'));
 });
+
+test("server and PWA default search profiles are the same four audit-positive indexers",()=>{
+ const backend=readFileSync(new URL("../src/index.mjs",import.meta.url),"utf8");
+ const frontend=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
+ const profile='["knaben","torrentscsv","thepiratebay","internetarchive"]';
+ assert.ok(backend.includes("const DEFAULT_IDS="+profile));
+ assert.ok(frontend.includes("const preferred="+profile));
+ for(const id of ["knaben","torrentscsv","thepiratebay","internetarchive"])
+  assert.equal(SOURCE_AUDIT.outcomes[id].state,"results",id);
+});
