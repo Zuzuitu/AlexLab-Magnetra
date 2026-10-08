@@ -456,6 +456,14 @@ def check_web_parity_and_companion(config: dict) -> None:
         fail("PWA must not serialize remote Companion credentials into URLs")
     if "python3 scripts/check-project-invariants.py" not in web_ci.read_text(encoding="utf-8"):
         fail("PWA CI must run the invariant gate before JS tests")
+    audit_path = ROOT / parity.get("production_audit_script", "")
+    require_file(audit_path)
+    deploy_workflow = ROOT / ".github" / "workflows" / "deploy-pwa.yml"
+    if deploy_workflow.is_file() and parity.get("production_audit_script"):
+        expected_audit = "python3 " + parity["production_audit_script"]
+        if expected_audit not in deploy_workflow.read_text(encoding="utf-8"):
+            fail("explicit production deploy must audit all 46 source search responses")
+
 
 
     deployment = nested(config, "deployment")
