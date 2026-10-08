@@ -237,10 +237,10 @@ Future fixed regressions with durable lessons must be recorded here with:
 - Fork created successfully.
 - Android baseline originates from upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`; fork `main` now diverges intentionally with PWA and technical memory.
 - Technical-memory guard baseline is established in main and enforced in CI.
-- PWA web shell and all **46 provider adapters implemented in this feature milestone**; provider-specific live search reliability and physical Shield integration are not yet established, and code is pending PR/CI promotion.
+- PWA web shell and all **46 provider adapters** are merged and deployed. The 2026-10-08 production audit confirmed results from 12 sources, 12 empty/unverified and 22 source errors. Physical Shield handoff remains unverified; the audit-aware source selection improvement is under PR review.
 - PWA backend/proxy is deployed to Cloudflare Workers with fixed allowlisted upstream endpoints.
 - Full 46-provider **implementation coverage reached and deployed**, but functional/live parity remains unverified. Never infer source uptime from the catalogue.
-- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain, deployed in successful GitHub Actions run 37596819448 (retry attempt 2). Independent public smoke run 37755554228 confirmed HTTP+TLS, HTML, PWA manifest, `/api/health` and `/api/providers` (21 ported flags/46 total). Deploy requires manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
+- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Initial deployment was verified by run 37596819448; the later 46-adapter recovery deployment passed run **37816874771** and the independent HTTPS/PWA smoke checks. Deploy requires manual dispatch or an explicit `[deploy-pwa]` marker on `main`; ordinary pushes do not redeploy.
 - Paid services: none approved.
 
 ## Next relevant steps
