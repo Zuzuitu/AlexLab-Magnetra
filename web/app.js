@@ -271,6 +271,12 @@ function init(){
   state.pairing={deviceId,token,autoStart:$("companionAuto").checked};
   save(STORAGE.pairing,state.pairing);closeDialog("settingsDialog");toast("Companion paired in this browser.");status();
  });
+ $("checkCompanion").addEventListener("click",async function(){
+   if(!state.pairing){toast("Save Remote QR pairing first.");return;}
+   this.disabled=true;const label=this.textContent;this.textContent="Checking…";
+   try{await status();toast("Device status refreshed; see pairing status.");}
+   finally{this.disabled=false;this.textContent=label;}
+ });
  $("forgetCompanion").addEventListener("click",()=>{
    state.pairing=null;localStorage.removeItem(STORAGE.pairing);
    $("companionDevice").value="";$("companionToken").value="";$("companionAuto").checked=false;
