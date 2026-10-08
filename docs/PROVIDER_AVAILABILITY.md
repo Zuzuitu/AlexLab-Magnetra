@@ -1,5 +1,9 @@
 # Provider availability audit — AlexLab Magnetra
 
+## Machine-readable snapshot used by the PWA
+
+The current dated source selection snapshot lives in `worker/src/source-audit.mjs`, generated from production workflow **37816874771**. It records **12 sources with results, 12 empty/unverified and 22 errors**, corresponding to a single `ubuntu` search at 2026-10-08 17:29 UTC. The PWA displays this observation explicitly as historical and uses it to offer a fast, practical source-selection option. It does not claim current uptime.
+
 ## Second production audit — deployed source recovery
 
 _Observation: 2026-10-08, deploy workflow run **37816874771**, commit `060ce27a2ba36310e7e5bc814c025633aba10cff`._
