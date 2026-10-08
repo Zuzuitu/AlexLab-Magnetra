@@ -19,3 +19,10 @@
 #pasteMagnetButton{border:1px solid #42684a;border-radius:10px;padding:10px 12px;color:#b7f598;background:#1a2a20;font-weight:780}
 #pasteMagnetButton:hover:not(:disabled){border-color:#a3f779}
 @media(max-width:550px){#pasteMagnetButton{order:3;flex:1 0 100%;text-align:center}.summary-line{padding-bottom:29px}}
+
+/* Audit labels describe a dated test result, never real-time availability. */
+.provider-row small{font-size:9px;white-space:normal;text-align:right;max-width:125px;line-height:1.35}
+.provider-row small.audit-results{color:#a3f779}
+.provider-row small.audit-error{color:#f4b68b}
+.provider-row small.audit-empty-unverified{color:#9db2b3}
+.sheet-actions{flex-wrap:wrap}
