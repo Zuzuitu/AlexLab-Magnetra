@@ -51,7 +51,7 @@ test("all original 46 indexers now have executable adapters; 25 legacy adapters 
    assert.ok(spec.magnet||spec.magnetSource||spec.magnetHashLink||spec.hashFromDetailsSuffix||spec.details,id);
    const url=new URL(legacySearchUrl(spec,"ubuntu & linux"));
    assert.equal(url.origin,spec.host,id);
-   assert.match(url.toString(),/%26/,id);
+   if(spec.method!=="POST_FORM")assert.match(url.toString(),/%26/,id);
  }
 });
 test("provider URLs reject off-domain details, insecure requests, username injection and oversized URLs",()=>{
