@@ -1,5 +1,34 @@
-const CACHE="alexlab-magnetra-v1";
+const CACHE="alexlab-magnetra-v2";
 const ASSETS=["/","/index.html","/styles.css","/app.js","/icon.svg","/manifest.webmanifest"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener("activate",e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("alexlab-magnetra-")&&k!==CACHE).map(k=>caches.delete(k))))])));
-self.addEventListener("fetch",e=>{const u=new URL(e.request.url);if(e.request.method!=="GET"||u.origin!==self.location.origin||u.pathname.startsWith("/api/"))return;if(e.request.mode==="navigate"){e.respondWith(fetch(e.request).catch(()=>caches.match("/")));return;}e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});
+const FRESH_ASSETS=new Set(["/app.js","/styles.css","/manifest.webmanifest"]);
+self.addEventListener("install",event=>
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))
+);
+self.addEventListener("activate",event=>event.waitUntil(Promise.all([
+  self.clients.claim(),
+  caches.keys().then(keys=>Promise.all(keys.filter(name=>name.startsWith("alexlab-magnetra-")&&name!==CACHE).map(name=>caches.delete(name))))
+])));
+self.addEventListener("fetch",event=>{
+  const url=new URL(event.request.url);
+  if(event.request.method!=="GET"||url.origin!==self.location.origin||url.pathname.startsWith("/api/"))return;
+
+  if(event.request.mode==="navigate"){
+    event.respondWith(fetch(event.request).catch(()=>caches.match("/") ));
+    return;
+  }
+
+  if(FRESH_ASSETS.has(url.pathname)){
+    event.respondWith(
+      fetch(event.request,{cache:"no-store"}).then(response=>{
+        if(response.ok){
+          const copy=response.clone();
+          event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));
+        }
+        return response;
+      }).catch(()=>caches.match(event.request))
+    );
+    return;
+  }
+
+  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request)));
+});
