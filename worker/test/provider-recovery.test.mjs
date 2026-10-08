@@ -18,6 +18,9 @@ test("other provider direct links stay bound to provider-owned canonical HTTPS o
    assert.ok(link.includes("%26"),id);
  }
  assert.equal(directSearchUrl("torrentscsv","ubuntu"),null,"Do not invent a public search URL for API-backed sources");
+ assert.equal(directSearchUrl("nonameclub","ubuntu"),null,"Form-only searches must not be misrepresented as bookmarkable GET URLs");
+ assert.equal(directSearchUrl("epublibre","ubuntu"),null,"POST-JSON searches cannot be reproduced by a browser GET");
+
 });
 test("provider error categories distinguish timeouts, rate limits, access denial and blocked redirects",()=>{
  assert.equal(classifyProviderError("The operation was aborted due to timeout").code,"TIMEOUT");
