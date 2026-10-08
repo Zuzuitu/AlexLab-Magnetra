@@ -73,3 +73,7 @@ The source inventory and implemented adapters do not guarantee live access to ea
 Magnetra now reports distinct error statuses, offers a direct HTTPS source-search link when supported, and a separate search using working alternative indexers. Alternative results always carry the correct indexer name. Browser-restricted results cannot be read back automatically into the PWA.
 
 No paid dependencies are used. See docs/PROJECT_STATE.md for the verified diagnostics.
+
+### Copy from browser → Flud Companion
+
+If you open BTDigg (or another source) directly in Safari, copy a magnet link. Return to Magnetra and press **Paste magnet → Flud**. The clipboard is read only after that explicit tap; if iOS denies clipboard access, a manual paste field opens. The existing paired Remote relay handles the dispatch, and the UI still distinguishes relay queue acceptance from Shield acknowledgement. This is a manual browser-origin fallback, not direct cross-origin scraping.
