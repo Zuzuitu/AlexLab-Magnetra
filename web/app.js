@@ -57,7 +57,7 @@ function renderProviders(){
   });
   const name=el("strong","",p.name);
   label.append(input,name);
-  const marker=el("small","",p.ported?"READY":"PORT PENDING");
+  const marker=el("small","",p.ported?"ADAPTER":"PORT PENDING");
   row.append(label,marker);grid.append(row);
  }
 }
@@ -131,7 +131,7 @@ async function sendMagnet(item,button){
    button.textContent="Queued ✓";
    await verifyCompanionReceipt(result.id,button);
  }catch(e){toast(e.message);button.title=e.message;}
- finally{button.disabled=false;button.textContent=original;}
+ finally{button.disabled=false;if(button.textContent==="Sending…"||button.textContent==="Queued ✓")button.textContent=original;}
 }
 function renderResults(){
  const root=$("results");root.replaceChildren();
