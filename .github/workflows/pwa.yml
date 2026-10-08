@@ -40,6 +40,6 @@ jobs:
           test -f "$RUNNER_TEMP/magnetra-selector-results.json" && cat "$RUNNER_TEMP/magnetra-selector-results.json"
           exit 1
       - name: Diagnose BTDigg host reachability (temporary)
-        run: node worker/test/diagnose-btdig.mjs
+        run: node worker/test/diagnose-btdig.mjs && node worker/test/diagnose-redirects.mjs
       - name: Verify Cloudflare Worker bundle and static PWA assets
         run: npx --yes wrangler@4.45.4 deploy --config worker/wrangler.jsonc --dry-run --outdir .wrangler-magnetra-preview
