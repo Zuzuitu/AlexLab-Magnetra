@@ -59,3 +59,9 @@ Production is deployed at **https://index.alexlab.media** (2026-10-08). GitHub-h
 ### Production provider audit
 
 After each explicitly marked `[deploy-pwa]` deployment, `scripts/audit-live-providers.py` checks all 46 indexers with a benign `ubuntu` search, capped at three concurrent searches, without fetching torrent files or opening magnets. Outcomes distinguish results, empty/unverified, provider errors and request errors. Upstream blocking does not falsely mark repository CI as broken; review job logs for follow-up fixes.
+
+### Live provider audit findings (2026-10-08)
+
+After the 46-adapter deployment, a benign `ubuntu` search returned results from 8 sources, 14 empty/unverified sources and 24 explicit upstream errors, mostly 403. Use job `37763214467` for provider-level evidence. Search results are not guaranteed simply because a source adapter is installed. Cloudflare challenge cookies and upstream server restrictions require independent compatibility work.
+
+The follow-up outbound compatibility layer mirrors the pinned Android `NetworkClient.USER_AGENT` and permits **one same-origin HTTPS redirect**, never arbitrary redirects. Do not silently introduce a generic fetch proxy or third-party paid CAPTCHA service.
