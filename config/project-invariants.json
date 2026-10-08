@@ -111,5 +111,10 @@
     "source_browser_links_must_use_https": true,
     "clipboard_read_requires_explicit_user_action": true,
     "manual_magnets_use_existing_companion_dispatch": true
+  },
+  "pwa_cache": {
+    "api_requests_never_cached": true,
+    "application_assets_network_first": true,
+    "offline_shell_preserved": true
   }
 }
