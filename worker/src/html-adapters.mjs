@@ -1,3 +1,4 @@
+import {SOURCE_HEADERS} from "./request-headers.mjs";
 /**
  * HTML providers ported from Android Jsoup source selectors. Every provider has
  * explicit fixed URL construction, row selectors and field selectors. No
@@ -178,7 +179,7 @@ export async function runHtmlAdapter(id,q,category,fetcher=fetch) {
  // Never allow redirect to a user-controlled arbitrary URL.
  if(!u.startsWith(spec.host+"/")&&!u.startsWith(spec.host+"?"))throw Error("provider origin mismatch");
  const response=await fetcher(u,{
-   method:"GET",headers:{"accept":"text/html,application/xhtml+xml"},
+   method:"GET",headers:{...SOURCE_HEADERS,"accept":"text/html,application/xhtml+xml"},
    signal:AbortSignal.timeout(11000),redirect:"follow"
  });
  if(!response.ok)throw Error("provider HTTP "+response.status);
