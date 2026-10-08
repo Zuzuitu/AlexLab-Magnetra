@@ -7,7 +7,7 @@ This folder contains the first web port of the upstream Android search experienc
 - `web/`: static PWA (vanilla JS, manifest, service worker, offline app shell).
 - `worker/`: Cloudflare Worker for explicit provider adapters and an allowlisted Flud Companion Remote relay bridge.
 - `worker/src/catalog.mjs`: all **46** upstream built-in sources, including transparent `ported: false` flags for unfinished adapters.
-- `worker/src/providers.mjs`: first **21** individually implemented adapters; **35 remain to port and verify**.
+- `worker/src/providers.mjs`: first **21** individually implemented adapters; **25 remain to port and verify**.
 - `worker/src/index.mjs`: `/api/providers`, `/api/search`, `/api/companion/status`, `/api/companion/magnet`.
 
 ## Development
@@ -51,4 +51,6 @@ Catalog coverage is not functional parity. When an upstream provider changes:
 4. Maintain all 46 upstream IDs (or deliberately reconcile additions/removals with the owner).
 5. Document Cloudflare/CORS/provider limits in `docs/PROJECT_STATE.md`.
 
-No production endpoint has been deployed or verified at the time this first scaffold is committed.
+Production is deployed at **https://index.alexlab.media** (2026-10-08). GitHub-hosted smoke checks passed HTTP+TLS, homepage, manifest, health and 46-entry provider catalog. Provider-level live search reliability, mobile PWA installation and Shield handoff still require independent end-to-end validation.
+
+`python3 scripts/check-production-smoke.py` verifies the public site and is run automatically after canonical Cloudflare deploys. The standalone workflow `.github/workflows/production-smoke.yml` also checks the public endpoint.
