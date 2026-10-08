@@ -1,3 +1,4 @@
+import {SOURCE_HEADERS} from "./request-headers.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {legacySearch,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
@@ -44,7 +45,7 @@ async function requestJson(url, options={}, fetcher=fetch) {
   const response=await fetcher(url,{
     ...options,redirect:"follow",
     signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    headers:{"accept":"application/json",...(options.headers||{})}
+    headers:{...SOURCE_HEADERS,"accept":"application/json",...(options.headers||{})}
   });
   if(!response.ok)throw Error("provider HTTP "+response.status);
   const length=Number(response.headers.get("content-length")||0);
@@ -54,7 +55,7 @@ async function requestJson(url, options={}, fetcher=fetch) {
   return JSON.parse(text);
 }
 async function requestHtml(url,fetcher=fetch) {
-  const response=await fetcher(url,{signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),headers:{"accept":"text/html"}});
+  const response=await fetcher(url,{signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),headers:{...SOURCE_HEADERS,"accept":"text/html"}});
   if(!response.ok)throw Error("provider HTTP "+response.status);
   const body=await response.text();
   if(body.length>3_000_000)throw Error("provider response too large");
