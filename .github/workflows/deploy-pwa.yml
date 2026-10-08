@@ -41,3 +41,5 @@ jobs:
         run: npx --yes wrangler@4.45.4 deploy --config worker/wrangler.jsonc
       - name: Verify live production HTTPS, PWA and APIs after deployment
         run: python3 scripts/check-production-smoke.py
+      - name: Audit all 46 provider search responses (no torrent downloads)
+        run: python3 scripts/audit-live-providers.py
