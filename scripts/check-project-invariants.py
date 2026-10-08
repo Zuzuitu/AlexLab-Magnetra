@@ -443,6 +443,24 @@ def check_web_parity_and_companion(config: dict) -> None:
                 fail("production deploy must run invariants before deployment")
 
 
+            smoke_cmd = deployment.get("production_smoke_command")
+            if not smoke_cmd or smoke_cmd not in deploy_text:
+                fail("production deploy must verify live PWA endpoints after publishing")
+            elif deploy_text.find(smoke_cmd) <= deploy_text.find("npx --yes wrangler@4.45.4 deploy --config worker/wrangler.jsonc"):
+                fail("production smoke must run AFTER deployment, not before")
+        smoke_workflow = ROOT / ".github" / "workflows" / "production-smoke.yml"
+        smoke_script = ROOT / "scripts" / "check-production-smoke.py"
+        for path in (smoke_workflow, smoke_script):
+            require_file(path)
+        if smoke_workflow.is_file() and deployment.get("production_smoke_command") not in smoke_workflow.read_text(encoding="utf-8"):
+            fail("standalone production smoke workflow must execute the canonical check")
+        if smoke_script.is_file():
+            smoke_text = smoke_script.read_text(encoding="utf-8")
+            for endpoint in deployment.get("production_smoke_required_endpoints", []):
+                if endpoint not in smoke_text:
+                    fail(f"production smoke script must cover endpoint: {endpoint}")
+
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
