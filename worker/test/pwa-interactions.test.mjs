@@ -24,12 +24,12 @@ function harness(fetcher){
   Response,DOMException,Date,Promise,Set,Map,
   setTimeout:(cb)=>setTimeout(cb,0),clearTimeout,
  };
- runInNewContext(source+\`
+ runInNewContext(source+`
  renderResults=()=>{};
  renderProviderErrors=()=>{};
  toast=()=>{};
  globalThis.testing={state,search,sendMagnet,magnetIdentity};
- \`,sandbox,{filename:"web/app.js"});
+ `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element};
 }
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
