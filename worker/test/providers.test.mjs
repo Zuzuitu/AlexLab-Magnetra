@@ -38,8 +38,8 @@ test("TorrentsCSV constructs magnet without upstream trackers",async()=>{
  const rows=await searchProvider("torrentscsv","test linux","all",fetcher);
  assert.equal(rows.length,1);assert.equal(rows[0].magnet,magnet);
 });
-test("unported provider cannot masquerade as searchable",async()=>{
- await assert.rejects(()=>searchProvider("1337x","linux","all"),/not ported/);
+test("unknown provider cannot masquerade as searchable",async()=>{
+ await assert.rejects(()=>searchProvider("invented-provider","linux","all"),/not ported/);
  await assert.rejects(()=>searchProvider("knaben","x","all"),/2–180/);
 });
 test("API catalog is complete and never publishes credentials",async()=>{
