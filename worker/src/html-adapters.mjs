@@ -180,7 +180,9 @@ export async function runHtmlAdapter(id,q,category,fetcher=fetch) {
  if(!u.startsWith(spec.host+"/")&&!u.startsWith(spec.host+"?"))throw Error("provider origin mismatch");
  const response=await fetchProviderSameOrigin(u,{
    method:"GET",headers:{...SOURCE_HEADERS,"accept":"text/html,application/xhtml+xml"},
-   signal:AbortSignal.timeout(11000)
+   // BTDigg rate-limits hosted requests. Fail promptly rather than
+   // making mobile users wait before offering the direct browser search.
+   signal:AbortSignal.timeout(id==="btdigg"?6500:11000)
  },fetcher);
  if(!response.ok)throw Error("provider HTTP "+response.status);
  if(response.headers.get("cf-mitigated")==="challenge")throw Error("provider Cloudflare challenge");
