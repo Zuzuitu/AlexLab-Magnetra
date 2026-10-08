@@ -469,6 +469,22 @@ def check_web_parity_and_companion(config: dict) -> None:
             if "renderProviderErrors" not in frontend_recovery or "Search with available indexers" not in frontend_recovery:
                 fail("PWA must provide explicitly attributed alternative search on source failure")
 
+    pwa_cache = nested(config, "pwa_cache")
+    if pwa_cache:
+        sw_path = ROOT / "web" / "sw.js"
+        require_file(sw_path)
+        if sw_path.is_file():
+            sw_text = sw_path.read_text(encoding="utf-8")
+            if pwa_cache.get("api_requests_never_cached") and 'url.pathname.startsWith("/api/")' not in sw_text:
+                fail("service worker must never cache /api/ requests")
+            if pwa_cache.get("application_assets_network_first") and (
+                'fetch(event.request,{cache:"no-store"})' not in sw_text
+                or '"/app.js"' not in sw_text or '"/styles.css"' not in sw_text
+            ):
+                fail("PWA JavaScript and CSS must use network-first refresh")
+            if pwa_cache.get("offline_shell_preserved") and 'caches.match("/")' not in sw_text:
+                fail("PWA offline shell fallback must remain available")
+
     headers_path = ROOT / "worker" / "src" / "request-headers.mjs"
     require_file(headers_path)
     if headers_path.is_file():
