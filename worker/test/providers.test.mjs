@@ -124,3 +124,11 @@ test("ten fixed-endpoint HTML adapter contracts are registered and encoded",()=>
   assert.ok(url.toString().includes("%26"),id+": search query was not encoded");
  }
 });
+
+test("missing seed/leech fields remain unknown rather than fabricated zero",async()=>{
+ const hash="0123456789abcdef0123456789abcdef01234567";
+ const rows=await searchProvider("torrentscsv","ubuntu","all",async()=>new Response(JSON.stringify({torrents:[{name:"Ubuntu ISO",id:77,infohash:hash,size_bytes:1024}]}),{headers:{"content-type":"application/json"}}));
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].seeders,null);
+ assert.equal(rows[0].peers,null);
+});
