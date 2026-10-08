@@ -457,6 +457,13 @@ def check_web_parity_and_companion(config: dict) -> None:
             worker_text_recovery = source_worker.read_text(encoding="utf-8")
             if "classifyProviderError(e)" not in worker_text_recovery or "directSearchUrl(id,q)" not in worker_text_recovery:
                 fail("Worker does not expose typed provider errors and exact source recovery URL")
+        if frontend.is_file() and recovery.get("clipboard_read_requires_explicit_user_action"):
+            frontend_clip = frontend.read_text(encoding="utf-8")
+            if ('$("pasteMagnetButton").addEventListener("click"' not in frontend_clip
+                    or "navigator.clipboard.readText()" not in frontend_clip):
+                fail("clipboard access must be initiated by explicit user interaction")
+            if recovery.get("manual_magnets_use_existing_companion_dispatch") and "sendMagnet({magnet}" not in frontend_clip:
+                fail("manual clipboard magnet must reuse the approved Companion dispatch path")
         if frontend.is_file() and recovery.get("never_relabel_alternative_results"):
             frontend_recovery = frontend.read_text(encoding="utf-8")
             if "renderProviderErrors" not in frontend_recovery or "Search with available indexers" not in frontend_recovery:
