@@ -435,6 +435,21 @@ def check_web_parity_and_companion(config: dict) -> None:
         if 'x.checked!==35' not in web_ci.read_text(encoding="utf-8"):
             fail("CI must validate the actual JSON result for all 35 HTML selector adapters")
 
+    headers_path = ROOT / "worker" / "src" / "request-headers.mjs"
+    require_file(headers_path)
+    if headers_path.is_file():
+        headers_text = headers_path.read_text(encoding="utf-8")
+        expected_agent = parity.get("upstream_user_agent")
+        if not expected_agent or expected_agent not in headers_text:
+            fail("outbound source User-Agent differs from the protected Android baseline")
+        if parity.get("max_same_origin_redirects") != 1:
+            fail("provider redirect limit must remain exactly 1")
+        if "target.origin!==original.origin" not in headers_text or "target.protocol!==\"https:\"" not in headers_text:
+            fail("provider redirect helper lost strict origin/HTTPS requirements")
+    for source_name in ("legacy-adapters.mjs", "html-adapters.mjs"):
+        path = ROOT / "worker" / "src" / source_name
+        if path.is_file() and "fetchProviderSameOrigin" not in path.read_text(encoding="utf-8"):
+            fail(f"{source_name}: must use the origin-restricted provider request helper")
     worker_text = source_worker.read_text(encoding="utf-8")
     origin = companion["allowed_remote_relay_origin"]
     if f'COMPANION_RELAY_ORIGIN="{origin}"' not in worker_text:

@@ -1,3 +1,4 @@
+import {SOURCE_USER_AGENT,fetchProviderSameOrigin} from "../src/request-headers.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {PROVIDERS} from "../src/catalog.mjs";
@@ -66,7 +67,7 @@ test("legacy provider does not follow arbitrary redirects",async()=>{
  const spec=LEGACY_SPECS["1337x"];
  await assert.rejects(
    ()=>legacySearch("1337x","ubuntu","all",async()=>new Response("",{status:302,headers:{location:"http://127.0.0.1/private"}})),
-   /redirected/
+   /redirect/
  );
  assert.ok(spec.details);
 });
@@ -169,4 +170,22 @@ test("same-origin resolver returns an actual magnet only after an approved sourc
    assert.equal((await res.json()).magnet,MAGNET);
    assert.equal(requests,1);
  }finally{globalThis.fetch=prior;}
+});
+
+test("outgoing source user-agent matches protected upstream Android baseline",()=>{
+ assert.equal(SOURCE_USER_AGENT,
+   "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36");
+});
+test("same-origin redirect is followed once but off-origin redirect never is",async()=>{
+ let count=0;
+ const fetcher=async(url,opts)=>{
+   count++;assert.equal(opts.redirect,"manual");
+   if(count===1)return new Response(null,{status:302,headers:{"location":"/results?q=ubuntu"}});
+   assert.equal(url,"https://linuxtracker.org/results?q=ubuntu");
+   return new Response("OK",{status:200});
+ };
+ const result=await fetchProviderSameOrigin("https://linuxtracker.org/search?q=ubuntu",{},fetcher);
+ assert.equal(result.status,200);assert.equal(count,2);
+ await assert.rejects(()=>fetchProviderSameOrigin("https://linuxtracker.org/",{},async()=>
+   new Response(null,{status:302,headers:{location:"http://169.254.169.254/latest/meta-data"}})),/redirect left/);
 });

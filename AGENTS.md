@@ -67,3 +67,7 @@ Update `docs/PROJECT_STATE.md` naturally after important milestones when any of 
 - new critical invariants.
 
 When explicitly asked to “Actualizează checkpoint-ul proiectului cu toate deciziile din această sesiune.”, verify current `main`, review only decisions actually made in the current session, and synchronize the repository memory without inventing decisions or deleting still-relevant history.
+
+## Outbound provider compatibility
+
+All Worker provider fetches must retain the protected Android `NetworkClient.USER_AGENT` in `worker/src/request-headers.mjs` and never follow redirects outside the original HTTPS provider origin. A maximum of one in-origin redirect is supported. Do not remove these guards or claim a provider is live-verified without a production audit. The 2026-10-08 first audit showed 8 sources with results, 14 empty/unverified, and 24 source errors. Record any improved/degraded counts from future audits rather than assuming HTTP 403 is a code defect.

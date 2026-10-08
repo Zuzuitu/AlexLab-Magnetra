@@ -119,6 +119,22 @@ During the full indexer port, `numeric(null)` was found to produce `0` because J
 
 While extending source testing, the HTML selector smoke check initially reported success because Wrangler picked up the production static-assets configuration and returned the PWA homepage (HTTP 200), **not** the test Worker response. Root cause: the CI command did not pin a dedicated test Wrangler config or validate response semantics. Fix: `worker/test/wrangler-selector.jsonc` specifies `selectors.worker.mjs`, and CI accepts only JSON with `ok === true`, `checked === 35` and zero invalid selectors. A new invariant prevents this test from silently reverting to an HTTP-only check.
 
+## First live 46-provider production audit (2026-10-08)
+
+The explicitly approved deployment `0b2eec1f2cec13fae05d3a7b4c15bca463afee7a` published 46/46 executable indexer adapters to `index.alexlab.media`. HTTPS, PWA manifest, health API and 46-source catalog passed.
+
+The first bounded, non-destructive live `ubuntu` query audit returned:
+
+- **8** sources with at least one search result: AudioBookBay, Dmhy, EpubLibre, Internet Archive, Knaben, NoNameClub, TorrentsCSV, 0Magnet.
+- **14** empty or unverified (no results for this specific query, not automatically broken).
+- **24** explicit provider-side errors: mainly HTTP 403; also one HTTP 429 (Nyaa), HTTP 530 (Torrentz), one redirect that the PWA initially refused (LinuxTracker), and an HTML source timeout (BTDigg). Details are in deployment run `37763214467` logs.
+
+This is evidence of partial real-world availability, **not** 46/46 live functionality. A CI adapter test only proves local contracts/selector syntax. Source anti-bot pages, IP reputation, cookies and third-party layout changes remain external limitations.
+
+### Provider fetch compatibility mitigation
+
+The upstream Android `NetworkClient.USER_AGENT` is a fixed Android Chrome 141 UA and uses persistent WebView cookies when needed. The first Cloudflare Worker source fetchers did not consistently send that UA. The compatibility patch centralizes this exact baseline string for Workers in `worker/src/request-headers.mjs` and adds a strictly provider-local one-hop HTTPS redirect policy (instead of blindly following arbitrary redirects). This may improve some third-party compatibility; **no improvement is claimed until a second live audit confirms it**. This is not a Cloudflare challenge/CAPTCHA bypass.
+
 ## Data and security rules
 
 - Never commit private keys, keystores, credentials, access tokens, real `.env` files, or service-account credentials.
@@ -171,7 +187,7 @@ Future fixed regressions with durable lessons must be recorded here with:
 - Technical-memory guard baseline is established in main and enforced in CI.
 - PWA web shell and all **46 provider adapters implemented in this feature milestone**; provider-specific live search reliability and physical Shield integration are not yet established, and code is pending PR/CI promotion.
 - PWA backend/proxy is deployed to Cloudflare Workers with fixed allowlisted upstream endpoints.
-- Full 46-provider **implementation coverage reached**, but functional/live parity remains unverified. Never infer source uptime from the catalogue.
+- Full 46-provider **implementation coverage reached and deployed**, but functional/live parity remains unverified. Never infer source uptime from the catalogue.
 - Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain, deployed in successful GitHub Actions run 37596819448 (retry attempt 2). Independent public smoke run 37755554228 confirmed HTTP+TLS, HTML, PWA manifest, `/api/health` and `/api/providers` (21 ported flags/46 total). Deploy requires manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
 - Paid services: none approved.
 
