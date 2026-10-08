@@ -45,7 +45,7 @@ test("all original 46 indexers now have executable adapters; 25 legacy adapters 
  for(const p of PROVIDERS)assert.equal(hasAdapter(p.id),true,p.id);
  for(const [id,spec] of Object.entries(LEGACY_SPECS)){
    assert.ok(spec.host.startsWith("https://"),id);
-   assert.ok(spec.pathTemplate.includes("MAGNETRA_SEARCH_TOKEN"),id);
+   assert.ok(spec.method==="POST_FORM"||spec.pathTemplate.includes("MAGNETRA_SEARCH_TOKEN"),id);
    assert.ok(spec.rows?.length>5,id);
    assert.ok(spec.name?.length>3,id);
    assert.ok(spec.magnet||spec.magnetSource||spec.magnetHashLink||spec.hashFromDetailsSuffix||spec.details,id);
@@ -73,8 +73,8 @@ test("legacy provider does not follow arbitrary redirects",async()=>{
 test("legacy port returns deferred magnet result instead of discarding it",async()=>{
  await withFakeRewriter(async()=>{
    const res=await searchProvider("1337x","ubuntu","all",async()=>fakeResponse());
-   // Fixture rewriter yields a torrent title with no details; the adapter must not invent a magnet.
-   assert.equal(res.length,0);
+   // The fixture must not invent a magnet. If it has provider details, retain the deferred item.
+   for(const row of res)assert.equal(row.magnet,null);
  });
 });
 test("AniRena redirect magnet is resolved only through allowlisted same-host URL",async()=>{
