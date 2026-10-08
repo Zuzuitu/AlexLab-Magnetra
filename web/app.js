@@ -226,7 +226,8 @@ async function status(){
    const online=data.online===true;
    updatePairChip("Flud Companion · "+(online?"Online":"Offline"),online);
    $("pairStatus").textContent=online?"Shield online · Auto-start "+(data.autoStartReady?"ready":"not ready"):"Shield offline";
- }catch(e){updatePairChip("Flud Companion · Unavailable");$("pairStatus").textContent=e.message;}
+   return online;
+ }catch(e){updatePairChip("Flud Companion · Unavailable");$("pairStatus").textContent=e.message;return false;}
 }
 function init(){
  state.bookmarks=load(STORAGE.bookmarks,{});
@@ -274,7 +275,7 @@ function init(){
  $("checkCompanion").addEventListener("click",async function(){
    if(!state.pairing){toast("Save Remote QR pairing first.");return;}
    this.disabled=true;const label=this.textContent;this.textContent="Checking…";
-   try{await status();toast("Device status refreshed; see pairing status.");}
+   try{const online=await status();toast(online?"Shield online.":"Shield offline or unavailable; see pairing status.");}
    finally{this.disabled=false;this.textContent=label;}
  });
  $("forgetCompanion").addEventListener("click",()=>{
