@@ -1,4 +1,4 @@
-import {SOURCE_HEADERS} from "./request-headers.mjs";
+import {SOURCE_HEADERS,fetchProviderSameOrigin} from "./request-headers.mjs";
 import {LEGACY_SPECS,legacySearchUrl} from "./legacy-specs.mjs";
 
 const MAX_HTML = 3_000_000;
@@ -31,12 +31,11 @@ function fromHashUrl(url,kind){
   return null;
 }
 export async function safeProviderHtml(url,options={},fetcher=fetch){
-  const res=await fetcher(url,{
+  const res=await fetchProviderSameOrigin(url,{
     ...options,redirect:"manual",
     signal:AbortSignal.timeout(TIMEOUT),
     headers:{...SOURCE_HEADERS,"accept":"text/html,application/xhtml+xml",...(options.headers||{})}
-  });
-  if(res.status>=300&&res.status<400)throw Error("provider redirected request; explicit verification needed");
+  },fetcher);
   if(!res.ok)throw Error("provider HTTP "+res.status);
   if(res.headers.get("cf-mitigated")==="challenge")throw Error("provider anti-bot challenge");
   if(Number(res.headers.get("content-length")||0)>MAX_HTML)throw Error("provider page too large");
