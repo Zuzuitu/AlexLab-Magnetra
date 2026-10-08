@@ -72,7 +72,7 @@ test("cancel search preserves completed results but ignores late and stale respo
  await api.search(); // pressing Search again while busy means Cancel
  releaseSlow();
  await pending;
- assert.deepEqual(api.state.items.map(x=>x.provider),["fast"]);
+ assert.deepEqual(Array.from(api.state.items,x=>x.provider),["fast"]);
  assert.equal(api.state.searching,false);
  assert.match(element("notice").textContent,/cancelled/i);
 });
