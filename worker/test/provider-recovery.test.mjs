@@ -70,3 +70,12 @@ test("manual browser fallback has an explicit user-gesture clipboard action and 
  assert.ok(app.includes('openDialog("manualMagnetDialog")'));
  assert.ok(app.includes('sendMagnet({magnet}'),"Manual magnets must reuse existing Companion dispatch");
 });
+
+test("PWA online assets are refreshed network-first but authenticated APIs never cached",()=>{
+ const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
+ assert.ok(sw.includes('CACHE="alexlab-magnetra-v2"'));
+ assert.ok(sw.includes('new Set(["/app.js","/styles.css","/manifest.webmanifest"])'));
+ assert.ok(sw.includes('fetch(event.request,{cache:"no-store"})'));
+ assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
+ assert.ok(sw.includes('event.request.method!=="GET"'));
+});
