@@ -82,7 +82,7 @@ export const LEGACY_SPECS=Object.freeze({
     "headers": {
       "Cookie": "layout=def_wlinks"
     },
-    "rows": "table:last-of-type > tbody > tr",
+    "rows": "table > tbody > tr",
     "name": "td:nth-child(2) a.epinfo",
     "details": "td:nth-child(2) a.epinfo",
     "magnet": "td:nth-child(3) a.magnet",
@@ -161,7 +161,7 @@ export const LEGACY_SPECS=Object.freeze({
     "size": "td:nth-child(6) u",
     "seeders": "td.seedmed b",
     "peers": "td.leechmed b",
-    "date": "td:last-child u",
+    "date": "td u",
     "resolution": "page",
     "magnetDetails": "a[href^='magnet:']",
     "pathTemplate": "/forum/tracker.php"
@@ -210,7 +210,7 @@ export const LEGACY_SPECS=Object.freeze({
     "name": "td.desc-top a:nth-child(2)",
     "magnet": "td.desc-top a:nth-child(1)",
     "torrentFile": "td.desc-top a[href$='.torrent']",
-    "details": "td.web a:last-child",
+    "details": "td.web a",
     "seeders": "td.stats span:nth-child(1)",
     "peers": "td.stats span:nth-child(2)",
     "size": "td.desc-bot",
