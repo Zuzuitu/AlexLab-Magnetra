@@ -148,3 +148,25 @@ test("Flud Companion status proxy exposes genuine acknowledgement without creati
    assert.equal(calls,1);
  }finally{globalThis.fetch=prev;}
 });
+
+test("same-origin resolver returns an actual magnet only after an approved source redirect",async()=>{
+ const prior=globalThis.fetch;
+ const origin="https://index.alexlab.media";
+ try{
+   let requests=0;
+   globalThis.fetch=async(url,opts)=>{
+     requests++;
+     assert.equal(url,"https://anirena.com/torrents/42/magnet");
+     assert.equal(opts.redirect,"manual");
+     return new Response(null,{status:302,headers:{"location":MAGNET}});
+   };
+   const req=new Request(origin+"/api/resolve",{
+     method:"POST",headers:{"origin":origin,"content-type":"application/json"},
+     body:JSON.stringify({provider:"anirena",details:"https://anirena.com/torrents/42/magnet"})
+   });
+   const res=await worker.fetch(req,{});
+   assert.equal(res.status,200);
+   assert.equal((await res.json()).magnet,MAGNET);
+   assert.equal(requests,1);
+ }finally{globalThis.fetch=prior;}
+});
