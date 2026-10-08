@@ -66,6 +66,10 @@ After the 46-adapter deployment, a benign `ubuntu` search returned results from 
 
 The follow-up outbound compatibility layer mirrors the pinned Android `NetworkClient.USER_AGENT` and permits **one same-origin HTTPS redirect**, never arbitrary redirects. Do not silently introduce a generic fetch proxy or third-party paid CAPTCHA service.
 
+## Audit-aware indexer selection
+
+**Select last-audit results** selects the 12 sources that returned hits in a dated `ubuntu` test, while **Select all 46** preserves the full source inventory. Labels identify the historical audit date and are not real-time availability indicators. Previous selections persist; new installs default to Knaben, TorrentsCSV, ThePirateBay and Internet Archive, which returned results in the recorded audit.
+
 ## Indexer availability and recovery
 
 The source inventory and implemented adapters do not guarantee live access to each site. On 2026-10-08, BTDigg returned HTTP 429 from GitHub-hosted tests while the production Worker timed out; some other sites required browser verification.
