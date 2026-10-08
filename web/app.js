@@ -183,6 +183,48 @@ function renderResults(){
    card.append(body,actions);root.append(card);
  }
 }
+function renderProviderErrors(failures){
+ const root=$("providerErrors");root.replaceChildren();
+ if(!failures.length)return;
+ const details=el("details","failed-sources");
+ if(failures.length<=2)details.open=true;
+ const summary=el("summary","failed-sources-title",failures.length+" indexer"+(failures.length===1?"":"s")+" unavailable · See alternatives");
+ details.append(summary);
+ const message=el("p","failed-sources-note",
+  "Some external sites restrict searches from Cloudflare. Magnetra cannot bypass their verification. You can open a source directly or search independently through other indexers.");
+ details.append(message);
+ for(const failure of failures){
+  const entry=el("div","source-failure");
+  const line=el("div","source-failure-content");
+  const provider=state.providers.find(p=>p.id===failure.provider);
+  line.append(el("strong","",provider?.name||failure.provider));
+  const message=failure.message||failure.error||"Provider unavailable";
+  const why=el("span","",message);
+  if(failure.error)why.title=failure.error;
+  line.append(why);entry.append(line);
+  const link=failure.openUrl || provider?.url;
+  if(/^https:\/\//.test(link||"")){
+   const a=el("a","source-open",failure.openUrl?"Open source search ↗":"Visit source ↗");
+   a.href=link;a.target="_blank";a.rel="noopener noreferrer";
+   entry.append(a);
+  }
+  details.append(entry);
+ }
+ const alternatives=el("button","source-alt","Search with available indexers →");
+ alternatives.type="button";
+ alternatives.addEventListener("click",()=>{
+  const ids=["knaben","torrentscsv","thepiratebay","internetarchive"].filter(id=>state.providers.some(p=>p.id===id&&p.ported));
+  if(!ids.length){toast("No alternative indexers are available.");return;}
+  state.selected=new Set(ids);
+  save(STORAGE.selected,ids);updateProviderCount();renderProviders();
+  if(state.searching){
+    state.pendingAlternativeSearch=true;
+    toast("Alternative search will start after this search finishes.");
+  }else search();
+ });
+ details.append(alternatives);
+ root.append(details);
+}
 async function search(){
  if(state.searching)return;
  const query=$("query").value.trim();
@@ -201,18 +243,23 @@ async function search(){
     try{
      const data=await api(url.pathname+url.search);
      state.items.push(...(data.results||[]));
-     for(const e of data.errors||[])failures.push({provider:e.provider,error:e.error});
-    }catch(e){failures.push({provider:id,error:e.message});}
+     for(const e of data.errors||[])failures.push(e);
+    }catch(e){failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});}
     completed++;
     renderResults();
     $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" results found.";
-    $("providerErrors").textContent=failures.map(e=>(state.providers.find(p=>p.id===e.provider)?.name||e.provider)+": "+e.error).join(" · ");
+    renderProviderErrors(failures);
    }));
   }
   if(!state.items.length)$("notice").textContent=failures.length?"No results; some indexers failed.":"No matching results in selected indexers.";
   else $("notice").textContent="";
  }finally{
   state.searching=false;$("searchButton").disabled=false;$("searchButton").textContent="Search →";renderResults();
+  if(state.pendingAlternativeSearch){
+    state.pendingAlternativeSearch=false;
+    search();
+    return;
+  }
   $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
  }
 }
@@ -242,6 +289,28 @@ function init(){
  $("sort").addEventListener("change",renderResults);
  $("settingsButton").addEventListener("click",()=>openDialog("settingsDialog"));
  $("companionChip").addEventListener("click",()=>openDialog("settingsDialog"));
+ $("pasteMagnetButton").addEventListener("click",async function(){
+  if(!state.pairing){openDialog("settingsDialog");toast("Pair Flud Companion first.");return;}
+  try{
+    const copied=(await navigator.clipboard.readText()).trim();
+    if(copied.startsWith("magnet:?") && copied.length<=12000){
+      await sendMagnet({magnet:copied},this);
+      return;
+    }
+  }catch{ /* Clipboard API may be unavailable on iOS standalone PWA. */ }
+  openDialog("manualMagnetDialog");
+  $("manualMagnetInput").focus();
+ });
+ $("manualMagnetForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const magnet=$("manualMagnetInput").value.trim();
+  if(!magnet.startsWith("magnet:?")||magnet.length>12000){
+    toast("Paste a valid magnet link.");return;
+  }
+  closeDialog("manualMagnetDialog");
+  sendMagnet({magnet},$("pasteMagnetButton"));
+ });
+
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{

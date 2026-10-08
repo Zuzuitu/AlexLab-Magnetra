@@ -65,3 +65,19 @@ After each explicitly marked `[deploy-pwa]` deployment, `scripts/audit-live-prov
 After the 46-adapter deployment, a benign `ubuntu` search returned results from 8 sources, 14 empty/unverified sources and 24 explicit upstream errors, mostly 403. Use job `37763214467` for provider-level evidence. Search results are not guaranteed simply because a source adapter is installed. Cloudflare challenge cookies and upstream server restrictions require independent compatibility work.
 
 The follow-up outbound compatibility layer mirrors the pinned Android `NetworkClient.USER_AGENT` and permits **one same-origin HTTPS redirect**, never arbitrary redirects. Do not silently introduce a generic fetch proxy or third-party paid CAPTCHA service.
+
+## Indexer availability and recovery
+
+The source inventory and implemented adapters do not guarantee live access to each site. On 2026-10-08, BTDigg returned HTTP 429 from GitHub-hosted tests while the production Worker timed out; some other sites required browser verification.
+
+Magnetra now reports distinct error statuses, offers a direct HTTPS source-search link when supported, and a separate search using working alternative indexers. Alternative results always carry the correct indexer name. Browser-restricted results cannot be read back automatically into the PWA.
+
+No paid dependencies are used. See docs/PROJECT_STATE.md for the verified diagnostics.
+
+### Copy from browser → Flud Companion
+
+If you open BTDigg (or another source) directly in Safari, copy a magnet link. Return to Magnetra and press **Paste magnet → Flud**. The clipboard is read only after that explicit tap; if iOS denies clipboard access, a manual paste field opens. The existing paired Remote relay handles the dispatch, and the UI still distinguishes relay queue acceptance from Shield acknowledgement. This is a manual browser-origin fallback, not direct cross-origin scraping.
+
+### Automatic PWA updates
+
+The service worker uses network-first refresh for scripts, styles and the manifest, while retaining an offline shell. API calls, including Flud Companion commands, are never cached. This corrects an older cache-first strategy that could keep iPhone users on stale JavaScript after a successful deployment. After the first update, reopening the PWA normally should pick up fresh assets; a one-time close/reopen may be needed when replacing a previously installed worker.

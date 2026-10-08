@@ -107,8 +107,8 @@ test("PWA manifest and service worker keep API/network commands out of offline c
  assert.equal(manifest.display,"standalone");
  assert.ok(manifest.icons.length);
  const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
- assert.ok(sw.includes('u.pathname.startsWith("/api/")'));
- assert.ok(sw.includes('e.request.method!=="GET"'));
+ assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
+ assert.ok(sw.includes('event.request.method!=="GET"'));
 });
 
 test("ten fixed-endpoint HTML adapter contracts are registered and encoded",()=>{

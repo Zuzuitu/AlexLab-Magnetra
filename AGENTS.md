@@ -71,3 +71,7 @@ When explicitly asked to “Actualizează checkpoint-ul proiectului cu toate dec
 ## Outbound provider compatibility
 
 All Worker provider fetches must retain the protected Android `NetworkClient.USER_AGENT` in `worker/src/request-headers.mjs` and never follow redirects outside the original HTTPS provider origin. A maximum of one in-origin redirect is supported. Do not remove these guards or claim a provider is live-verified without a production audit. The 2026-10-08 first audit showed 8 sources with results, 14 empty/unverified, and 24 source errors. Record any improved/degraded counts from future audits rather than assuming HTTP 403 is a code defect.
+
+## Provider recovery requirements
+
+An implemented provider is not necessarily accessible from Cloudflare. Rate limits and browser verification must be reported accurately; do not claim a BTDigg source is healthy just because its parser is installed. Use only source-owned HTTPS links from the protected indexer catalog. Fallback searches via other indexers must preserve source attribution. Never introduce automatically repeated requests after HTTP 429, unsafe redirects, or paid infrastructure without owner approval. Add an automated regression test for any new provider recovery behavior.
