@@ -12,6 +12,7 @@ export function directSearchUrl(id,query){
   candidate=spec.search(query.trim());origin=spec.host;
  }else if(Object.hasOwn(LEGACY_SPECS,id)){
   const spec=LEGACY_SPECS[id];
+  if(spec.method==="POST_FORM"||spec.method==="POST_JSON_HTML")return null;
   candidate=legacySearchUrl(spec,query.trim());origin=spec.host;
  }else if(id==="nyaasi"||id==="sukebeinyaa"){
   origin=id==="nyaasi"?"https://nyaa.si":"https://sukebei.nyaa.si";
