@@ -1,8 +1,8 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1"};
-const preferred=["knaben","torrentscsv","nyaasi","internetarchive"];
-const state={providers:[],selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false};
+const preferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false};
 const api=async(path,options={})=>{
   const response=await fetch(path,{cache:"no-store",...options});
   let data;
@@ -42,7 +42,9 @@ function updateProviderCount(){$("providerCount").textContent=String(state.selec
 function renderProviders(){
  const grid=$("providerGrid");grid.replaceChildren();
  const ported=state.providers.filter(p=>p.ported).length;
- $("catalogSummary").textContent=ported+" ported · "+state.providers.length+" total upstream";
+ const audited=state.providers.filter(p=>p.lastAudit?.state==="results").length;
+ const day=state.audit?.observedAt?new Date(state.audit.observedAt).toLocaleDateString():"unknown date";
+ $("catalogSummary").textContent=ported+" adapters · "+audited+" returned results for '"+(state.audit?.query||"test")+"' on "+day+" (not live status)";
  for(const p of state.providers){
   const row=el("div","provider-row"+(p.ported?"":" missing"));
   const label=el("label");
@@ -57,7 +59,13 @@ function renderProviders(){
   });
   const name=el("strong","",p.name);
   label.append(input,name);
-  const marker=el("small","",p.ported?"ADAPTER":"PORT PENDING");
+  const audit=p.lastAudit?.state;
+  const message=audit==="results"?"RESULTS IN TEST":audit==="empty-unverified"?"0 IN TEST":audit==="error"?"ERROR IN TEST":"NOT AUDITED";
+  const marker=el("small","audit-"+(audit||"unknown"),p.ported?message:"PORT PENDING");
+  if(audit)marker.title="Historical "+(state.audit?.query||"")+
+    " query on "+(state.audit?.observedAt||"unknown date")+
+    (p.lastAudit?.code?"; "+p.lastAudit.code:"")+
+    (p.lastAudit?.count!=null?"; "+p.lastAudit.count+" results":"");
   row.append(label,marker);grid.append(row);
  }
 }
@@ -319,8 +327,17 @@ function init(){
   renderResults();
  });
  $("selectWorking").addEventListener("click",()=>{
-  state.selected=new Set(state.providers.filter(p=>p.ported).map(p=>p.id));
-  save(STORAGE.selected,[...state.selected]);renderProviders();updateProviderCount();
+  const ids=state.providers.filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
+  if(!ids.length){toast("No tested sources with results in the saved audit.");return;}
+  state.selected=new Set(ids);
+  save(STORAGE.selected,ids);renderProviders();updateProviderCount();
+  toast("Selected "+ids.length+" sources with results in the last audit (not guaranteed online).");
+ });
+ $("selectAllProviders").addEventListener("click",()=>{
+  const ids=state.providers.filter(p=>p.ported).map(p=>p.id);
+  state.selected=new Set(ids);
+  save(STORAGE.selected,ids);renderProviders();updateProviderCount();
+  toast("Selected all "+ids.length+" indexers, including sources that may fail.");
  });
  $("importPairing").addEventListener("click",()=>{
   try{
@@ -352,9 +369,11 @@ function init(){
    $("companionDevice").value="";$("companionToken").value="";$("companionAuto").checked=false;
    updatePairChip("Flud Companion · Not paired");toast("Pairing removed from this browser.");
  });
- api("/api/providers").then(({providers})=>{
-  state.providers=providers;chooseProviders();renderProviders();
-  $("notice").textContent="Ready. "+providers.filter(p=>p.ported).length+" indexers are ported; "+providers.length+" are inventoried.";
+ api("/api/providers").then(({providers,audit})=>{
+  state.providers=providers;state.audit=audit||null;
+  chooseProviders();renderProviders();
+  const tested=providers.filter(p=>p.lastAudit?.state==="results").length;
+  $("notice").textContent="Ready. "+providers.length+" source adapters; "+tested+" returned results in the last recorded test. Availability may change.";
  }).catch(e=>$("notice").textContent="API unavailable: "+e.message);
  status();
  if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});

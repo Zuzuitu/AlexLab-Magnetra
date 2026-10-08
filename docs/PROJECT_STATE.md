@@ -175,6 +175,18 @@ BTDigg and other inaccessible sources are still not reliably searchable automati
 - One `tokyotoshokan` response had `code: UNCLASSIFIED` in the audit despite an HTTP 403 diagnostic, while most other errors supplied typed codes. This might be edge rollout timing or an inconsistent API response; do not invent a cause, verify on any subsequent provider audit.
 - The new source-recovery UI, clipboard handoff, typed error metadata, PWA cache refresh and invariant tests were deployed without paid infrastructure. Successful server deployment **does not imply every third-party search source is available**.
 
+## Audit-aware provider selection (2026-10-08)
+
+A review of the PWA revealed a real usability regression: the "Select working" button selected all 46 implemented adapters even though the verified post-deploy audit had only 12 sources returning results, 12 empty/unverified and 22 errors. This falsely implied that implementation coverage established provider uptime and needlessly prolonged searches.
+
+Fix:
+- Source-specific, timestamped audit snapshot in `worker/src/source-audit.mjs` from successful deployment run `37816874771` (benign query `ubuntu`, observed 2026-10-08T17:29:37Z). All 46 original IDs and three outcome categories are preserved.
+- `/api/providers` now includes `audit.observedAt`, `query`, `workflowRunId`, and each provider's historical `lastAudit` result. **This is not live availability** and must not be presented as such.
+- "Select last-audit results" selects only the 12 sources that returned results for the audit query, while "Select all 46" explicitly keeps the original complete search capability available. Users can still select any source individually, including BTDigg.
+- Default sources for new installations are Knaben, TorrentsCSV, ThePirateBay and Internet Archive, excluding Nyaa after repeated HTTP 429 in the verified audit. Existing user selections in local storage are preserved.
+- All statuses are visibly labelled **in test**, with dated explanations and tests protecting the identity/counts. An empty result for "ubuntu" is not evidence that a provider is offline or defective.
+- This change only improves selection and status attribution; it does not bypass the external rate limits affecting BTDigg and others. Update the audit metadata only after a new complete, recorded production source audit.
+
 ## Data and security rules
 
 - Never commit private keys, keystores, credentials, access tokens, real `.env` files, or service-account credentials.
@@ -225,10 +237,10 @@ Future fixed regressions with durable lessons must be recorded here with:
 - Fork created successfully.
 - Android baseline originates from upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`; fork `main` now diverges intentionally with PWA and technical memory.
 - Technical-memory guard baseline is established in main and enforced in CI.
-- PWA web shell and all **46 provider adapters implemented in this feature milestone**; provider-specific live search reliability and physical Shield integration are not yet established, and code is pending PR/CI promotion.
+- PWA web shell and all **46 provider adapters** are merged and deployed. The 2026-10-08 production audit confirmed results from 12 sources, 12 empty/unverified and 22 source errors. Physical Shield handoff remains unverified; the audit-aware source selection improvement is under PR review.
 - PWA backend/proxy is deployed to Cloudflare Workers with fixed allowlisted upstream endpoints.
 - Full 46-provider **implementation coverage reached and deployed**, but functional/live parity remains unverified. Never infer source uptime from the catalogue.
-- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain, deployed in successful GitHub Actions run 37596819448 (retry attempt 2). Independent public smoke run 37755554228 confirmed HTTP+TLS, HTML, PWA manifest, `/api/health` and `/api/providers` (21 ported flags/46 total). Deploy requires manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
+- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Initial deployment was verified by run 37596819448; the later 46-adapter recovery deployment passed run **37816874771** and the independent HTTPS/PWA smoke checks. Deploy requires manual dispatch or an explicit `[deploy-pwa]` marker on `main`; ordinary pushes do not redeploy.
 - Paid services: none approved.
 
 ## Next relevant steps

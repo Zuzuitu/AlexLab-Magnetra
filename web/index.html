@@ -46,9 +46,9 @@
 
 <dialog id="providersDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">SEARCH SOURCES</div><h2>Indexers</h2><p id="catalogSummary" class="muted">Loading source catalog…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Close">×</button></div>
-  <p class="muted">All 46 upstream sources are inventoried. Sources still being ported are shown transparently and cannot be selected yet.</p>
+  <p class="muted">All 46 adapters are implemented. Labels below reflect one dated “ubuntu” audit, not live uptime. Sources with errors remain selectable if you want to retry manually.</p>
   <div class="provider-grid" id="providerGrid"></div>
-  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select working</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>
+  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select last-audit results</button><button type="button" class="secondary" id="selectAllProviders">Select all 46</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>
 </dialog>
 
 <dialog id="settingsDialog" class="sheet">

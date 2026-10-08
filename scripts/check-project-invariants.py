@@ -485,6 +485,36 @@ def check_web_parity_and_companion(config: dict) -> None:
             if pwa_cache.get("offline_shell_preserved") and 'caches.match("/")' not in sw_text:
                 fail("PWA offline shell fallback must remain available")
 
+    recovery = nested(config, "provider_recovery")
+    if recovery and recovery.get("audited_results_selection_separate_from_select_all"):
+        audit_module = ROOT / recovery["audit_snapshot_module"]
+        require_file(audit_module)
+        if audit_module.is_file():
+            audit_content = audit_module.read_text(encoding="utf-8")
+            if f'workflowRunId: {recovery["audit_source_workflow_run"]}' not in audit_content:
+                fail("provider audit snapshot no longer points to the source workflow run")
+            if "export const SOURCE_AUDIT" not in audit_content:
+                fail("the date-stamped provider audit snapshot was removed")
+        default_ids = recovery.get("default_searched_provider_ids", [])
+        if not default_ids or len(default_ids) != 4:
+            fail("the PWA and API must preserve the four explicitly audited default source IDs")
+        else:
+            ids_str = ",".join('"' + i + '"' for i in default_ids)
+            if "const DEFAULT_IDS=[" + ids_str + "]" not in source_worker.read_text(encoding="utf-8"):
+                fail("Worker API default sources diverged from the project invariants")
+            if "const preferred=[" + ids_str + "]" not in frontend.read_text(encoding="utf-8"):
+                fail("PWA default sources diverged from API/project invariants")
+        frontend_content = frontend.read_text(encoding="utf-8")
+        if 'p.lastAudit?.state==="results"' not in frontend_content:
+            fail("last-audit result selection must exclude sources with unverified uptime")
+        if '$("selectAllProviders")' not in frontend_content:
+            fail("full all-46 indexer selection must remain independently available")
+        if 'state.audit=audit||null' not in frontend_content:
+            fail("provider health UI must display the explicit dated audit")
+        endpoint_content = source_worker.read_text(encoding="utf-8")
+        if "auditFor(p.id)" not in endpoint_content:
+            fail("provider API must expose the last known audit source metadata")
+
     headers_path = ROOT / "worker" / "src" / "request-headers.mjs"
     require_file(headers_path)
     if headers_path.is_file():

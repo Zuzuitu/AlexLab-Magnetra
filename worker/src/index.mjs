@@ -1,10 +1,11 @@
+import {SOURCE_AUDIT,auditFor} from "./source-audit.mjs";
 import {classifyProviderError,directSearchUrl} from "./provider-recovery.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 
-const DEFAULT_IDS=["knaben","torrentscsv","nyaasi","internetarchive"];
+const DEFAULT_IDS=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Exact endpoint allowlist: never forward to an arbitrary hostname or URL.
 const COMPANION_RELAY_ORIGIN="https://flud-remote.alexlab.media";
 const CATEGORIES=new Set(["all","movies","series","apps","games","books","music","anime","porn","other"]);
@@ -111,7 +112,7 @@ export default {
  async fetch(request,env){
    const url=new URL(request.url);
    if(url.pathname==="/api/health" && request.method==="GET")return json({ok:true,product:"AlexLab Magnetra",ported:PROVIDERS.filter(x=>x.ported).length,total:PROVIDERS.length});
-   if(url.pathname==="/api/providers" && request.method==="GET")return json({providers:PROVIDERS});
+   if(url.pathname==="/api/providers" && request.method==="GET")return json({providers:PROVIDERS.map(p=>({...p,lastAudit:auditFor(p.id)})),audit:{observedAt:SOURCE_AUDIT.observedAt,query:SOURCE_AUDIT.query,workflowRunId:SOURCE_AUDIT.workflowRunId}});
    if(url.pathname==="/api/search" && request.method==="GET")return getSearch(url);
    if(url.pathname==="/api/resolve" && request.method==="POST")return resolveMagnet(request);
    if(url.pathname==="/api/companion/magnet" && request.method==="POST")return companion(request,"magnet");
