@@ -217,7 +217,10 @@ function renderProviderErrors(failures){
   if(!ids.length){toast("No alternative indexers are available.");return;}
   state.selected=new Set(ids);
   save(STORAGE.selected,ids);updateProviderCount();renderProviders();
-  search();
+  if(state.searching){
+    state.pendingAlternativeSearch=true;
+    toast("Alternative search will start after this search finishes.");
+  }else search();
  });
  details.append(alternatives);
  root.append(details);
@@ -252,6 +255,11 @@ async function search(){
   else $("notice").textContent="";
  }finally{
   state.searching=false;$("searchButton").disabled=false;$("searchButton").textContent="Search →";renderResults();
+  if(state.pendingAlternativeSearch){
+    state.pendingAlternativeSearch=false;
+    search();
+    return;
+  }
   $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
  }
 }
