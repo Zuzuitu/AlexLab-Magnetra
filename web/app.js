@@ -10,7 +10,7 @@ const companionLabels=new Map();
 // Remote deduplicates requestId for 120 seconds. Reuse that ID on rapid repeat taps.
 function magnetIdentity(magnet,deviceId){
  const params=new URLSearchParams(magnet.slice(magnet.indexOf("?")+1));
- const xt=params.getAll("xt").find(value=>/^urn:btih:/i.test(value));
+ const xt=[...params.entries()].find(([key,value])=>key.toLowerCase()==="xt"&&/^urn:btih:/i.test(value))?.[1];
  return deviceId+"|"+(xt?xt.toLowerCase():magnet.trim());
 }
 const api=async(path,options={})=>{
