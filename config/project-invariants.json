@@ -49,7 +49,9 @@
       ".github/workflows/deploy-pwa.yml",
       ".github/workflows/production-smoke.yml"
     ],
-    "allowed_cron_expressions": []
+    "allowed_cron_expressions": [],
+    "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
+    "handoff_subordinate_to_repository_truth": true
   },
   "cleanup": {
     "forbidden_globs": [
