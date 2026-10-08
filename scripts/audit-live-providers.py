@@ -31,8 +31,11 @@ def check(id):
     try:
         response = api("/api/search?" + query)
         if response.get("errors"):
+            failure = response["errors"][0]
             return {"id": id, "state": "provider-error",
-                    "reason": response["errors"][0].get("error", "unknown")[:130]}
+                    "code": failure.get("code", "UNCLASSIFIED"),
+                    "reason": failure.get("error", "unknown")[:130],
+                    "recovery_url": bool(failure.get("openUrl"))}
         amount = len(response.get("results") or [])
         return {"id": id, "state": "results" if amount else "empty-or-unverified", "count": amount}
     except Exception as exc:
