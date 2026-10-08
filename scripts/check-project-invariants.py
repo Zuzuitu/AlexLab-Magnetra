@@ -413,7 +413,7 @@ def check_web_parity_and_companion(config: dict) -> None:
         require_file(path)
     if legacy_specs.is_file() and provider_impl.is_file():
         legacy_text = legacy_specs.read_text(encoding="utf-8")
-        legacy_ids = set(re.findall(r'^  "([^"]+)": \\{', legacy_text, re.MULTILINE))
+        legacy_ids = set(re.findall(r'^  "([^"]+)": \{', legacy_text, re.MULTILINE))
         expected_count = parity.get("legacy_adapter_count")
         if len(legacy_ids) != expected_count:
             fail(f"legacy provider specs count changed: expected {expected_count}, found {len(legacy_ids)}")
