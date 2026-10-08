@@ -435,6 +435,33 @@ def check_web_parity_and_companion(config: dict) -> None:
         if 'x.checked!==35' not in web_ci.read_text(encoding="utf-8"):
             fail("CI must validate the actual JSON result for all 35 HTML selector adapters")
 
+    recovery = nested(config, "provider_recovery")
+    if recovery:
+        recovery_path = ROOT / "worker" / "src" / "provider-recovery.mjs"
+        recovery_test = ROOT / "worker" / "test" / "provider-recovery.test.mjs"
+        for path in (recovery_path, recovery_test):
+            require_file(path)
+        if recovery_path.is_file():
+            recovery_text = recovery_path.read_text(encoding="utf-8")
+            if recovery.get("source_links_must_use_catalog_allowlist") and (
+                "PROVIDER_MAP.get(id)" not in recovery_text
+                or "target.origin!==expected.origin" not in recovery_text
+                or 'target.protocol!=="https:"' not in recovery_text
+            ):
+                fail("provider recovery links must use exact HTTPS catalog origins")
+            if recovery.get("auto_retry_rate_limited_sources") is not False:
+                fail("do not automatically retry a rate-limited provider")
+            if recovery.get("never_relabel_alternative_results") and "RATE_LIMIT" not in recovery_text:
+                fail("source error status classifier is missing")
+        if source_worker.is_file() and recovery.get("provider_errors_must_report_code"):
+            worker_text_recovery = source_worker.read_text(encoding="utf-8")
+            if "classifyProviderError(e)" not in worker_text_recovery or "directSearchUrl(id,q)" not in worker_text_recovery:
+                fail("Worker does not expose typed provider errors and exact source recovery URL")
+        if frontend.is_file() and recovery.get("never_relabel_alternative_results"):
+            frontend_recovery = frontend.read_text(encoding="utf-8")
+            if "renderProviderErrors" not in frontend_recovery or "Search with available indexers" not in frontend_recovery:
+                fail("PWA must provide explicitly attributed alternative search on source failure")
+
     headers_path = ROOT / "worker" / "src" / "request-headers.mjs"
     require_file(headers_path)
     if headers_path.is_file():
