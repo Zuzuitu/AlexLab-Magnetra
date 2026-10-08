@@ -7,8 +7,9 @@ This folder contains the first web port of the upstream Android search experienc
 - `web/`: static PWA (vanilla JS, manifest, service worker, offline app shell).
 - `worker/`: Cloudflare Worker for explicit provider adapters and an allowlisted Flud Companion Remote relay bridge.
 - `worker/src/catalog.mjs`: all **46** upstream built-in sources, including transparent `ported: false` flags for unfinished adapters.
-- `worker/src/providers.mjs`: first **21** individually implemented adapters; **25 remain to port and verify**.
-- `worker/src/index.mjs`: `/api/providers`, `/api/search`, `/api/companion/status`, `/api/companion/magnet`.
+- `worker/src/providers.mjs`: dispatches all **46** executable source adapters (21 pre-existing and 25 additional source-specific implementations).
+- `worker/src/legacy-specs.mjs` + `legacy-adapters.mjs`: 25 additional legacy-source contracts, including detail-page magnet resolution.
+- `worker/src/index.mjs`: `/api/providers`, `/api/search`, `/api/resolve`, `/api/companion/status`, `/api/companion/magnet`.
 
 ## Development
 
@@ -43,11 +44,11 @@ Auto-start uses the Companion's existing validated helper; the PWA does not impl
 
 ## Provider coverage policy
 
-Catalog coverage is not functional parity. When an upstream provider changes:
+**All 46 source adapters are coded**, but implementation does not prove they currently work against every upstream site. Full live validation remains mandatory. Catalog coverage is not verified uptime. When an upstream provider changes:
 
 1. Update the corresponding Worker adapter; do not silently fall back to unrelated search results.
 2. Add source-specific fixtures/tests.
-3. Mark `ported: true` only once the port exists and is tested.
+3. Mark `ported: true` only once the adapter exists and passes test contracts. **This flag is not provider-live-verified**.
 4. Maintain all 46 upstream IDs (or deliberately reconcile additions/removals with the owner).
 5. Document Cloudflare/CORS/provider limits in `docs/PROJECT_STATE.md`.
 
