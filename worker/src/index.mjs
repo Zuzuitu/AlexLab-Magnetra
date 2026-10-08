@@ -1,3 +1,4 @@
+import {classifyProviderError,directSearchUrl} from "./provider-recovery.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
@@ -33,12 +34,15 @@ async function getSearch(url) {
        const found=await searchProvider(id,q,category);
        return {provider:id,results:found,count:found.length};
      } catch(e){
-       return {provider:id,results:[],count:0,error:String(e?.message||e).slice(0,180)};
+       const reason=classifyProviderError(e);
+       return {provider:id,results:[],count:0,error:String(e?.message||e).slice(0,180),
+         code:reason.code,message:reason.message,retryable:reason.retryable,openUrl:directSearchUrl(id,q)};
      }
    }));
    for(const item of batch){
      stats.push({provider:item.provider,count:item.count,ok:!item.error});
-     if(item.error)errors.push({provider:item.provider,error:item.error});
+     if(item.error)errors.push({provider:item.provider,error:item.error,
+       code:item.code,message:item.message,retryable:item.retryable,openUrl:item.openUrl});
      results.push(...item.results);
    }
  }
