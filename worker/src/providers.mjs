@@ -1,4 +1,4 @@
-import {SOURCE_HEADERS} from "./request-headers.mjs";
+import {SOURCE_HEADERS,fetchProviderSameOrigin} from "./request-headers.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {legacySearch,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
@@ -42,11 +42,11 @@ function normalize(item,provider) {
 }
 const parsed=(xs,id)=>xs.map(x=>normalize(x,id)).filter(Boolean).slice(0,MAX_RESULTS);
 async function requestJson(url, options={}, fetcher=fetch) {
-  const response=await fetcher(url,{
-    ...options,redirect:"follow",
+  const response=await fetchProviderSameOrigin(url,{
+    ...options,
     signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers:{...SOURCE_HEADERS,"accept":"application/json",...(options.headers||{})}
-  });
+  },fetcher);
   if(!response.ok)throw Error("provider HTTP "+response.status);
   const length=Number(response.headers.get("content-length")||0);
   if(length>4_000_000)throw Error("provider response too large");
@@ -55,7 +55,7 @@ async function requestJson(url, options={}, fetcher=fetch) {
   return JSON.parse(text);
 }
 async function requestHtml(url,fetcher=fetch) {
-  const response=await fetcher(url,{signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),headers:{...SOURCE_HEADERS,"accept":"text/html"}});
+  const response=await fetchProviderSameOrigin(url,{signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),headers:{...SOURCE_HEADERS,"accept":"text/html"}},fetcher);
   if(!response.ok)throw Error("provider HTTP "+response.status);
   const body=await response.text();
   if(body.length>3_000_000)throw Error("provider response too large");
