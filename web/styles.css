@@ -13,3 +13,9 @@
 .source-open{border:1px solid #715543;background:#3a2a22;color:#ffd4a2;border-radius:9px;padding:9px 11px;font-size:11px;font-weight:750;white-space:nowrap;text-decoration:none}
 .source-alt{margin-top:12px;border:1px solid #779a66;color:#b7f598;background:#243521;border-radius:9px;padding:11px 15px;font-size:12px;font-weight:850}
 @media(max-width:520px){.source-failure{align-items:flex-start;flex-direction:column}.source-open{width:100%;text-align:center}}
+
+/* One-tap clipboard handoff on compact phone screens. */
+.summary-line{flex-wrap:wrap}
+#pasteMagnetButton{border:1px solid #42684a;border-radius:10px;padding:10px 12px;color:#b7f598;background:#1a2a20;font-weight:780}
+#pasteMagnetButton:hover:not(:disabled){border-color:#a3f779}
+@media(max-width:550px){#pasteMagnetButton{order:3;flex:1 0 100%;text-align:center}.summary-line{padding-bottom:29px}}
