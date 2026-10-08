@@ -13,7 +13,7 @@ export const PROVIDERS = Object.freeze([
     "id": "anirena",
     "name": "AniRena",
     "url": "https://anirena.com",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -27,7 +27,7 @@ export const PROVIDERS = Object.freeze([
     "id": "audiobookbay",
     "name": "AudioBookBay",
     "url": "https://audiobookbay.lu",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -48,21 +48,21 @@ export const PROVIDERS = Object.freeze([
     "id": "bitsearch",
     "name": "BitSearch",
     "url": "https://bitsearch.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "blueroms",
     "name": "BlueRoms",
     "url": "https://www.blueroms.ws",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "bt4g",
     "name": "BT4G",
     "url": "https://bt4gprx.com",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -83,35 +83,35 @@ export const PROVIDERS = Object.freeze([
     "id": "epublibre",
     "name": "EpubLibre",
     "url": "https://epublibre.org",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "extdotto",
     "name": "Ext",
     "url": "https://ext.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "eztvx",
     "name": "Eztv",
     "url": "https://eztvx.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": true
   },
   {
     "id": "filemood",
     "name": "FileMood",
     "url": "https://filemood.com",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "fitgirlrepacks",
     "name": "FitGirl Repacks",
     "url": "https://fitgirl-repacks.site",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -139,14 +139,14 @@ export const PROVIDERS = Object.freeze([
     "id": "linuxtracker",
     "name": "LinuxTracker",
     "url": "https://linuxtracker.org",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "megapeer",
     "name": "MegaPeer",
     "url": "https://megapeer.vip",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -160,7 +160,7 @@ export const PROVIDERS = Object.freeze([
     "id": "mypornclub",
     "name": "MyPornClub",
     "url": "https://myporn.club",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -174,7 +174,7 @@ export const PROVIDERS = Object.freeze([
     "id": "nonameclub",
     "name": "NoNameClub",
     "url": "https://nnmclub.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -188,7 +188,7 @@ export const PROVIDERS = Object.freeze([
     "id": "oxtorrent",
     "name": "OxTorrent",
     "url": "https://oxtorrent.co",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -223,35 +223,35 @@ export const PROVIDERS = Object.freeze([
     "id": "therarbag",
     "name": "TheRarBg",
     "url": "https://therarbg.com",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "1337x",
     "name": "1337x",
     "url": "https://1337x.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "tokyotoshokan",
     "name": "TokyoToshokan",
     "url": "https://tokyotosho.info",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": true
   },
   {
     "id": "torrent9",
     "name": "Torrent9",
     "url": "https://www6.torrent9.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "torrentdatabase",
     "name": "TorrentDatabase",
     "url": "https://developify.ca",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -265,7 +265,7 @@ export const PROVIDERS = Object.freeze([
     "id": "torrentdownloads",
     "name": "TorrentDownloads",
     "url": "https://torrentdownloads.pro",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": true
   },
   {
@@ -286,21 +286,21 @@ export const PROVIDERS = Object.freeze([
     "id": "torrentz",
     "name": "Torrentz",
     "url": "https://torrentz2.nz",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
     "id": "uindex",
     "name": "UIndex",
     "url": "https://uindex.org",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": true
   },
   {
     "id": "xxxclub",
     "name": "XXXClub",
     "url": "https://xxxclub.to",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   },
   {
@@ -321,7 +321,7 @@ export const PROVIDERS = Object.freeze([
     "id": "0magnet",
     "name": "0Magnet",
     "url": "https://9mag.net",
-    "ported": false,
+    "ported": true,
     "enabledByDefault": false
   }
 ]);
