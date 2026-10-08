@@ -67,9 +67,9 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
     magnet:"td:nth-child(2) > a:nth-child(2)",
     torrentFile:"td:nth-child(2) > a:nth-child(1)",
     details:"td:nth-child(2) > a:nth-child(3)",
-    size:"td:nth-last-child(2)",
-    seeders:"td:nth-last-child(1) > span:nth-child(1)",
-    peers:"td:nth-last-child(1) > span:nth-child(3)",
+    size:"td:nth-child(3)",
+    seeders:"td:nth-child(4) > span:nth-child(1)",
+    peers:"td:nth-child(4) > span:nth-child(3)",
     date:"td:nth-child(1)"
   },
   xxxtracker:{
@@ -80,8 +80,8 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
     magnet:"td:nth-child(2) > a:nth-child(1)",
     torrentFile:"td:nth-child(2) > a:nth-child(2)",
     details:"td:nth-child(2) > a:nth-child(3)",
-    size:"td:nth-last-child(2)",seeders:"td:nth-last-child(1) > span.green",
-    peers:"td:nth-last-child(1) > span.red",date:"td:nth-child(1)"
+    size:"td:nth-child(3)",seeders:"td:nth-child(4) > span.green",
+    peers:"td:nth-child(4) > span.red",date:"td:nth-child(1)"
   },
   animetosho:{
     host:"https://animetosho.org",
