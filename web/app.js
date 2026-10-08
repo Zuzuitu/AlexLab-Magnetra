@@ -85,17 +85,51 @@ async function copyMagnet(magnet) {
    const ok=document.execCommand("copy");t.remove();toast(ok?"Magnet copied":"Copy failed");
  }
 }
+async function ensureMagnet(item){
+ if(item.magnet?.startsWith("magnet:?"))return item.magnet;
+ const source=item.magnetSource||item.details;
+ if(!source)throw Error("Provider has no supported magnet or details link.");
+ const res=await api("/api/resolve",{
+  method:"POST",headers:{"content-type":"application/json"},
+  body:JSON.stringify({provider:item.provider,details:source})
+ });
+ if(!res.magnet?.startsWith("magnet:?"))throw Error("Provider did not return a valid magnet.");
+ item.magnet=res.magnet;
+ if(state.bookmarks[item.id]){state.bookmarks[item.id]=item;save(STORAGE.bookmarks,state.bookmarks);}
+ return item.magnet;
+}
+async function verifyCompanionReceipt(commandId,button) {
+ if(!commandId||!state.pairing)return;
+ // Bridge acknowledges commands asynchronously. A queued result is NOT a Flud download.
+ for(let attempt=0;attempt<4;attempt++){
+  await new Promise(resolve=>setTimeout(resolve,2000));
+  try{
+   const data=await api("/api/companion/status",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(state.pairing)
+   });
+   if(data.lastResult?.id===commandId){
+    if(data.lastResult.ok){toast("Shield acknowledged the magnet command.");button.textContent="Shield ✓";}
+    else {toast("Shield rejected magnet: "+(data.lastResult.message||"Unknown error"));button.textContent="Retry send";}
+    return;
+   }
+  }catch{return;}
+ }
+ toast("Queued; waiting for Shield confirmation.");
+}
 async function sendMagnet(item,button){
  if(!state.pairing?.deviceId||!state.pairing?.token){openDialog("settingsDialog");toast("Pair Flud Companion first.");return;}
  const original=button.textContent;
  button.disabled=true;button.textContent="Sending…";
  try{
-   const body={...state.pairing,magnet:item.magnet,requestId:crypto.randomUUID()};
+   const magnet=await ensureMagnet(item);
+   const body={...state.pairing,magnet,requestId:crypto.randomUUID()};
    const result=await api("/api/companion/magnet",{
      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)
    });
-   if(result.ok&&result.queued)toast("Magnet queued in Flud Companion.");
-   else toast("Companion accepted magnet.");
+   if(!result.ok||result.queued!==true)throw Error("Relay did not confirm a queued command.");
+   toast(result.duplicate?"Already queued in Companion.":"Magnet queued; awaiting Shield acknowledgement.");
+   button.textContent="Queued ✓";
+   await verifyCompanionReceipt(result.id,button);
  }catch(e){toast(e.message);button.title=e.message;}
  finally{button.disabled=false;button.textContent=original;}
 }
@@ -120,14 +154,25 @@ function renderResults(){
    body.append(title,info);
    const actions=el("div","result-actions");
    addAction(actions,"Send to Flud",function(){sendMagnet(item,this)},"send");
-   addAction(actions,"Copy",()=>copyMagnet(item.magnet));
+   addAction(actions,"Copy",async()=>{try{await copyMagnet(await ensureMagnet(item));}catch(e){toast(e.message);}});
    addAction(actions,"Share",async()=>{
-     if(navigator.share){
-       try{await navigator.share({title:item.name,text:item.magnet});}
-       catch(e){if(e?.name!=="AbortError")copyMagnet(item.magnet);}
-     }else await copyMagnet(item.magnet);
+     try{
+       const magnet=await ensureMagnet(item);
+       if(navigator.share){
+         try{await navigator.share({title:item.name,text:magnet});}
+         catch(e){if(e?.name!=="AbortError")await copyMagnet(magnet);}
+       }else await copyMagnet(magnet);
+     }catch(e){toast(e.message);}
    });
-   const magnet=el("a","action","Magnet");magnet.href=item.magnet;magnet.rel="noopener noreferrer";magnet.title="Open in your installed torrent client";actions.append(magnet);
+   if(item.magnet){
+     const magnet=el("a","action","Magnet");magnet.href=item.magnet;magnet.rel="noopener noreferrer";magnet.title="Open in your installed torrent client";actions.append(magnet);
+   }else{
+     addAction(actions,"Resolve",async function(){
+       const old=this.textContent;this.disabled=true;this.textContent="Resolving…";
+       try{await ensureMagnet(item);toast("Magnet resolved.");renderResults();}
+       catch(e){toast(e.message);this.textContent=old;this.disabled=false;}
+     });
+   }
    if(item.torrentFile)downloadAction(actions,".torrent ↗",item.torrentFile);
    if(item.details)downloadAction(actions,"Details ↗",item.details);
    const saved=Boolean(state.bookmarks[item.id]);
