@@ -38,7 +38,7 @@
       <button type="button" class="providers-trigger" id="providersButton">Indexers <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
     </form>
   </section>
-  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
+  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
   <section class="results-section"><div class="section-top"><div><div class="section-overline">DISCOVERY</div><h2 id="resultsTitle">Search results</h2></div><div class="result-count" id="resultCount">READY</div></div><div class="notice" id="notice" role="status" aria-live="polite">Enter a search to see results from your enabled indexers.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
 </main>
 <footer class="footer"><span>© AlexLab · Magnetra</span><span>Search. Magnet. Done.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Based on TorrentSearch (MIT) ↗</a></footer>
@@ -65,6 +65,13 @@
   <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Test Shield connection</button>
   <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
   <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
+</dialog>
+<dialog id="manualMagnetDialog" class="sheet">
+  <div class="sheet-head"><div><div class="section-overline">DIRECT TO FLOOD COMPANION</div><h2>Send a magnet</h2><p class="muted">Paste a magnet copied from BTDigg or another website. It will be sent through your paired Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Close">×</button></div>
+  <form id="manualMagnetForm">
+    <label class="setting-label">Magnet link<input id="manualMagnetInput" type="text" placeholder="magnet:?xt=urn:btih:..." autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <div class="sheet-actions"><button class="primary" type="submit" id="manualMagnetSend">Send to Flud →</button></div>
+  </form>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
