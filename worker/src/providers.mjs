@@ -8,7 +8,7 @@ const REQUEST_TIMEOUT_MS = 11000;
 const KNABEN_CATEGORIES = { music:1000000,series:2000000,movies:3000000,apps:4000000,porn:5000000,anime:6000000,games:7000000,books:9000000,other:10000000 };
 
 function clean(value) { return String(value ?? "").trim(); }
-function numeric(value) { const n=Number(value); return Number.isFinite(n)&&n>=0 ? Math.floor(n) : null; }
+function numeric(value) { if(value===null||value===undefined||String(value).trim()==="")return null; const n=Number(String(value).trim().replace(/,/g,"")); return Number.isFinite(n)&&n>=0 ? Math.floor(n) : null; }
 function bytes(value) {
   const n=Number(value);
   if (!Number.isFinite(n)||n<0) return null;
