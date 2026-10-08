@@ -1,6 +1,6 @@
 # AlexLab Magnetra — Project State
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-08_
 
 This file is the canonical human-readable technical checkpoint for AlexLab Magnetra. Repository state on the main branch takes precedence over old chat context. Material changes must reconcile this file, `config/project-invariants.json`, code, and CI guards.
 
@@ -12,7 +12,7 @@ The product is a torrent metasearch client. It searches third-party providers an
 
 ## Current architecture
 
-Current production code is still the upstream Android application:
+The repository retains the upstream Android application and now also runs a production PWA:
 
 - Android application source: `app/`
 - Language: Kotlin
@@ -24,7 +24,7 @@ Current production code is still the upstream Android application:
 - Build system: Gradle / Android Gradle Plugin
 - CI: GitHub Actions
 
-The first PWA implementation is included in this repository; production deployment and real-device validation are still pending. The separation is:
+The first PWA implementation is deployed and confirmed over HTTPS; real-device and provider-specific end-to-end testing remain pending. The separation is:
 
 - `app/` — upstream-compatible Android implementation
 - `web/` — installable, standalone mobile-first PWA with IndexedDB-like local bookmark persistence (currently localStorage), full indexer inventory and magnet actions
@@ -98,7 +98,7 @@ These values are protected because they describe the known-good starting point. 
 - Auto-start is optional and must respect Companion's already validated accessibility/helper state; do not alter Flud Companion's hardware-verified preflight/single-handoff rules.
 - Hosted HTTPS PWA to plaintext LAN bridge can be blocked by mixed-content and private-network restrictions. Primary 1-tap integration is the HTTPS Remote relay; fallback is Copy magnet + open Companion PWA.
 - The search backend must stay a fixed-provider metasearch service, not an arbitrary HTTP proxy.
-- HTML ports are source-based, syntax/bundle-checked and contract-checked but external layouts and challenge pages still require integration validation. No production deploy has occurred. Online CORS, provider availability, responsive phone hardware and Shield Auto-start must still be verified before declaring production readiness.
+- HTML ports are source-based, syntax/bundle-checked and contract-checked but external layouts and challenge pages still require integration validation. Production was deployed successfully on 2026-10-08; live HTTP/TLS, homepage, manifest, health and provider catalog passed the independent GitHub-hosted smoke check on first attempt. Actual searches and Shield Auto-start remain unverified end to end.
 
 ## Data and security rules
 
@@ -129,13 +129,15 @@ These values are protected because they describe the known-good starting point. 
 
 ## Important regressions / causes
 
-No AlexLab-specific product regression has been fixed yet because this fork is at its initial baseline.
+No end-user PWA regression has been confirmed and fixed yet. The project has addressed the repository/CI regressions below.
 
 The first repository-safety issue identified at project start was that existing build workflows had no project-invariant gate, and the release workflow could materialize signing material before any repository-policy validation. This memory-system change adds an invariant guard before build/release-sensitive steps.
 
 Initial upstream CI regression (2026-10-07): both Debug and Staging failed before Android compilation with Foojay HTTP 400 while attempting to download JetBrains Runtime 21. Root cause: existing workflows only installed Temurin 17 although the committed Gradle daemon JVM criteria require vendor JETBRAINS/version 21. Fix: explicitly provision JBR 21 with `actions/setup-java` after JDK 17; keep Android Java 17 source/target compatibility unchanged. Guard: require correct Gradle daemon vendor/version and JBR setup in all Android workflows.
 
 PWA CI invariant-guard regression (2026-10-07): adding the PWA job to `delivery.guarded_workflows` initially caused CI to fail because the JBR 21 prerequisite was checked for every guarded workflow, including Node-only tests. Root cause: guard scope was too broad. Fix: enforce JBR 21 only on workflows containing a Gradle build (`./gradlew`), while still requiring the general invariant gate for all guarded workflows.
+
+Cloudflare production deployment initial failure (2026-10-08): deploy job failed at credential validation because newly created repository lacked `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` GitHub Actions secrets. Owner configured them privately; rerunning failed jobs deployed the Worker and its `index.alexlab.media` custom domain. Prevention: pre-deploy secret check; permanent independent post-deploy smoke workflow verifying HTTPS, homepage, manifest, health and provider catalog.
 
 Future fixed regressions with durable lessons must be recorded here with:
 - symptom;
@@ -146,23 +148,23 @@ Future fixed regressions with durable lessons must be recorded here with:
 ## Current state
 
 - Fork created successfully.
-- Fork main currently matches upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`.
+- Android baseline originates from upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`; fork `main` now diverges intentionally with PWA and technical memory.
 - Technical-memory guard baseline is established in main and enforced in CI.
 - PWA web shell and first 21 provider adapters implemented; live integration validation pending.
-- PWA backend/proxy implemented with fixed allowlisted upstream endpoints; not yet deployed.
+- PWA backend/proxy is deployed to Cloudflare Workers with fixed allowlisted upstream endpoints.
 - Full 46-provider functional parity: **not complete**, still required and to be advanced via separate tested batches.
-- Production target: **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Deploy is owner-authorized for this milestone and triggered only by manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
+- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain, deployed in successful GitHub Actions run 37596819448 (retry attempt 2). Independent public smoke run 37755554228 confirmed HTTP+TLS, HTML, PWA manifest, `/api/health` and `/api/providers` (21 ported flags/46 total). Deploy requires manual dispatch or an explicit `[deploy-pwa]` commit marker on `main`.
 - Paid services: none approved.
 
 ## Next relevant steps
 
 1. Maintain the canonical technical-memory baseline and keep its CI guard green.
-2. Deploy and validate the first PWA + API at `https://index.alexlab.media`, then verify remote Companion handoff without compromising pairing credentials.
+2. Validate actual provider searches and verify Remote Companion magnet handoff on iPhone/Shield without compromising pairing credentials.
 3. Port and test the remaining 25 indexers, prioritized by supported upstream functionality and practical compatibility; never silently omit or mark them ready early.
 4. Verify real iPhone browser/PWA behavior and Shield integration, especially device offline/queue/Auto-start.
-5. Implement result actions: open magnet, copy/share magnet, `.torrent` download where available.
+5. Verify the existing open/copy/share/magnet and `.torrent` result actions on real iOS and Android devices.
 6. Add provider-specific tests and document every stable workaround/invariant discovered.
-7. Select deployment only after verifying cost, provider compatibility, and secret boundaries.
+7. Keep the post-deploy smoke check and production invariants green after future explicitly approved releases.
 
 ## Maintenance rule
 

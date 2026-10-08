@@ -1,0 +1,20 @@
+name: Production PWA smoke checks
+
+on:
+  push:
+    branches: [ "main", "ops/**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+      - name: Validate project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Verify public HTTPS, PWA assets, API health and provider catalog
+        run: python3 scripts/check-production-smoke.py

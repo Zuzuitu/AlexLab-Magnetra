@@ -46,7 +46,8 @@
       ".github/workflows/staging_build.yml",
       ".github/workflows/release_build.yml",
       ".github/workflows/pwa.yml",
-      ".github/workflows/deploy-pwa.yml"
+      ".github/workflows/deploy-pwa.yml",
+      ".github/workflows/production-smoke.yml"
     ],
     "allowed_cron_expressions": []
   },
@@ -80,6 +81,13 @@
     "custom_domain_required": true,
     "automatic_main_deploy": false,
     "explicit_commit_marker": "[deploy-pwa]",
-    "paid_tier_required": false
+    "paid_tier_required": false,
+    "production_smoke_command": "python3 scripts/check-production-smoke.py",
+    "production_smoke_required_endpoints": [
+      "/",
+      "/manifest.webmanifest",
+      "/api/health",
+      "/api/providers"
+    ]
   }
 }
