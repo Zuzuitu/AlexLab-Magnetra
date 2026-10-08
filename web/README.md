@@ -38,7 +38,7 @@ Pair once in the Settings sheet with your existing **Remote Device ID** and **Re
 
 `https://flud-remote.alexlab.media/api/v1/device/<deviceId>/magnet`
 
-No dynamic target hosts or generic proxy paths are accepted. The browser retains pairing credentials locally. The Worker does not store credentials. The Remote relay only accepts commands while the Shield/Companion is online, and a `202 queued` response means **queued**, not downloaded or confirmed by Flud.
+No dynamic target hosts or generic proxy paths are accepted. The browser retains pairing credentials locally. The Worker does not store credentials. The PWA Settings sheet includes a read-only **Test Shield connection** action. The Remote relay only accepts commands while the Shield/Companion is online, and a `202 queued` response means **queued**, not downloaded or confirmed by Flud.
 
 Auto-start uses the Companion's existing validated helper; the PWA does not implement an independent or duplicate magnet handoff. If an iPhone browser cannot open `magnet:` locally, use **Send to Flud** via the Remote relay or **Copy** and open the existing Companion PWA.
 
@@ -55,3 +55,7 @@ Auto-start uses the Companion's existing validated helper; the PWA does not impl
 Production is deployed at **https://index.alexlab.media** (2026-10-08). GitHub-hosted smoke checks passed HTTP+TLS, homepage, manifest, health and 46-entry provider catalog. Provider-level live search reliability, mobile PWA installation and Shield handoff still require independent end-to-end validation.
 
 `python3 scripts/check-production-smoke.py` verifies the public site and is run automatically after canonical Cloudflare deploys. The standalone workflow `.github/workflows/production-smoke.yml` also checks the public endpoint.
+
+### Production provider audit
+
+After each explicitly marked `[deploy-pwa]` deployment, `scripts/audit-live-providers.py` checks all 46 indexers with a benign `ubuntu` search, capped at three concurrent searches, without fetching torrent files or opening magnets. Outcomes distinguish results, empty/unverified, provider errors and request errors. Upstream blocking does not falsely mark repository CI as broken; review job logs for follow-up fixes.
