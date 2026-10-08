@@ -2,7 +2,17 @@
 const $=id=>document.getElementById(id);
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1"};
 const preferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null};
+const recentCompanionCommands=new Map();
+const activeCompanionMagnets=new Set();
+const activeCompanionItems=new Set();
+const companionLabels=new Map();
+// Remote deduplicates requestId for 120 seconds. Reuse that ID on rapid repeat taps.
+function magnetIdentity(magnet,deviceId){
+ const params=new URLSearchParams(magnet.slice(magnet.indexOf("?")+1));
+ const xt=params.getAll("xt").find(value=>/^urn:btih:/i.test(value));
+ return deviceId+"|"+(xt?xt.toLowerCase():magnet.trim());
+}
 const api=async(path,options={})=>{
   const response=await fetch(path,{cache:"no-store",...options});
   let data;
@@ -106,9 +116,9 @@ async function ensureMagnet(item){
  if(state.bookmarks[item.id]){state.bookmarks[item.id]=item;save(STORAGE.bookmarks,state.bookmarks);}
  return item.magnet;
 }
-async function verifyCompanionReceipt(commandId,button) {
- if(!commandId||!state.pairing)return;
- // Bridge acknowledges commands asynchronously. A queued result is NOT a Flud download.
+async function verifyCompanionReceipt(commandId) {
+ if(!commandId||!state.pairing)return "Queued ✓";
+ // Relay acceptance, Shield acknowledgement, and torrent download are distinct states.
  for(let attempt=0;attempt<4;attempt++){
   await new Promise(resolve=>setTimeout(resolve,2000));
   try{
@@ -116,30 +126,57 @@ async function verifyCompanionReceipt(commandId,button) {
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(state.pairing)
    });
    if(data.lastResult?.id===commandId){
-    if(data.lastResult.ok){toast("Shield acknowledged the magnet command.");button.textContent="Shield ✓";}
-    else {toast("Shield rejected magnet: "+(data.lastResult.message||"Unknown error"));button.textContent="Retry send";}
-    return;
+    if(data.lastResult.ok){toast("Shield acknowledged the magnet command.");return "Shield ✓";}
+    toast("Shield rejected magnet: "+(data.lastResult.message||"Unknown error"));
+    return "Retry send";
    }
-  }catch{return;}
+  }catch{return "Queued ✓";}
  }
  toast("Queued; waiting for Shield confirmation.");
+ return "Queued ✓";
 }
 async function sendMagnet(item,button){
  if(!state.pairing?.deviceId||!state.pairing?.token){openDialog("settingsDialog");toast("Pair Flud Companion first.");return;}
+ const itemKey=item.id||item.magnet;
+ if(activeCompanionItems.has(itemKey)){toast("This magnet is already being sent.");return;}
  const original=button.textContent;
+ let activeKey=null;
+ activeCompanionItems.add(itemKey);
+ if(item.id)companionLabels.set(itemKey,"Sending…");
  button.disabled=true;button.textContent="Sending…";
  try{
    const magnet=await ensureMagnet(item);
-   const body={...state.pairing,magnet,requestId:crypto.randomUUID()};
+   const key=magnetIdentity(magnet,state.pairing.deviceId);
+   if(activeCompanionMagnets.has(key)){
+     toast("This magnet is already being sent.");return;
+   }
+   activeCompanionMagnets.add(key);activeKey=key;
+   const previous=recentCompanionCommands.get(key);
+   const now=Date.now();
+   const requestId=previous&&now-previous.at<110000?previous.requestId:crypto.randomUUID();
+   recentCompanionCommands.set(key,{requestId,at:now});
+   const body={...state.pairing,magnet,requestId};
    const result=await api("/api/companion/magnet",{
      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)
    });
    if(!result.ok||result.queued!==true)throw Error("Relay did not confirm a queued command.");
+   if(typeof result.id!=="string"||!result.id)throw Error("Relay returned no command receipt ID.");
    toast(result.duplicate?"Already queued in Companion.":"Magnet queued; awaiting Shield acknowledgement.");
    button.textContent="Queued ✓";
-   await verifyCompanionReceipt(result.id,button);
- }catch(e){toast(e.message);button.title=e.message;}
- finally{button.disabled=false;if(button.textContent==="Sending…"||button.textContent==="Queued ✓")button.textContent=original;}
+   if(item.id)companionLabels.set(itemKey,"Queued ✓");
+   const label=await verifyCompanionReceipt(result.id);
+   button.textContent=label;
+   if(item.id)companionLabels.set(itemKey,label);
+ }catch(e){
+   toast(e.message);button.title=e.message;
+   if(item.id)companionLabels.set(itemKey,"Retry send");
+ }finally{
+   if(activeKey)activeCompanionMagnets.delete(activeKey);
+   activeCompanionItems.delete(itemKey);
+   button.disabled=false;
+   if(item.id)renderResults();
+   else button.textContent=original;
+ }
 }
 function renderResults(){
  const root=$("results");root.replaceChildren();
@@ -161,7 +198,8 @@ function renderResults(){
    }
    body.append(title,info);
    const actions=el("div","result-actions");
-   addAction(actions,"Send to Flud",function(){sendMagnet(item,this)},"send");
+   const sendButton=addAction(actions,companionLabels.get(item.id)||"Send to Flud",function(){sendMagnet(item,this)},"send");
+   sendButton.disabled=activeCompanionItems.has(item.id);
    addAction(actions,"Copy",async()=>{try{await copyMagnet(await ensureMagnet(item));}catch(e){toast(e.message);}});
    addAction(actions,"Share",async()=>{
      try{
@@ -227,48 +265,70 @@ function renderProviderErrors(failures){
   save(STORAGE.selected,ids);updateProviderCount();renderProviders();
   if(state.searching){
     state.pendingAlternativeSearch=true;
-    toast("Alternative search will start after this search finishes.");
+    state.searchAbort?.abort();
+    toast("Cancelling the current search and starting alternatives.");
   }else search();
  });
  details.append(alternatives);
  root.append(details);
 }
 async function search(){
- if(state.searching)return;
+ if(state.searching){
+  state.searchAbort?.abort();
+  $("notice").textContent="Cancelling search; keeping results already found…";
+  return;
+ }
  const query=$("query").value.trim();
  if(query.length<2){toast("Enter at least two characters");return;}
- if(!state.selected.size){openDialog("providersDialog");toast("Select at least one working indexer.");return;}
- state.searching=true;state.bookmarksMode=false;state.items=[];
- $("searchButton").disabled=true;$("searchButton").textContent="Searching…";
- $("notice").textContent="Searching "+state.selected.size+" indexers…";$("providerErrors").replaceChildren();renderResults();
- const ids=[...state.selected],failures=[];let completed=0;
+ if(!state.selected.size){openDialog("providersDialog");toast("Select at least one indexer.");return;}
+ const ids=[...state.selected],category=$("category").value,failures=[];
+ const controller=new AbortController();
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];
+ $("searchButton").disabled=false;$("searchButton").textContent="Cancel search ×";
+ $("notice").textContent="Searching "+ids.length+" indexers…";$("providerErrors").replaceChildren();renderResults();
+ let completed=0,next=0;
  try{
-  for(let i=0;i<ids.length;i+=3){
-   await Promise.all(ids.slice(i,i+3).map(async id=>{
+  // Sliding pool: a slow provider never blocks the next queued provider.
+  await Promise.all(Array.from({length:Math.min(3,ids.length)},async()=>{
+   while(!controller.signal.aborted){
+    const index=next++;
+    if(index>=ids.length)return;
+    const id=ids[index];
     const url=new URL("/api/search",location.origin);
-    url.searchParams.set("q",query);url.searchParams.set("category",$("category").value);
+    url.searchParams.set("q",query);url.searchParams.set("category",category);
     url.searchParams.set("providers",id);
     try{
-     const data=await api(url.pathname+url.search);
+     const data=await api(url.pathname+url.search,{signal:controller.signal});
+     if(controller.signal.aborted)return;
      state.items.push(...(data.results||[]));
      for(const e of data.errors||[])failures.push(e);
-    }catch(e){failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});}
+    }catch(e){
+     if(controller.signal.aborted)return;
+     failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});
+    }
+    if(controller.signal.aborted)return;
     completed++;
     renderResults();
     $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" results found.";
     renderProviderErrors(failures);
-   }));
+   }
+  }));
+  if(!controller.signal.aborted){
+   if(!state.items.length)$("notice").textContent=failures.length?"No results; some indexers failed.":"No matching results in selected indexers.";
+   else $("notice").textContent="";
   }
-  if(!state.items.length)$("notice").textContent=failures.length?"No results; some indexers failed.":"No matching results in selected indexers.";
-  else $("notice").textContent="";
  }finally{
-  state.searching=false;$("searchButton").disabled=false;$("searchButton").textContent="Search →";renderResults();
+  const cancelled=controller.signal.aborted;
+  state.searchAbort=null;state.searching=false;
+  $("searchButton").disabled=false;$("searchButton").textContent="Search →";
+  renderResults();
   if(state.pendingAlternativeSearch){
-    state.pendingAlternativeSearch=false;
-    search();
-    return;
+   state.pendingAlternativeSearch=false;
+   search();
+   return;
   }
-  $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
+  if(cancelled)$("notice").textContent="Search cancelled. Results already found are preserved.";
+  else $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
  }
 }
 async function status(){
