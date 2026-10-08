@@ -65,3 +65,11 @@ After each explicitly marked `[deploy-pwa]` deployment, `scripts/audit-live-prov
 After the 46-adapter deployment, a benign `ubuntu` search returned results from 8 sources, 14 empty/unverified sources and 24 explicit upstream errors, mostly 403. Use job `37763214467` for provider-level evidence. Search results are not guaranteed simply because a source adapter is installed. Cloudflare challenge cookies and upstream server restrictions require independent compatibility work.
 
 The follow-up outbound compatibility layer mirrors the pinned Android `NetworkClient.USER_AGENT` and permits **one same-origin HTTPS redirect**, never arbitrary redirects. Do not silently introduce a generic fetch proxy or third-party paid CAPTCHA service.
+
+## Indexer availability and recovery
+
+The source inventory and implemented adapters do not guarantee live access to each site. On 2026-10-08, BTDigg returned HTTP 429 from GitHub-hosted tests while the production Worker timed out; some other sites required browser verification.
+
+Magnetra now reports distinct error statuses, offers a direct HTTPS source-search link when supported, and a separate search using working alternative indexers. Alternative results always carry the correct indexer name. Browser-restricted results cannot be read back automatically into the PWA.
+
+No paid dependencies are used. See docs/PROJECT_STATE.md for the verified diagnostics.
