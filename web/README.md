@@ -77,3 +77,7 @@ No paid dependencies are used. See docs/PROJECT_STATE.md for the verified diagno
 ### Copy from browser → Flud Companion
 
 If you open BTDigg (or another source) directly in Safari, copy a magnet link. Return to Magnetra and press **Paste magnet → Flud**. The clipboard is read only after that explicit tap; if iOS denies clipboard access, a manual paste field opens. The existing paired Remote relay handles the dispatch, and the UI still distinguishes relay queue acceptance from Shield acknowledgement. This is a manual browser-origin fallback, not direct cross-origin scraping.
+
+### Automatic PWA updates
+
+The service worker uses network-first refresh for scripts, styles and the manifest, while retaining an offline shell. API calls, including Flud Companion commands, are never cached. This corrects an older cache-first strategy that could keep iPhone users on stale JavaScript after a successful deployment. After the first update, reopening the PWA normally should pick up fresh assets; a one-time close/reopen may be needed when replacing a previously installed worker.
