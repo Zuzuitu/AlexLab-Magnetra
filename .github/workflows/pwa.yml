@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check worker/src/index.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check web/app.js && node --check web/sw.js
+        run: node --check worker/src/index.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check web/app.js && node --check web/sw.js
       - name: Test provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
       - name: Validate provider selectors in real Cloudflare workerd runtime
