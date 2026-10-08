@@ -1,4 +1,4 @@
-import {SOURCE_HEADERS} from "./request-headers.mjs";
+import {SOURCE_HEADERS,fetchProviderSameOrigin} from "./request-headers.mjs";
 /**
  * HTML providers ported from Android Jsoup source selectors. Every provider has
  * explicit fixed URL construction, row selectors and field selectors. No
@@ -178,10 +178,10 @@ export async function runHtmlAdapter(id,q,category,fetcher=fetch) {
  const u=spec.search(q,category);
  // Never allow redirect to a user-controlled arbitrary URL.
  if(!u.startsWith(spec.host+"/")&&!u.startsWith(spec.host+"?"))throw Error("provider origin mismatch");
- const response=await fetcher(u,{
+ const response=await fetchProviderSameOrigin(u,{
    method:"GET",headers:{...SOURCE_HEADERS,"accept":"text/html,application/xhtml+xml"},
-   signal:AbortSignal.timeout(11000),redirect:"follow"
- });
+   signal:AbortSignal.timeout(11000)
+ },fetcher);
  if(!response.ok)throw Error("provider HTTP "+response.status);
  if(response.headers.get("cf-mitigated")==="challenge")throw Error("provider Cloudflare challenge");
  const raw=await response.text();
