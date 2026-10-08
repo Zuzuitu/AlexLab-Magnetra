@@ -137,6 +137,9 @@ The upstream Android `NetworkClient.USER_AGENT` is a fixed Android Chrome 141 UA
 
 ## BTDigg and third-party provider recovery (2026-10-08)
 
+Full 46-source outcomes and the 21 failing sources are tracked in **`docs/PROVIDER_AVAILABILITY.md`**. This is a dated observation, not a promise of live uptime.
+
+
 Owner reported: `BTDigg: The operation was aborted due to timeout`, requesting remediation for all failing indexers.
 
 ### Verified source reachability facts
