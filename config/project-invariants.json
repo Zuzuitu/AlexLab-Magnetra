@@ -118,7 +118,13 @@
     "audit_empty_count": 12,
     "audit_error_count": 22,
     "audited_results_selection_separate_from_select_all": true,
-    "audit_is_not_live_status": true
+    "audit_is_not_live_status": true,
+    "default_searched_provider_ids": [
+      "knaben",
+      "torrentscsv",
+      "thepiratebay",
+      "internetarchive"
+    ]
   },
   "pwa_cache": {
     "api_requests_never_cached": true,
