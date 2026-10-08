@@ -6,9 +6,10 @@ This repository is the persistent technical memory for AlexLab Magnetra. Do not 
 
 1. Read `docs/PROJECT_STATE.md`.
 2. Read `config/project-invariants.json`.
-3. Inspect the current implementation on the main branch before assuming behavior from prior conversations.
-4. Run `python3 scripts/check-project-invariants.py`.
-5. If code, config, checkpoint, and implementation contradict each other, stop the feature change and reconcile the inconsistency first.
+3. For cross-chat continuation, read `docs/NEXT_CHAT_HANDOFF.md` as a **supplement**, not a replacement for current `main` and `docs/PROJECT_STATE.md`.
+4. Inspect the current implementation on the main branch before assuming behavior from prior conversations.
+5. Run `python3 scripts/check-project-invariants.py`.
+6. If code, config, checkpoint, and implementation contradict each other, stop the feature change and reconcile the inconsistency first.
 
 ## Critical invariants
 
@@ -55,6 +56,12 @@ Never leave the checkpoint behind the code.
 - The deferred magnet endpoint must reject off-origin details links and external redirects; the PWA must never silently drop a deferred-magnet listing solely because the search page lacks a magnet. Workerd selector tests must validate actual JSON from a dedicated test Worker, not HTTP 200 from the deployed PWA assets.
 - Never use an arbitrary URL proxy. Companion remote relay calls are routed to one allowlisted HTTPS host. Keep tokens out of URLs, service worker caches and logs.
 - Companion magnet commands must use idempotency request IDs; distinguish queue acceptance from the matching remote Shield/Bridge acknowledgement, and never claim queued or acknowledged means downloaded. Never modify the proven Flood/Flud Auto-start boundary in another repository as part of a PWA convenience feature.
+
+## New-chat handoff stewardship
+
+- `docs/NEXT_CHAT_HANDOFF.md` is the practical handoff for fresh ChatGPT sessions; `docs/PROJECT_STATE.md` and code on current `main` remain more authoritative. Treat all recorded SHAs and provider health snapshots as historical observations.
+- When the owner explicitly requests a complete session checkpoint, reconcile and update both the canonical `docs/PROJECT_STATE.md` and relevant handoff content in one guarded PR, without inventing decisions, replacing the source audit with guessed data, or rewriting unrelated historical sections.
+- The most recent fully recorded production provider audit on 2026-10-08 is **12 results / 14 empty-unverified / 20 source errors** (run 37827913584). The intentionally older UI snapshot is **12/12/22** (run 37816874771); do not confuse these. Source status is never 'live now' unless verified as such.
 
 ## Technical-memory maintenance
 
