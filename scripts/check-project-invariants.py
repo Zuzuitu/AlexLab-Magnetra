@@ -91,9 +91,31 @@ def check_required_memory_files(config: dict) -> None:
         "docs/PROJECT_STATE.md",
         "config/project-invariants.json",
         "scripts/check-project-invariants.py",
+        "docs/NEXT_CHAT_HANDOFF.md",
     ):
         if required_reference not in agents:
             fail(f"AGENTS.md must reference {required_reference}")
+
+    handoff_rel = nested(config, "delivery", "handoff_document")
+    if handoff_rel != "docs/NEXT_CHAT_HANDOFF.md":
+        fail("delivery.handoff_document must point to the canonical next-chat handoff")
+    else:
+        handoff_path = ROOT / handoff_rel
+        require_file(handoff_path)
+        if handoff_path.is_file():
+            handoff = handoff_path.read_text(encoding="utf-8")
+            for required in (
+                "docs/PROJECT_STATE.md",
+                "config/project-invariants.json",
+                "https://index.alexlab.media",
+                "46",
+                "Flud Companion",
+                "BTDigg",
+            ):
+                if required not in handoff:
+                    fail(f"handoff missing essential project context: {required}")
+    if nested(config, "delivery", "handoff_subordinate_to_repository_truth") is not True:
+        fail("new-chat handoff must remain subordinate to current main and canonical checkpoint")
 
 
 def check_project_identity(config: dict) -> None:
