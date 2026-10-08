@@ -289,6 +289,28 @@ function init(){
  $("sort").addEventListener("change",renderResults);
  $("settingsButton").addEventListener("click",()=>openDialog("settingsDialog"));
  $("companionChip").addEventListener("click",()=>openDialog("settingsDialog"));
+ $("pasteMagnetButton").addEventListener("click",async function(){
+  if(!state.pairing){openDialog("settingsDialog");toast("Pair Flud Companion first.");return;}
+  try{
+    const copied=(await navigator.clipboard.readText()).trim();
+    if(copied.startsWith("magnet:?") && copied.length<=12000){
+      await sendMagnet({magnet:copied},this);
+      return;
+    }
+  }catch{ /* Clipboard API may be unavailable on iOS standalone PWA. */ }
+  openDialog("manualMagnetDialog");
+  $("manualMagnetInput").focus();
+ });
+ $("manualMagnetForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const magnet=$("manualMagnetInput").value.trim();
+  if(!magnet.startsWith("magnet:?")||magnet.length>12000){
+    toast("Paste a valid magnet link.");return;
+  }
+  closeDialog("manualMagnetDialog");
+  sendMagnet({magnet},$("pasteMagnetButton"));
+ });
+
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{
