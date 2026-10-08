@@ -27,7 +27,7 @@ The repository retains the upstream Android application and now also runs a prod
 The first PWA implementation is deployed and confirmed over HTTPS; real-device and provider-specific end-to-end testing remain pending. The separation is:
 
 - `app/` — upstream-compatible Android implementation
-- `web/` — installable, standalone mobile-first PWA with IndexedDB-like local bookmark persistence (currently localStorage), full indexer inventory and magnet actions
+- `web/` — installable, standalone mobile-first PWA (vanilla JavaScript, CSS, HTML, manifest, service worker) with browser-local `localStorage` for source preferences, bookmarks and Companion pairing, complete source catalog and magnet actions. IndexedDB is not implemented.
 - `worker/` — Cloudflare Workers-compatible search/API and fixed-origin Flud Companion remote relay bridge
 
 The PWA must not be implemented by destructively converting or replacing the Android codebase.
@@ -74,7 +74,7 @@ Cloudflare Worker source under `worker/` serves static web assets and same-origi
 
 ## Protected Android baseline
 
-The fork currently matches upstream at commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`.
+The Android baseline was forked from upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`. Current fork `main` has intentionally diverged with AlexLab technical memory, PWA and CI changes; it no longer matches this upstream SHA.
 
 Protected baseline values:
 
@@ -86,11 +86,11 @@ Protected baseline values:
 
 These values are protected because they describe the known-good starting point. They may change later only as an intentional coordinated decision.
 
-## First PWA implementation (2026-10-07)
+## First PWA implementation — historical first milestone (2026-10-07)
 
 - Full canonical inventory: exactly **46 built-in upstream indexers**, derived from `BuiltinSearchProvidersModule.kt`. Guard checks matching upstream provider IDs, not merely count.
 - Explicitly ported adapters in the first milestone (**21**): `AniLibria`, `Knaben`, `TorrentsCSV`, `ThePirateBay`, `YTS`, `Internet Archive`, `BangumiMoe`, `SubsPlease`, `Btsow`, `Nyaa` and `Sukebei`; plus `BTDigg`, `Dmhy`, `NekoBT`, `Mikan`, `TorrentKitty`, `Rutor`, `XXXTracker`, `AnimeTosho`, `LimeTorrents`, `TorrentDownload` (HTMLRewriter). These are implemented adapters, **not yet live-tested against every provider**; real-world availability remains an external dependency.
-- The remaining **25** providers are inventoried and visible as **PORT PENDING**, not represented as working. Full functional parity remains an outstanding explicit product requirement; never count catalog coverage as adapter parity.
+- **Historical only:** in this first milestone 25 providers were still **PORT PENDING**. All 25 subsequently received adapters in the second milestone. Full 46-source **live functional parity remains unverified**, so the historical PORT PENDING note is not the current state.
 - Search worker accepts an allowlisted set of provider IDs, a bounded query and category, with provider-specific adapters, up to all 46 registered sources (once ported), with at most three simultaneous per-provider fetches to bound load.
 - PWA displays source, size, seeders, peers, date, magnet, copy/share, torrent link when provided, bookmarks, and per-provider errors.
 - Remote Flud Companion handoff uses a same-origin Worker endpoint which forwards only to `https://flud-remote.alexlab.media` and reuses the verified public Flud Companion `/api/v1/device/:deviceId/magnet` contract. It sends a stable request ID per command for duplicate protection.
@@ -225,7 +225,7 @@ Fix:
 
 ## Important regressions / causes
 
-No end-user PWA regression has been confirmed and fixed yet. The project has addressed the repository/CI regressions below.
+Several concrete PWA/UX and CI regressions were found and addressed in this session, including stale service-worker caches, misleading selection of all adapters as 'working', missing swarm-count coercion, workerd selector-test false positives, and inconsistencies between API and PWA default source IDs. Root causes and fixes are preserved above and in the provider documents.
 
 The first repository-safety issue identified at project start was that existing build workflows had no project-invariant gate, and the release workflow could materialize signing material before any repository-policy validation. This memory-system change adds an invariant guard before build/release-sensitive steps.
 
@@ -246,10 +246,11 @@ Future fixed regressions with durable lessons must be recorded here with:
 - Fork created successfully.
 - Android baseline originates from upstream commit `100b3f21f98b93bb9b70869ba5f70eadc80fa14c`; fork `main` now diverges intentionally with PWA and technical memory.
 - Technical-memory guard baseline is established in main and enforced in CI.
-- PWA web shell and all **46 provider adapters** are merged and deployed. The 2026-10-08 production audit confirmed results from 12 sources, 12 empty/unverified and 22 source errors. Physical Shield handoff remains unverified; the audit-aware source selection improvement was merged as PR #8 and deployed.
+- PWA web shell and all **46 original provider adapter IDs** are merged and deployed. **Latest verified complete production audit (run `37827913584`): 12 source IDs returned results, 14 were empty/unverified for the single `ubuntu` query, and 20 reported upstream errors.** The older, deliberately dated UI snapshot (run `37816874771`) still describes 12/12/22; do not confuse these two datasets. Physical Shield handoff is unverified. Audit-aware source selection was merged in PR #8 and deployed.
 - PWA backend/proxy is deployed to Cloudflare Workers with fixed allowlisted upstream endpoints.
 - Full 46-provider **implementation coverage reached and deployed**, but functional/live parity remains unverified. Never infer source uptime from the catalogue.
-- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Initial deployment was verified by run 37596819448; the later 46-adapter recovery deployment passed run **37816874771** and the independent HTTPS/PWA smoke checks. Deploy requires manual dispatch or an explicit `[deploy-pwa]` marker on `main`; ordinary pushes do not redeploy.
+- Production is live at **`https://index.alexlab.media`** via Cloudflare Workers Custom Domain. Initial deployment was verified by run `37596819448`; full 46-adapter deployment by run `37763214467`; source recovery by run `37816874771`; **most recent PWA deployment and HTTPS/provider smoke by successful run `37827913584`**. PR #9 was documentation-only and did not deploy. Deployment requires manual dispatch or an explicit `[deploy-pwa]` marker on `main`; ordinary pushes do not deploy.
+- GitHub `main` checkpoint before this synchronization: `94d2b6b40e4a3ad465f0c39e64fc1df4301f9f87` (PR #9), with no open PRs as inspected on 2026-10-08. This SHA is an observation and must never be assumed latest in a future chat.
 - Paid services: none approved.
 
 ## Next relevant steps
