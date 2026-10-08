@@ -5,7 +5,7 @@ import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 
-const DEFAULT_IDS=["knaben","torrentscsv","nyaasi","internetarchive"];
+const DEFAULT_IDS=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Exact endpoint allowlist: never forward to an arbitrary hostname or URL.
 const COMPANION_RELAY_ORIGIN="https://flud-remote.alexlab.media";
 const CATEGORIES=new Set(["all","movies","series","apps","games","books","music","anime","porn","other"]);
