@@ -101,5 +101,13 @@
       "/api/health",
       "/api/providers"
     ]
+  },
+  "provider_recovery": {
+    "source_links_must_use_catalog_allowlist": true,
+    "provider_errors_must_report_code": true,
+    "never_relabel_alternative_results": true,
+    "auto_retry_rate_limited_sources": false,
+    "no_paid_challenge_bypass": true,
+    "source_browser_links_must_use_https": true
   }
 }
