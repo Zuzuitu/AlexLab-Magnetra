@@ -1,3 +1,4 @@
+import {readFileSync} from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {directSearchUrl,classifyProviderError} from "../src/provider-recovery.mjs";
@@ -57,4 +58,15 @@ test("provider timeouts have explicit recovery metadata, not opaque failure text
   assert.ok(data.errors[0].message.includes("respond"));
   assert.equal(data.errors[0].openUrl,"https://btdig.com/search?q=ubuntu");
  }finally{globalThis.fetch=original;}
+});
+
+test("manual browser fallback has an explicit user-gesture clipboard action and paste form",()=>{
+ const html=readFileSync(new URL("../../web/index.html",import.meta.url),"utf8");
+ const app=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
+ for(const id of ["pasteMagnetButton","manualMagnetDialog","manualMagnetForm","manualMagnetInput"])
+   assert.ok(html.includes('id="'+id+'"'),id+" missing from PWA");
+ assert.ok(app.includes('$("pasteMagnetButton").addEventListener("click"'));
+ assert.ok(app.includes("navigator.clipboard.readText()"));
+ assert.ok(app.includes('openDialog("manualMagnetDialog")'));
+ assert.ok(app.includes('sendMagnet({magnet}'),"Manual magnets must reuse existing Companion dispatch");
 });
