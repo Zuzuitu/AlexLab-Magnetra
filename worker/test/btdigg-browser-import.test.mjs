@@ -61,6 +61,7 @@ function fixtureRow(name="Ubuntu official ISO"){
 }
 function runBookmarklet(origin,rows){
  const b=bridge();let destination="",alerted="";
+ assert.equal(b.bookmarklet().includes("\n"),false,"Safari bookmarklet URL should be single-line");
  const location={protocol:"https:",hostname:origin,origin:"https://"+origin,
   pathname:"/search",search:"?q=ubuntu",assign(url){destination=url;}};
  const box={location,URL,URLSearchParams,document:{
