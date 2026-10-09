@@ -62,22 +62,19 @@ packages. If NexaPanel/CalciDatum are running, leave them untouched.
 
 ## 1. Install the *separate* gateway service
 
-From the Magnetra repository checkout on the Rock64:
+Use the repo's **guarded, idempotent installer**. It runs local tests,
+creates only dedicated Magnetra paths and an isolated systemd unit, generates
+a strong token privately on Rock64 and never alters existing CalciDatum,
+NexaPanel or cloudflared units. It will NOT set up a Cloudflare tunnel.
+
+From the Magnetra repository checkout on Rock64:
 
 ```bash
-sudo install -d -m 0755 /opt/magnetra-btdigg
-sudo install -d -m 0700 /etc/magnetra-btdigg
-sudo install -m 0644 rock64/btdigg_gateway.py /opt/magnetra-btdigg/btdigg_gateway.py
-sudo install -m 0644 rock64/magnetra-btdigg.service /etc/systemd/system/magnetra-btdigg.service
-sudo install -m 0600 /dev/null /etc/magnetra-btdigg/gateway.env
-# Generate locally on the Rock64. The token remains PRIVATE; do not paste it in chat.
-python3 -c 'import secrets;print("MAGNETRA_BTDIGG_TOKEN="+secrets.token_urlsafe(48))' |
-  sudo tee /etc/magnetra-btdigg/gateway.env >/dev/null
-sudo chmod 0600 /etc/magnetra-btdigg/gateway.env
-sudo systemctl daemon-reload
-sudo systemctl enable --now magnetra-btdigg.service
-sudo systemctl --no-pager --full status magnetra-btdigg.service
+sudo bash rock64/install-btdigg.sh
 ```
+
+No secret needs to be copied into the terminal command. The installer won't
+replace an existing token, or overwrite a systemd unit owned by another app.
 
 **Never post the token in GitHub, screenshots, logs, chat or a URL.** Read it
 privately on the host when you configure the exact same value as a *Secret*
@@ -87,11 +84,9 @@ The name in Rock64's environment file is deliberately different:
 
 ## 2. Prove the *Rock64 process* can actually read the source
 
-Copy the check script into the gateway's existing directory (does not install
-or modify systemd), then run once:
+Run the one-time protected source check:
 
 ```bash
-sudo install -m 0644 rock64/check-btdigg.py /opt/magnetra-btdigg/check-btdigg.py
 sudo python3 /opt/magnetra-btdigg/check-btdigg.py
 ```
 
