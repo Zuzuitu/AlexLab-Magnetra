@@ -164,12 +164,39 @@ def handler_class(secret: str, provider: SearchProvider):
     return Handler
 
 
+
+class LimitedHTTPServer(ThreadingHTTPServer):
+    """Bound per-request threads, including rejected/unauthenticated requests."""
+    daemon_threads = True
+    request_queue_size = 16
+
+    def __init__(self, address, handler):
+        self._slots = threading.BoundedSemaphore(16)
+        super().__init__(address, handler)
+
+    def process_request(self, request, client_address):
+        if not self._slots.acquire(blocking=False):
+            request.close()
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+
 def main():
     token = os.environ.get("MAGNETRA_BTDIGG_TOKEN", "")
     if len(token) < 48 or len(token) > 256 or not re.fullmatch(r"[A-Za-z0-9_-]+", token):
         raise SystemExit("Set a strong MAGNETRA_BTDIGG_TOKEN (48-256 URL-safe characters).")
     # Explicit no-port-forward and no LAN listener. Use Cloudflare Tunnel -> localhost.
-    server = ThreadingHTTPServer((BIND, PORT), handler_class(token, SearchProvider()))
+    server = LimitedHTTPServer((BIND, PORT), handler_class(token, SearchProvider()))
     print("Magnetra BTDigg gateway bound to 127.0.0.1:%d (private); no public listener." % PORT, flush=True)
     try:
         server.serve_forever(poll_interval=0.5)
