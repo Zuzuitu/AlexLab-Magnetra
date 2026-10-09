@@ -53,3 +53,9 @@ External references:
 - https://bitmagnet.io/guides/endpoints.html
 - https://bitmagnet.io/faq.html
 - https://bitmagnet.io/setup/installation.html
+
+## Owner scope clarification — 2026-10-09
+
+**Binding scope:** The owner wants **genuine BTDigg search result listings displayed within Magnetra**, not an independent DHT indexer or a Bitmagnet/dhtcrawler2 installation. Path B above is REJECTED as a proposed delivery milestone, retained only as background comparative research. Do not build, provision, or label an independent crawler as `btdigg`. Existing browser fallback does not meet the requested automatic integrated search acceptance criterion.
+
+Acceptance criterion: a benign `ubuntu` search to the canonical BTDigg source must return result rows with verifiable BTDigg origin, title, magnet/infohash and other fields where available; the established tests should exercise real provider response and fixtures. If the provider continues to block automated requests or offers no permitted API, report the dependency rather than faking results. Contact/permission for an official endpoint is a prerequisite for a reliable server integration. Historical public `api.btdigg.org` paths appearing in unrelated old third-party scripts are **not** verified/current API contracts and must not be used without operator confirmation.
