@@ -4,6 +4,7 @@ import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
+import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
 
 const DEFAULT_IDS=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Exact endpoint allowlist: never forward to an arbitrary hostname or URL.
@@ -18,7 +19,7 @@ async function safeBody(request,max=15000){
   if(t.length>max)throw Error("request too large");
   return JSON.parse(t);
 }
-async function getSearch(url) {
+async function getSearch(url,env) {
  const q=url.searchParams.get("q")||"";
  if(q.trim().length<2||q.length>180)return error("Query must contain 2–180 characters.");
  const category=url.searchParams.get("category")||"all";
@@ -27,12 +28,17 @@ async function getSearch(url) {
  if(ids.length>46||ids.length===0||new Set(ids).size!==ids.length)return error("Choose 1–46 distinct providers.");
  if(ids.some(id=>!PROVIDER_MAP.has(id)))return error("Unknown provider.");
  if(ids.some(id=>!hasAdapter(id)))return error("One or more selected providers are not ported yet.");
+ // Only BTDigg can opt in to the private fixed-host Rock64 gateway.
+ // All other 45 adapters retain their existing network behavior.
+ let btdiggFetcher;
+ try{btdiggFetcher=ids.includes("btdigg")?rock64BTDiggFetcher(env):null;}
+ catch(e){return error(String(e?.message||e),503);}
  const results=[],errors=[],stats=[];
  // Bounded concurrency reduces load on providers and keeps resource consumption predictable.
  for(let i=0;i<ids.length;i+=3){
    const batch=await Promise.all(ids.slice(i,i+3).map(async id=>{
      try {
-       const found=await searchProvider(id,q,category);
+       const found=await searchProvider(id,q,category,id==="btdigg"&&btdiggFetcher?btdiggFetcher:fetch);
        return {provider:id,results:found,count:found.length};
      } catch(e){
        const reason=classifyProviderError(e);
@@ -113,7 +119,7 @@ export default {
    const url=new URL(request.url);
    if(url.pathname==="/api/health" && request.method==="GET")return json({ok:true,product:"AlexLab Magnetra",ported:PROVIDERS.filter(x=>x.ported).length,total:PROVIDERS.length});
    if(url.pathname==="/api/providers" && request.method==="GET")return json({providers:PROVIDERS.map(p=>({...p,lastAudit:auditFor(p.id)})),audit:{observedAt:SOURCE_AUDIT.observedAt,query:SOURCE_AUDIT.query,workflowRunId:SOURCE_AUDIT.workflowRunId}});
-   if(url.pathname==="/api/search" && request.method==="GET")return getSearch(url);
+   if(url.pathname==="/api/search" && request.method==="GET")return getSearch(url,env);
    if(url.pathname==="/api/resolve" && request.method==="POST")return resolveMagnet(request);
    if(url.pathname==="/api/companion/magnet" && request.method==="POST")return companion(request,"magnet");
    if(url.pathname==="/api/companion/status" && request.method==="POST")return companion(request,"status");
