@@ -188,7 +188,7 @@ function renderResults(){
    else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent="No results. Try another query or indexer.";
    return;
  }
- $("notice").textContent="";
+ $("notice").textContent=state.importNote&&!state.bookmarksMode&&sorted.some(x=>x.importedFromBrowser)?state.importNote:"";
  for(const item of sorted.slice(0,400)){
    const card=el("article","result");
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
@@ -284,7 +284,20 @@ function showBTDiggDialog(){
  if(q)url.pathname="/search",url.searchParams.set("q",q);
  $("btdiggOpenSearch").href=url.toString();
  $("btdiggBookmarkletLink").href=BTDiggBridge.bookmarklet();
+ $("btdiggClipboardBookmarkletLink").href=BTDiggBridge.bookmarklet("copy");
  openDialog("btdiggDialog");
+}
+function applyBTDiggImport(imported){
+ if(!imported?.results?.length)throw Error("No BTDigg results were imported.");
+ state.items=imported.results;
+ state.bookmarksMode=false;
+ if(imported.query)$("query").value=imported.query;
+ state.importNote="Imported "+imported.results.length+" BTDigg result(s) from your browser; not independently server-verified.";
+ renderResults();
+}
+function importBTDiggFromClipboard(text){
+ if(!globalThis.BTDiggBridge)throw Error("BTDigg importer script is unavailable.");
+ applyBTDiggImport(BTDiggBridge.parseClipboard(text.trim()));
 }
 function importBTDiggBrowserResults(){
  if(!location.hash.startsWith("#btdigg="))return;
@@ -298,12 +311,7 @@ function importBTDiggBrowserResults(){
  }
  try{
   if(!globalThis.BTDiggBridge)throw Error("BTDigg importer script is unavailable.");
-  const imported=BTDiggBridge.parsePayload(fragment);
-  state.items=imported.results;
-  state.bookmarksMode=false;
-  if(imported.query)$("query").value=imported.query;
-  state.importNote="Imported "+imported.results.length+" BTDigg results from your browser (not server-verified).";
-  renderResults();
+  applyBTDiggImport(BTDiggBridge.parsePayload(fragment));
  }catch(e){
   state.importNote=e.message||"Invalid BTDigg import.";
   $("notice").textContent=state.importNote;
@@ -320,7 +328,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast("Select at least one indexer.");return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];state.importNote=null;
  $("searchButton").disabled=false;$("searchButton").textContent="Cancel search ×";
  $("notice").textContent="Searching "+ids.length+" indexers…";$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -419,12 +427,33 @@ function init(){
 
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
  $("btdiggButton").addEventListener("click",showBTDiggDialog);
- $("copyBTDiggBookmarklet").addEventListener("click",async()=>{
+ async function copyBTDiggCode(mode){
   try{
    if(!globalThis.BTDiggBridge)throw Error("BTDigg importer is unavailable.");
-   await navigator.clipboard.writeText(BTDiggBridge.bookmarklet());
-   toast("BTDigg importer copied. Paste it as a Safari bookmark URL.");
-  }catch(e){toast("Could not copy importer automatically; select the desktop bookmark link instead.");}
+   await navigator.clipboard.writeText(BTDiggBridge.bookmarklet(mode));
+   toast("Safari bookmarklet copied. Paste it as the URL of a Safari bookmark.");
+  }catch{
+   toast("Clipboard write denied; use the desktop bookmarklet link instead.");
+  }
+ }
+ $("copyBTDiggBookmarklet").addEventListener("click",()=>copyBTDiggCode("open"));
+ $("copyBTDiggClipboardBookmarklet").addEventListener("click",()=>copyBTDiggCode("copy"));
+ $("btdiggImportFromClipboard").addEventListener("click",async()=>{
+  try{
+   const text=await navigator.clipboard.readText();
+   importBTDiggFromClipboard(text);
+   $("btdiggPasteInput").value="";
+   closeDialog("btdiggDialog");
+   toast("BTDigg results imported into this PWA.");
+  }catch(e){toast((e?.message||"Clipboard read not permitted.")+" Use manual paste if needed.");}
+ });
+ $("btdiggImportManual").addEventListener("click",()=>{
+  try{
+   importBTDiggFromClipboard($("btdiggPasteInput").value);
+   $("btdiggPasteInput").value="";
+   closeDialog("btdiggDialog");
+   toast("BTDigg results imported.");
+  }catch(e){toast(e?.message||"Invalid BTDigg import code.");}
  });
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{
