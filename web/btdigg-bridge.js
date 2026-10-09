@@ -103,6 +103,6 @@ function collectPage(){
  if(encoded.length>24000){alert("A BTDigg result was too large to import safely.");return;}
  location.assign("https://index.alexlab.media/#btdigg="+encoded);
 }
-function bookmarklet(){return "javascript:("+collectPage.toString()+")()";}
+function bookmarklet(){return "javascript:("+collectPage.toString().replace(/\r?\n/g," ")+")()";}
 globalThis.BTDiggBridge=Object.freeze({parsePayload,checkedMagnet,bookmarklet,origin:ORIGIN});
 })();
