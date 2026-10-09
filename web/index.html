@@ -68,17 +68,25 @@
   <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
 </dialog>
 <dialog id="btdiggDialog" class="sheet">
-  <div class="sheet-head"><div><div class="section-overline">BTDIGG · USER BROWSER</div><h2>Import actual BTDigg results</h2><p class="muted">BTDigg may block Magnetra's automated server requests. This optional route reads the results that you open yourself in Safari, and brings their magnet links back to Magnetra.</p></div><button class="close-btn" data-close="btdiggDialog" aria-label="Close">×</button></div>
+  <div class="sheet-head"><div><div class="section-overline">BTDIGG · USER BROWSER</div><h2>Import actual BTDigg results</h2><p class="muted">When BTDigg rejects automated server access, you can import the results visible in your own Safari browser. This is a manual fallback, not an automatic API.</p></div><button class="close-btn" data-close="btdiggDialog" aria-label="Close">×</button></div>
   <div class="btdigg-import-steps">
-    <p><strong>Set up once (iPhone Safari):</strong> Tap <strong>Copy importer code</strong>. Create a Safari bookmark, edit its address, and replace the URL with the copied <code>javascript:</code> code.</p>
-    <p><strong>On each search:</strong> Open your BTDigg search in Safari, then run that saved bookmark while viewing the results. The page will return to Magnetra with its actual search results and Flud actions.</p>
-    <p class="muted">Desktop: drag the "BTDigg → Magnetra" link to the bookmarks bar instead. Safari bookmarklets and the live BTDigg page still need a real-device check. Do not run bookmarklet code on unknown sites.</p>
+    <p><strong>Set up once:</strong> Tap <strong>Copy iPhone PWA bookmarklet</strong>. Create a Safari bookmark, edit its address, and replace the address with the copied JavaScript bookmark code.</p>
+    <p><strong>Each search (installed Magnetra PWA):</strong> Open BTDigg in Safari and perform your search. Run the bookmark to copy its visible results. Return to your installed Magnetra app and choose <strong>Import from clipboard</strong>; your existing Flud Companion pairing remains available.</p>
+    <p><strong>Desktop or regular browser:</strong> Use <strong>Copy browser importer</strong> instead to navigate straight back to Magnetra in the browser. Safari and iOS home-screen PWAs do not share local storage or Companion pairing.</p>
+    <p class="muted">If clipboard access is denied, Safari will offer a manual copy prompt. In Magnetra, paste that code in the input below. On-device Safari/BTDigg verification is still needed.</p>
   </div>
   <div class="sheet-actions btdigg-import-actions">
-    <button id="copyBTDiggBookmarklet" type="button" class="secondary">Copy importer code</button>
+    <button id="copyBTDiggClipboardBookmarklet" type="button" class="secondary">Copy iPhone PWA bookmarklet</button>
+    <button id="copyBTDiggBookmarklet" type="button" class="secondary">Copy browser importer</button>
     <a id="btdiggOpenSearch" class="source-open" target="_blank" rel="noopener noreferrer" href="https://btdig.com/">Open BTDigg search ↗</a>
   </div>
-  <p class="muted">Desktop shortcut: <a id="btdiggBookmarkletLink" href="#" draggable="true">BTDigg → Magnetra</a>. The import link carries only user-selected public torrent metadata in a URL fragment (never Companion credentials), clears the fragment immediately on arrival, and makes no API calls to bypass BTDigg's limits. This is a manual import, not a recovered automatic API.</p>
+  <div class="btdigg-paste-area">
+    <button id="btdiggImportFromClipboard" type="button" class="primary">Import from clipboard</button>
+    <label class="setting-label" for="btdiggPasteInput">Or paste your BTDigg import code manually:</label>
+    <textarea id="btdiggPasteInput" rows="2" spellcheck="false" autocomplete="off" placeholder="BTDIGG_IMPORT:..."></textarea>
+    <button id="btdiggImportManual" type="button" class="secondary">Import pasted code</button>
+  </div>
+  <p class="muted">Desktop bookmarks: <a id="btdiggBookmarkletLink" href="#" draggable="true">BTDigg → Magnetra</a> or <a id="btdiggClipboardBookmarkletLink" href="#" draggable="true">BTDigg → copy for PWA</a>. Only result metadata and magnet links are shared, never Companion credentials. The browser route immediately clears the imported URL fragment; the PWA route uses your clipboard. Neither route bypasses BTDigg access controls.</p>
 </dialog>
 <dialog id="manualMagnetDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">DIRECT TO FLUD COMPANION</div><h2>Send a magnet</h2><p class="muted">Paste a magnet copied from BTDigg or another website. It will be sent through your paired Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Close">×</button></div>
