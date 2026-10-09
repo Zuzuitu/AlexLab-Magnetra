@@ -192,7 +192,7 @@ function renderResults(){
  for(const item of sorted.slice(0,400)){
    const card=el("article","result");
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
-   info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
+   info.append(el("span","tag",item.importedFromBrowser?"BTDigg · browser import":state.providers.find(p=>p.id===item.provider)?.name||item.provider));
    for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?item.seeders+" seeders":null,item.peers!==null&&item.peers!==undefined?item.peers+" peers":null,item.date?String(item.date).slice(0,10):null]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));
    }
@@ -254,6 +254,12 @@ function renderProviderErrors(failures){
    a.href=link;a.target="_blank";a.rel="noopener noreferrer";
    entry.append(a);
   }
+  if(failure.provider==="btdigg"){
+    const imported=el("button","source-open","Import actual BTDigg results ↗");
+    imported.type="button";
+    imported.addEventListener("click",showBTDiggDialog);
+    entry.append(imported);
+  }
   details.append(entry);
  }
  const alternatives=el("button","source-alt","Search with available indexers →");
@@ -271,6 +277,33 @@ function renderProviderErrors(failures){
  });
  details.append(alternatives);
  root.append(details);
+}
+function showBTDiggDialog(){
+ const q=$("query").value.trim();
+ const url=new URL("https://btdig.com/");
+ if(q)url.pathname="/search",url.searchParams.set("q",q);
+ $("btdiggOpenSearch").href=url.toString();
+ $("btdiggBookmarkletLink").href=BTDiggBridge.bookmarklet();
+ openDialog("btdiggDialog");
+}
+function importBTDiggBrowserResults(){
+ if(!location.hash.startsWith("#btdigg="))return;
+ const fragment=location.hash;
+ // Never persist magnet-bearing fragment URLs in navigation history.
+ try{history.replaceState(null,"",location.pathname+location.search);}
+ catch{location.hash="";}
+ try{
+  if(!globalThis.BTDiggBridge)throw Error("BTDigg importer script is unavailable.");
+  const imported=BTDiggBridge.parsePayload(fragment);
+  state.items=imported.results;
+  state.bookmarksMode=false;
+  if(imported.query)$("query").value=imported.query;
+  state.importNote="Imported "+imported.results.length+" BTDigg results from your browser (not server-verified).";
+  renderResults();
+ }catch(e){
+  state.importNote=e.message||"Invalid BTDigg import.";
+  $("notice").textContent=state.importNote;
+ }
 }
 async function search(){
  if(state.searching){
@@ -345,6 +378,7 @@ async function status(){
  }catch(e){updatePairChip("Flud Companion · Unavailable");$("pairStatus").textContent=e.message;return false;}
 }
 function init(){
+ importBTDiggBrowserResults();
  state.bookmarks=load(STORAGE.bookmarks,{});
  state.pairing=load(STORAGE.pairing,null);
  if(state.pairing){
@@ -380,6 +414,14 @@ function init(){
  });
 
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
+ $("btdiggButton").addEventListener("click",showBTDiggDialog);
+ $("copyBTDiggBookmarklet").addEventListener("click",async()=>{
+  try{
+   if(!globalThis.BTDiggBridge)throw Error("BTDigg importer is unavailable.");
+   await navigator.clipboard.writeText(BTDiggBridge.bookmarklet());
+   toast("BTDigg importer copied. Paste it as a Safari bookmark URL.");
+  }catch(e){toast("Could not copy importer automatically; select the desktop bookmark link instead.");}
+ });
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{
   state.bookmarksMode=!state.bookmarksMode;
@@ -433,7 +475,8 @@ function init(){
   state.providers=providers;state.audit=audit||null;
   chooseProviders();renderProviders();
   const tested=providers.filter(p=>p.lastAudit?.state==="results").length;
-  $("notice").textContent="Ready. "+providers.length+" source adapters; "+tested+" returned results in the last recorded test. Availability may change.";
+  $("notice").textContent=state.importNote||("Ready. "+providers.length+" source adapters; "+tested+" returned results in the last recorded test. Availability may change.");
+  if(state.items.length)renderResults();
  }).catch(e=>$("notice").textContent="API unavailable: "+e.message);
  status();
  if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
