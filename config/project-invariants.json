@@ -132,5 +132,20 @@
     "api_requests_never_cached": true,
     "application_assets_network_first": true,
     "offline_shell_preserved": true
+  },
+  "btdigg_residential_gateway": {
+    "upstream_origin": "https://btdig.com",
+    "tunnel_origin": "https://btdigg-rock64.alexlab.media",
+    "worker_secret_name": "BTDIGG_GATEWAY_TOKEN",
+    "rock64_secret_name": "MAGNETRA_BTDIGG_TOKEN",
+    "loopback_listener": "127.0.0.1:8796",
+    "max_content_bytes": 3000000,
+    "auth_required": true,
+    "disabled_without_worker_secret": true,
+    "open_proxy_forbidden": true,
+    "provider_substitution_forbidden": true,
+    "auto_retry_429_forbidden": true,
+    "must_not_modify_companion_or_other_providers": true,
+    "requires_real_rock64_probe_before_production_activation": true
   }
 }

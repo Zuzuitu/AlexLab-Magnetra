@@ -1,0 +1,27 @@
+[Unit]
+Description=Magnetra isolated Cloudflare Tunnel (do not replace existing cloudflared services)
+After=network-online.target magnetra-btdigg.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+LoadCredential=tunnel-token:/etc/magnetra-btdigg/tunnel-token
+Environment=TUNNEL_TOKEN_FILE=%d/tunnel-token
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate run
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=128M
+CPUQuota=20%
+TasksMax=32
+UMask=0077
+# systemd securely copies root-owned token file into service-private credentials dir.
+# If your cloudflared binary is not /usr/bin/cloudflared, adapt ExecStart
+# before copying; never touch the machine's existing cloudflared.service.
+
+[Install]
+WantedBy=multi-user.target

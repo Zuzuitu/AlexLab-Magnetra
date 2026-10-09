@@ -625,6 +625,67 @@ def check_web_parity_and_companion(config: dict) -> None:
                     fail(f"production smoke script must cover endpoint: {endpoint}")
 
 
+
+def check_btdigg_residential_gateway(config: dict) -> None:
+    """Prevent an accidentally open proxy or a BTDigg source substitution."""
+    gateway = nested(config, "btdigg_residential_gateway")
+    if not isinstance(gateway, dict):
+        return
+    expected = {
+        "upstream_origin": "https://btdig.com",
+        "tunnel_origin": "https://btdigg-rock64.alexlab.media",
+        "worker_secret_name": "BTDIGG_GATEWAY_TOKEN",
+        "rock64_secret_name": "MAGNETRA_BTDIGG_TOKEN",
+        "loopback_listener": "127.0.0.1:8796",
+        "max_content_bytes": 3000000,
+        "auth_required": True,
+        "disabled_without_worker_secret": True,
+        "open_proxy_forbidden": True,
+        "provider_substitution_forbidden": True,
+        "auto_retry_429_forbidden": True,
+        "must_not_modify_companion_or_other_providers": True,
+        "requires_real_rock64_probe_before_production_activation": True,
+    }
+    for key, value in expected.items():
+        require_equal(gateway.get(key), value, "btdigg_residential_gateway." + key)
+    files = [
+        ROOT / "worker" / "src" / "btdigg-rock64.mjs",
+        ROOT / "rock64" / "btdigg_gateway.py",
+        ROOT / "rock64" / "check-btdigg.py",
+        ROOT / "rock64" / "magnetra-btdigg.service",
+        ROOT / "rock64" / "magnetra-btdigg-tunnel.service",
+        ROOT / "rock64" / "test_btdigg_gateway.py",
+        ROOT / "rock64" / "install-btdigg.sh",
+        ROOT / "rock64" / "README.md",
+        ROOT / "worker" / "test" / "btdigg-rock64.test.mjs",
+    ]
+    for path in files:
+        require_file(path)
+    if any(not path.is_file() for path in files):
+        return
+    gateway_py = (ROOT / "rock64" / "btdigg_gateway.py").read_text(encoding="utf-8")
+    gateway_js = (ROOT / "worker" / "src" / "btdigg-rock64.mjs").read_text(encoding="utf-8")
+    worker = (ROOT / "worker" / "src" / "index.mjs").read_text(encoding="utf-8")
+    for required in ("127.0.0.1", "https://btdig.com", "NoRedirect",
+                     "hmac.compare_digest", "MIN_SEARCH_INTERVAL = 5",
+                     "MAGNETRA_BTDIGG_TOKEN"):
+        if required not in gateway_py:
+            fail("gateway safety guard missing: " + required)
+    for required in ("https://btdigg-rock64.alexlab.media",
+                     "BTDIGG_GATEWAY_TOKEN", "redirect:\"manual\"",
+                     "source.origin!==\"https://btdig.com\""):
+        if required not in gateway_js:
+            fail("worker BTDigg tunnel safety guard missing: " + required)
+    for required in ("rock64BTDiggFetcher(env)", 'id==="btdigg"&&btdiggFetcher'):
+        if required not in worker:
+            fail("Worker no longer scopes private gateway to BTDigg alone: " + required)
+    pwa_workflow = (ROOT / ".github" / "workflows" / "pwa.yml").read_text(encoding="utf-8")
+    if "python3 -m unittest discover -s rock64" not in pwa_workflow:
+        fail("CI must exercise Rock64 loopback gateway tests")
+    state = STATE_PATH.read_text(encoding="utf-8")
+    if "BTDigg Rock64" not in state:
+        fail("project state missing Rock64 gateway decision")
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
@@ -641,6 +702,7 @@ def main() -> int:
         check_forbidden_files(config)
         check_secret_content(config)
         check_web_parity_and_companion(config)
+        check_btdigg_residential_gateway(config)
 
     if ERRORS:
         print("Project invariant check FAILED:", file=sys.stderr)
