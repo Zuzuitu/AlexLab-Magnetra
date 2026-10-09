@@ -291,7 +291,11 @@ function importBTDiggBrowserResults(){
  const fragment=location.hash;
  // Never persist magnet-bearing fragment URLs in navigation history.
  try{history.replaceState(null,"",location.pathname+location.search);}
- catch{location.hash="";}
+ catch{
+  state.importNote="Browser import requires a history-safe context.";
+  $("notice").textContent=state.importNote;
+  return;
+ }
  try{
   if(!globalThis.BTDiggBridge)throw Error("BTDigg importer script is unavailable.");
   const imported=BTDiggBridge.parsePayload(fragment);
