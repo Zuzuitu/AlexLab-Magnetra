@@ -22,7 +22,7 @@ class GatewayTests(unittest.TestCase):
             self.requests.append(query)
             return 200, b"<html>BTDigg genuine fixture</html>"
         self.provider = gateway.SearchProvider(fetcher=upstream, clock=lambda: self.now[0])
-        self.server = ThreadingHTTPServer(
+        self.server = gateway.LimitedHTTPServer(
             ("127.0.0.1", 0),
             gateway.handler_class(TOKEN, self.provider),
         )
@@ -84,6 +84,7 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(gateway.HOST, "https://btdig.com")
         self.assertEqual(gateway.BIND, "127.0.0.1")
         self.assertGreaterEqual(gateway.MIN_SEARCH_INTERVAL, 5)
+        self.assertEqual(gateway.LimitedHTTPServer.request_queue_size, 16)
 
 if __name__ == "__main__":
     unittest.main()
