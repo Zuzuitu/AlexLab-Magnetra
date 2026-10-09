@@ -255,7 +255,7 @@ function renderProviderErrors(failures){
    entry.append(a);
   }
   if(failure.provider==="btdigg"){
-    const imported=el("button","source-open","Import actual BTDigg results ↗");
+    const imported=el("button","source-open","BTDigg: ghid în 3 pași ↗");
     imported.type="button";
     imported.addEventListener("click",showBTDiggDialog);
     entry.append(imported);
@@ -428,12 +428,14 @@ function init(){
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
  $("btdiggButton").addEventListener("click",showBTDiggDialog);
  async function copyBTDiggCode(mode){
+  const status=$("btdiggStepStatus");
   try{
-   if(!globalThis.BTDiggBridge)throw Error("BTDigg importer is unavailable.");
+   if(!globalThis.BTDiggBridge)throw Error("Codul BTDigg nu este disponibil.");
    await navigator.clipboard.writeText(BTDiggBridge.bookmarklet(mode));
-   toast("Safari bookmarklet copied. Paste it as the URL of a Safari bookmark.");
+   status.textContent="✓ Cod copiat! În Safari creează bookmarkul și lipește codul la «Adresă».";
+   toast("Codul Safari a fost copiat.");
   }catch{
-   toast("Clipboard write denied; use the desktop bookmarklet link instead.");
+   status.textContent="Copierea nu a reușit. Verifică permisiunea pentru clipboard și încearcă din nou.";
   }
  }
  $("copyBTDiggBookmarklet").addEventListener("click",()=>copyBTDiggCode("open"));
@@ -444,16 +446,23 @@ function init(){
    importBTDiggFromClipboard(text);
    $("btdiggPasteInput").value="";
    closeDialog("btdiggDialog");
-   toast("BTDigg results imported into this PWA.");
-  }catch(e){toast((e?.message||"Clipboard read not permitted.")+" Use manual paste if needed.");}
+   toast("Rezultatele BTDigg au fost importate.");
+  }catch(e){
+   const reason=String(e?.message||"");
+   const tip=reason.includes("Clipboard does not contain")
+    ?"Clipboardul nu conține rezultate BTDigg. Execută bookmarkul din pasul 2, apoi revino aici."
+    :"Nu am putut citi rezultatele. Poți lipi codul manual în secțiunea de ajutor.";
+   toast(tip);
+   $("btdiggMore").open=true;
+  }
  });
  $("btdiggImportManual").addEventListener("click",()=>{
   try{
    importBTDiggFromClipboard($("btdiggPasteInput").value);
    $("btdiggPasteInput").value="";
    closeDialog("btdiggDialog");
-   toast("BTDigg results imported.");
-  }catch(e){toast(e?.message||"Invalid BTDigg import code.");}
+   toast("Rezultatele BTDigg au fost importate.");
+  }catch{toast("Cod invalid. Copiază rezultatele din Safari înainte de import.");}
  });
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{

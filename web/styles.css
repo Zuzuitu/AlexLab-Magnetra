@@ -27,19 +27,26 @@
 .provider-row small.audit-empty-unverified{color:#9db2b3}
 .sheet-actions{flex-wrap:wrap}
 
-/* Explicit, opt-in BTDigg Safari bookmarklet bridge. */
-.btdigg-import-steps{margin:20px 0 10px;padding:12px 15px;border:1px solid #334d47;border-radius:12px;background:#14242a;font-size:13px;line-height:1.65}
-.btdigg-import-steps p+p{margin-top:12px}
-.btdigg-import-steps code{overflow-wrap:anywhere;color:#a3f779}
-.btdigg-import-actions{justify-content:flex-start;align-items:center;flex-wrap:wrap}
-.btdigg-import-actions a{padding:14px 17px;text-decoration:none;font-size:12px}
-#btdiggBookmarkletLink{color:#b7f598;overflow-wrap:anywhere}
+/* BTDigg Safari helper: three clear, numbered steps for iPhone PWA. */
+.btdigg-sheet{max-width:680px}
+.btdigg-guide-steps{counter-reset:btdiggstep;list-style:none;padding:0;margin:22px 0 18px;display:grid;gap:12px}
+.btdigg-guide-step{counter-increment:btdiggstep;position:relative;border:1px solid #354d46;border-radius:14px;background:#15272c;padding:18px 16px 18px 62px;min-width:0}
+.btdigg-guide-step::before{content:counter(btdiggstep);display:grid;place-items:center;position:absolute;top:17px;left:15px;width:32px;height:32px;border-radius:10px;background:#b5f697;color:#142419;font-size:17px;font-weight:900}
+.btdigg-guide-step h3{margin:1px 0 11px;color:#effcf2;font-size:16px;line-height:1.45}
+.btdigg-guide-step h3 small{display:inline-block;margin-left:5px;color:#b5f697;font-size:11px;font-weight:700}
+.btdigg-guide-step p{font-size:13px;line-height:1.65;color:#bdd0cb;margin:8px 0}
+.btdigg-guide-step p strong{color:#effcf2}
+.btdigg-guide-action{display:block;width:100%;text-align:center;margin-top:14px;box-sizing:border-box;min-height:45px;white-space:normal;cursor:pointer}
+a.btdigg-guide-action{text-decoration:none;padding:14px 15px;font-size:13px;font-weight:800;background:#203625;border-color:#5f8559;color:#c3f9a7}
+.btdigg-step-status{color:#b5f697!important;font-weight:700;margin-bottom:0!important}
+.btdigg-step-status:empty{display:none}
+.btdigg-more{border:1px solid #31433e;border-radius:12px;padding:13px 15px;background:#102027}
+.btdigg-more summary{cursor:pointer;color:#c4daca;font-size:13px;font-weight:800;line-height:1.5}
+.btdigg-more[open] summary{margin-bottom:12px}
+.btdigg-more a{color:#b5f697;overflow-wrap:anywhere}
+.btdigg-more textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:65px;background:#07141e;color:#effdf4;border:1px solid #36514a;border-radius:10px;padding:12px;font-size:12px}
+.btdigg-more .setting-label{margin-top:12px}
+.btdigg-link-button{background:none;border:0;color:#b5f697;text-decoration:underline;font-size:inherit;font-weight:700;padding:0;cursor:pointer}
+.btdigg-disclaimer{margin-top:16px;line-height:1.5}
 #btdiggButton{color:#d3f5ae;font-weight:800}
-@media(max-width:550px){.btdigg-import-actions>*{flex:1 0 100%;text-align:center}}
-
-/* Safari-to-installed-iOS-PWA handoff: pairing stays in PWA local storage. */
-.btdigg-paste-area{border:1px solid #334d47;border-radius:12px;background:#102027;display:grid;gap:10px;padding:14px;margin:16px 0}
-.btdigg-paste-area .setting-label{margin-top:5px}
-.btdigg-paste-area textarea{width:100%;max-width:100%;resize:vertical;min-height:66px;padding:12px;border-radius:10px;border:1px solid #36514a;background:#07141e;color:#eaffeb;font-size:12px;line-height:1.55}
-.btdigg-paste-area button{min-height:43px}
-.btdigg-import-actions button{white-space:normal}
+@media(max-width:550px){.btdigg-guide-step{padding:16px 12px 16px 53px}.btdigg-guide-step::before{top:15px;left:11px;width:30px;height:30px}.btdigg-guide-step h3{font-size:15px}}
