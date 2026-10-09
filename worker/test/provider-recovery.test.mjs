@@ -73,8 +73,8 @@ test("manual browser fallback has an explicit user-gesture clipboard action and 
 
 test("PWA online assets are refreshed network-first but authenticated APIs never cached",()=>{
  const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
- assert.ok(sw.includes('CACHE="alexlab-magnetra-v2"'));
- assert.ok(sw.includes('new Set(["/app.js","/styles.css","/manifest.webmanifest"])'));
+ assert.ok(sw.includes('CACHE="alexlab-magnetra-v3"'));
+ assert.ok(sw.includes('new Set(["/app.js","/btdigg-bridge.js","/styles.css","/manifest.webmanifest"])'));
  assert.ok(sw.includes('fetch(event.request,{cache:"no-store"})'));
  assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
  assert.ok(sw.includes('event.request.method!=="GET"'));

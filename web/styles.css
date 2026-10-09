@@ -26,3 +26,13 @@
 .provider-row small.audit-error{color:#f4b68b}
 .provider-row small.audit-empty-unverified{color:#9db2b3}
 .sheet-actions{flex-wrap:wrap}
+
+/* Explicit, opt-in BTDigg Safari bookmarklet bridge. */
+.btdigg-import-steps{margin:20px 0 10px;padding:12px 15px;border:1px solid #334d47;border-radius:12px;background:#14242a;font-size:13px;line-height:1.65}
+.btdigg-import-steps p+p{margin-top:12px}
+.btdigg-import-steps code{overflow-wrap:anywhere;color:#a3f779}
+.btdigg-import-actions{justify-content:flex-start;align-items:center;flex-wrap:wrap}
+.btdigg-import-actions a{padding:14px 17px;text-decoration:none;font-size:12px}
+#btdiggBookmarkletLink{color:#b7f598;overflow-wrap:anywhere}
+#btdiggButton{color:#d3f5ae;font-weight:800}
+@media(max-width:550px){.btdigg-import-actions>*{flex:1 0 100%;text-align:center}}

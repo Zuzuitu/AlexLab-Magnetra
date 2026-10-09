@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="/icon.svg">
 <link rel="stylesheet" href="/styles.css">
 <title>AlexLab Magnetra — Search. Magnet. Done.</title>
+<script src="/btdigg-bridge.js" defer></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
@@ -38,7 +39,7 @@
       <button type="button" class="providers-trigger" id="providersButton">Indexers <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
     </form>
   </section>
-  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
+  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="btdiggButton" class="text-button" type="button">⌕ BTDigg import</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
   <section class="results-section"><div class="section-top"><div><div class="section-overline">DISCOVERY</div><h2 id="resultsTitle">Search results</h2></div><div class="result-count" id="resultCount">READY</div></div><div class="notice" id="notice" role="status" aria-live="polite">Enter a search to see results from your enabled indexers.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
 </main>
 <footer class="footer"><span>© AlexLab · Magnetra</span><span>Search. Magnet. Done.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Based on TorrentSearch (MIT) ↗</a></footer>
@@ -65,6 +66,19 @@
   <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Test Shield connection</button>
   <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
   <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
+</dialog>
+<dialog id="btdiggDialog" class="sheet">
+  <div class="sheet-head"><div><div class="section-overline">BTDIGG · USER BROWSER</div><h2>Import actual BTDigg results</h2><p class="muted">BTDigg may block Magnetra's automated server requests. This optional route reads the results that you open yourself in Safari, and brings their magnet links back to Magnetra.</p></div><button class="close-btn" data-close="btdiggDialog" aria-label="Close">×</button></div>
+  <div class="btdigg-import-steps">
+    <p><strong>Set up once (iPhone Safari):</strong> Tap <strong>Copy importer code</strong>. Create a Safari bookmark, edit its address, and replace the URL with the copied <code>javascript:</code> code.</p>
+    <p><strong>On each search:</strong> Open your BTDigg search in Safari, then run that saved bookmark while viewing the results. The page will return to Magnetra with its actual search results and Flud actions.</p>
+    <p class="muted">Desktop: drag the "BTDigg → Magnetra" link to the bookmarks bar instead. Safari bookmarklets and the live BTDigg page still need a real-device check. Do not run bookmarklet code on unknown sites.</p>
+  </div>
+  <div class="sheet-actions btdigg-import-actions">
+    <button id="copyBTDiggBookmarklet" type="button" class="secondary">Copy importer code</button>
+    <a id="btdiggOpenSearch" class="source-open" target="_blank" rel="noopener noreferrer" href="https://btdig.com/">Open BTDigg search ↗</a>
+  </div>
+  <p class="muted">Desktop shortcut: <a id="btdiggBookmarkletLink" href="#" draggable="true">BTDigg → Magnetra</a>. The import link carries only user-selected public torrent metadata in a URL fragment (never Companion credentials), clears the fragment immediately on arrival, and makes no API calls to bypass BTDigg's limits. This is a manual import, not a recovered automatic API.</p>
 </dialog>
 <dialog id="manualMagnetDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">DIRECT TO FLUD COMPANION</div><h2>Send a magnet</h2><p class="muted">Paste a magnet copied from BTDigg or another website. It will be sent through your paired Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Close">×</button></div>
