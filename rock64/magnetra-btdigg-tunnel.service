@@ -6,7 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 DynamicUser=yes
-Environment=TUNNEL_TOKEN_FILE=/etc/magnetra-btdigg/tunnel-token
+LoadCredential=tunnel-token:/etc/magnetra-btdigg/tunnel-token
+Environment=TUNNEL_TOKEN_FILE=%d/tunnel-token
 ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate run
 Restart=on-failure
 RestartSec=15
@@ -18,7 +19,7 @@ MemoryMax=128M
 CPUQuota=20%
 TasksMax=32
 UMask=0077
-# Requires an operator-supplied token file readable only by this service.
+# systemd securely copies root-owned token file into service-private credentials dir.
 # If your cloudflared binary is not /usr/bin/cloudflared, adapt ExecStart
 # before copying; never touch the machine's existing cloudflared.service.
 
