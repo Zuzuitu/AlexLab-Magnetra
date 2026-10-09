@@ -19,7 +19,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 BIND = "127.0.0.1"
 PORT = 8796
@@ -65,7 +65,7 @@ class SearchProvider:
         )
         try:
             # Explicitly stop redirects: not an open proxy, no off-origin hops.
-            with build_opener(NoRedirect()).open(request, timeout=TIMEOUT_SECONDS) as res:
+            with build_opener(ProxyHandler({}), NoRedirect()).open(request, timeout=TIMEOUT_SECONDS) as res:
                 if res.status != 200:
                     return res.status, b""
                 if int(res.headers.get("content-length") or 0) > SIZE_LIMIT:
