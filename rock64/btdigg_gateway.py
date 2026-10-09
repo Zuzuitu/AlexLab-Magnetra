@@ -136,7 +136,7 @@ def handler_class(secret: str, provider: SearchProvider):
             if parsed.path == "/healthz" and not parsed.query:
                 self.reply(200, b'{"ok":true}', "application/json")
                 return
-            if parsed.path != "/v1/search" or parsed.fragment or len(self.path) > 850:
+            if parsed.path != "/v1/search" or parsed.fragment or len(self.path) > 2600:
                 self.reply(404, b'{"error":"not found"}')
                 return
             params = parse_qs(parsed.query, keep_blank_values=True)
