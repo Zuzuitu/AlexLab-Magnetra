@@ -3,6 +3,7 @@
 (function(){
 "use strict";
 const PREFIX="#btdigg=";
+const CLIP_PREFIX="BTDIGG_IMPORT:";
 const ORIGIN="https://index.alexlab.media";
 const INFOHASH=/^(?:[0-9a-f]{40}|[a-z2-7]{32})$/i;
 function checkedMagnet(value){
@@ -52,10 +53,15 @@ function parsePayload(hash){
  if(!results.length)throw Error("BTDigg import contains no valid result magnets.");
  return {query:payload.query.trim(),results};
 }
+function parseClipboard(text){
+ if(typeof text!=="string"||!text.startsWith(CLIP_PREFIX)||text.length>50000)
+  throw Error("Clipboard does not contain a Magnetra BTDigg import code.");
+ return parsePayload(PREFIX+text.slice(CLIP_PREFIX.length));
+}
 // Self-contained on purpose: this function's source is inserted into a Safari/Firefox
 // bookmarklet and runs ONLY after the user explicitly invokes it on btdig.com.
 // No cross-origin reads, cookies, credentials, external scripts or hidden requests.
-function collectPage(){
+function collectPage(mode){
  if(location.protocol!=="https:"||
     !(location.hostname==="btdig.com"||location.hostname==="www.btdig.com")||
     !/^\/search\/?$/.test(location.pathname)){
@@ -101,8 +107,21 @@ function collectPage(){
   payload.results.pop();encoded=encodeURIComponent(JSON.stringify(payload));
  }
  if(encoded.length>24000){alert("A BTDigg result was too large to import safely.");return;}
+ if(mode==="copy"){
+  const exportText="BTDIGG_IMPORT:"+encoded;
+  const manual=()=>window.prompt("Copy this import code and paste it into the installed Magnetra PWA:",exportText);
+  if(navigator.clipboard?.writeText){
+   navigator.clipboard.writeText(exportText).then(
+    ()=>alert("BTDigg results copied. Open the installed Magnetra PWA and tap Import from clipboard."),
+    manual
+   );
+  }else manual();
+  return;
+ }
  location.assign("https://index.alexlab.media/#btdigg="+encoded);
 }
-function bookmarklet(){return "javascript:("+collectPage.toString().replace(/\r?\n/g," ")+")()";}
-globalThis.BTDiggBridge=Object.freeze({parsePayload,checkedMagnet,bookmarklet,origin:ORIGIN});
+function bookmarklet(mode="open"){
+ return "javascript:("+collectPage.toString().replace(/\r?\n/g," ")+")("+JSON.stringify(mode==="copy"?"copy":"open")+")";
+}
+globalThis.BTDiggBridge=Object.freeze({parsePayload,parseClipboard,checkedMagnet,bookmarklet,origin:ORIGIN});
 })();
