@@ -6,6 +6,7 @@ import pathlib
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
+from urllib.parse import quote
 
 PATH = pathlib.Path(__file__).with_name("btdigg_gateway.py")
 SPEC = importlib.util.spec_from_file_location("btdigg_gateway", PATH)
@@ -66,6 +67,10 @@ class GatewayTests(unittest.TestCase):
         self.now[0] += 6
         self.assertEqual(self.call("/v1/search?q=debian")[0], 200)
         self.assertEqual(self.requests, ["ubuntu", "debian"])
+        self.now[0] += 6
+        romanian = "ț" * 180
+        self.assertEqual(self.call("/v1/search?q=" + quote(romanian))[0], 200)
+        self.assertEqual(self.requests[-1], romanian)
 
     def test_upstream_statuses_are_not_disguised(self):
         for status in [429, 503, 504]:
