@@ -19,9 +19,13 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check worker/src/index.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/source-audit.mjs && node --check web/app.js && node --check web/sw.js
+        run: node --check worker/src/index.mjs && node --check worker/src/btdigg-rock64.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/source-audit.mjs && node --check web/app.js && node --check web/sw.js
       - name: Test provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
+      - name: Test Rock64 BTDigg gateway (loopback only, no external requests)
+        run: python3 -m unittest discover -s rock64 -p 'test_*.py' -v
+      - name: Validate Rock64 gateway Python syntax
+        run: python3 -m py_compile rock64/btdigg_gateway.py
       - name: Validate provider selectors in real Cloudflare workerd runtime
         run: |
           npx --yes wrangler@4.45.4 dev --config worker/test/wrangler-selector.jsonc --port 8789 > "$RUNNER_TEMP/magnetra-selectors.log" 2>&1 &
