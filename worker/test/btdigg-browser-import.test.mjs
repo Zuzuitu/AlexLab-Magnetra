@@ -113,5 +113,64 @@ test("Magnetra consumes browser import locally and immediately scrubs the fragme
  assert.equal(box.debug.state.items.length,1);
  assert.equal(box.debug.state.items[0].provider,"btdigg");
  assert.equal(element("query").value,"ubuntu");
- assert.match(box.debug.state.importNote,/not server-verified/);
+ assert.match(box.debug.state.importNote,/not independently server-verified/);
+});
+
+test("Safari copy-mode bookmarklet exports visible BTDigg results without redirecting",async()=>{
+ const b=bridge();
+ const copied=[],alerts=[];
+ let opened=false;
+ const location={protocol:"https:",hostname:"btdig.com",origin:"https://btdig.com",
+  pathname:"/search",search:"?q=ubuntu",assign(){opened=true;}};
+ const box={location,URL,URLSearchParams,encodeURIComponent,JSON,
+  document:{querySelectorAll(){return [fixtureRow()];}},
+  navigator:{clipboard:{writeText:async text=>{copied.push(text);}}},
+  alert:msg=>alerts.push(msg),
+  window:{prompt(){throw Error("unexpected prompt");}}};
+ const url=b.bookmarklet("copy");
+ assert.ok(url.startsWith("javascript:"));
+ assert.equal(url.includes("\n"),false,"bookmarklet URL must remain single-line");
+ runInNewContext(url.slice("javascript:".length),box);
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(opened,false);
+ assert.equal(copied.length,1);
+ assert.ok(copied[0].startsWith("BTDIGG_IMPORT:"));
+ const data=b.parseClipboard(copied[0]);
+ assert.equal(data.results.length,1);
+ assert.equal(data.results[0].provider,"btdigg");
+ assert.match(alerts[0],/copied/i);
+});
+test("clipboard import rejects missing marker and spoofed origins",()=>{
+ const b=bridge();
+ const valid="BTDIGG_IMPORT:"+makePayload([sample()]).slice("#btdigg=".length);
+ assert.equal(b.parseClipboard(valid).results[0].magnet,magnet);
+ for(const invalid of [
+  "", "magnet:?xt=urn:btih:"+hash,"https://btdig.com/",
+  "BTDIGG_IMPORT:%7B", "BTDIGG_IMPORT:"+"A".repeat(50001),
+  "BTDIGG_IMPORT:"+makePayload([sample({details:"https://evil.example/torrent/"+hash})]).slice("#btdigg=".length)
+ ])assert.throws(()=>b.parseClipboard(invalid));
+});
+test("PWA clipboard import preserves existing Flud pairing and puts BTDigg rows in result state",()=>{
+ const b=bridge();
+ const elements=new Map();
+ const element=id=>{
+  if(!elements.has(id))elements.set(id,{value:"",textContent:"",replaceChildren(){},
+   classList:{add(){},remove(){},toggle(){}}});
+  return elements.get(id);
+ };
+ const box={
+  document:{getElementById:element,addEventListener(){}},
+  BTDiggBridge:b,URL,URLSearchParams,Set,Map,Date,Promise,AbortController,setTimeout,clearTimeout
+ };
+ box.globalThis=box;
+ runInNewContext(app+"\nrenderResults=()=>{};globalThis.debug={importBTDiggFromClipboard,state};",box);
+ const pairing={deviceId:"D".repeat(20),token:"T".repeat(25),autoStart:false};
+ box.debug.state.pairing=pairing;
+ const exported="BTDIGG_IMPORT:"+makePayload([sample()]).slice("#btdigg=".length);
+ box.debug.importBTDiggFromClipboard(exported);
+ assert.equal(box.debug.state.pairing,pairing);
+ assert.equal(box.debug.state.items[0].provider,"btdigg");
+ assert.equal(box.debug.state.items[0].magnet,magnet);
+ assert.equal(element("query").value,"ubuntu");
+ assert.match(box.debug.state.importNote,/not independently server-verified/);
 });
