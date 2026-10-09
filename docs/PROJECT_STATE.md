@@ -345,3 +345,7 @@ The owner supplied `https://github.com/btdig/dhtcrawler2` as a possible BTDigg a
 No accessible, documented, operator-permitted BTDigg official API was verified. A third-party SearXNG engine labels API access `on demand`, but still parses BTDigg HTML and has no generally usable API contract. The existing browser-owned fallback and strictly attributed alternate indexer searches remain necessary; **BTDigg was not fixed**.
 
 For a separate, self-hosted DHT search source, Bitmagnet (modern Go/PostgreSQL, Torznab and GraphQL) is a more plausible candidate than the legacy Erlang crawler, but needs persistent storage, private authenticated read-only exposure, resource isolation and explicit owner approval before installing or connecting it to Magnetra. This would be a **new source, not BTDigg**. The full evidence, feasibility decision and safeguards are in `docs/BTDIGG_DHT_FEASIBILITY.md`. No new infrastructure was provisioned, secrets collected, runtime code changed or PWA release authorized.
+
+### Owner scope correction (2026-10-09)
+
+Owner confirmed the goal is **only genuine BTDigg results in Magnetra's BTDigg search**, not adding a separately attributed DHT indexer. Bitmagnet and `dhtcrawler2` are not approved implementation paths for this milestone; they remain investigative references only. Preserve BTDigg source truth and keep its unavailable state honest until actual authorized data access is proven. Do not launch new services.
