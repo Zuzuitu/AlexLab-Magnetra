@@ -655,6 +655,7 @@ def check_btdigg_residential_gateway(config: dict) -> None:
         ROOT / "rock64" / "magnetra-btdigg.service",
         ROOT / "rock64" / "magnetra-btdigg-tunnel.service",
         ROOT / "rock64" / "test_btdigg_gateway.py",
+        ROOT / "rock64" / "install-btdigg.sh",
         ROOT / "rock64" / "README.md",
         ROOT / "worker" / "test" / "btdigg-rock64.test.mjs",
     ]
