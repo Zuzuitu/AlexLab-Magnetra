@@ -345,6 +345,12 @@ async function status(){
  }catch(e){updatePairChip("Flud Companion · Unavailable");$("pairStatus").textContent=e.message;return false;}
 }
 function init(){
+ // Previously shared import links may contain magnet URI metadata.
+ // Retired BTDigg imports are never parsed; scrub their old URL fragments.
+ if(location.hash.startsWith("#btdigg=")){
+  try{history.replaceState(null,"",location.pathname+location.search);}
+  catch{ /* Browser may prohibit history editing; no import processing occurs. */ }
+ }
  state.bookmarks=load(STORAGE.bookmarks,{});
  state.pairing=load(STORAGE.pairing,null);
  if(state.pairing){
