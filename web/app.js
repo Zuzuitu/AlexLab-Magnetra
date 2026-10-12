@@ -248,7 +248,7 @@ function renderProviderErrors(failures){
   const why=el("span","",message);
   if(failure.error)why.title=failure.error;
   line.append(why);entry.append(line);
-  const link=failure.openUrl || provider?.url;
+  const link=failure.provider==="btdigg"?null:(failure.openUrl || provider?.url);
   if(/^https:\/\//.test(link||"")){
    const a=el("a","source-open",failure.openUrl?"Open source search ↗":"Visit source ↗");
    a.href=link;a.target="_blank";a.rel="noopener noreferrer";
