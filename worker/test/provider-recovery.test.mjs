@@ -4,9 +4,8 @@ import assert from "node:assert/strict";
 import {directSearchUrl,classifyProviderError} from "../src/provider-recovery.mjs";
 import worker from "../src/index.mjs";
 
-test("BTDigg browser search link is exact-source HTTPS and preserves query",()=>{
- const url=directSearchUrl("btdigg","linux & ubuntu");
- assert.equal(url,"https://btdig.com/search?q=linux%20%26%20ubuntu");
+test("BTDigg has no retired manual browser recovery URL",()=>{
+ assert.equal(directSearchUrl("btdigg","linux & ubuntu"),null);
  assert.equal(directSearchUrl("btdigg","x"),null);
  assert.equal(directSearchUrl("invented-provider","ubuntu"),null);
  assert.equal(directSearchUrl("btdigg","u".repeat(181)),null);
