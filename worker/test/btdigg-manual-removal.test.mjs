@@ -25,6 +25,7 @@ test("only BTDigg source-error browser prompt disappears; Flud and provider cata
  const catalog=readFileSync(fromRoot("worker/src/catalog.mjs"),"utf8");
  assert.match(worker,/rock64BTDiggFetcher/);
  assert.match(worker,/id==="btdigg"\?null:directSearchUrl\(id,q\)/);
+ assert.match(app,/failure\.provider==="btdigg"\?null:\(failure\.openUrl \|\| provider\?\.url\)/);
  assert.equal((catalog.match(/"id": "/g)||[]).length,46);
  assert.match(catalog,/"id": "btdigg"/);
  for(const keep of ["pasteMagnetButton","manualMagnetDialog","companionChip","providersButton"]){
