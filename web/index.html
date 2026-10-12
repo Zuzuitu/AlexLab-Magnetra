@@ -13,7 +13,6 @@
 <link rel="apple-touch-icon" href="/icon.svg">
 <link rel="stylesheet" href="/styles.css">
 <title>AlexLab Magnetra — Search. Magnet. Done.</title>
-<script src="/btdigg-bridge.js" defer></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
@@ -39,7 +38,7 @@
       <button type="button" class="providers-trigger" id="providersButton">Indexers <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
     </form>
   </section>
-  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="btdiggButton" class="text-button" type="button">⌕ BTDigg · 3 pași</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
+  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
   <section class="results-section"><div class="section-top"><div><div class="section-overline">DISCOVERY</div><h2 id="resultsTitle">Search results</h2></div><div class="result-count" id="resultCount">READY</div></div><div class="notice" id="notice" role="status" aria-live="polite">Enter a search to see results from your enabled indexers.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
 </main>
 <footer class="footer"><span>© AlexLab · Magnetra</span><span>Search. Magnet. Done.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Based on TorrentSearch (MIT) ↗</a></footer>
@@ -66,40 +65,6 @@
   <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Test Shield connection</button>
   <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
   <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
-</dialog>
-<dialog id="btdiggDialog" class="sheet btdigg-sheet" aria-labelledby="btdiggDialogTitle">
-  <div class="sheet-head">
-    <div><div class="section-overline">BTDIGG / GHID IPHONE</div><h2 id="btdiggDialogTitle">BTDigg în 3 pași</h2><p class="muted">Urmează pașii în ordine. Pasul 1 se face o singură dată.</p></div>
-    <button class="close-btn" data-close="btdiggDialog" aria-label="Închide">×</button>
-  </div>
-  <ol class="btdigg-guide-steps">
-    <li class="btdigg-guide-step">
-      <h3>Pregătește bookmarkul în Safari <small>Doar prima dată</small></h3>
-      <p>Apasă butonul de mai jos pentru a copia codul. Apoi în <strong>Safari</strong>:</p>
-      <p>În Safari deschide <strong>btdig.com</strong>, apoi din meniul paginii alege <strong>Adaugă semn de carte</strong> (italiană: <em>Aggiungi segnalibro</em>). Numește-l <strong>Magnetra BTDigg</strong>. Apoi deschide <strong>Semne de carte</strong>, ține apăsat pe cel creat și alege <strong>Editare</strong> (<em>Modifica</em>). La <strong>Adresă</strong> șterge linkul vechi, lipește codul copiat și apasă <strong>Salvează</strong> (<em>Salva</em>).</p>
-      <button id="copyBTDiggClipboardBookmarklet" class="secondary btdigg-guide-action" type="button">Copiază codul pentru Safari</button>
-      <p id="btdiggStepStatus" class="btdigg-step-status" role="status" aria-live="polite"></p>
-    </li>
-    <li class="btdigg-guide-step">
-      <h3>Caută pe BTDigg</h3>
-      <p>Apasă <strong>Deschide BTDigg</strong> și caută ce dorești. După ce vezi rezultatele, rămâi în Safari: deschide <strong>Semne de carte</strong> și apasă pe bookmarkul <strong>Magnetra BTDigg</strong> creat la pasul 1. Acesta copiază rezultatele.</p>
-      <a id="btdiggOpenSearch" class="source-open btdigg-guide-action" target="_blank" rel="noopener noreferrer" href="https://btdig.com/">Deschide BTDigg ↗</a>
-    </li>
-    <li class="btdigg-guide-step">
-      <h3>Adu rezultatele în Magnetra</h3>
-      <p>Întoarce-te în aplicația <strong>Magnetra</strong> instalată pe iPhone și apasă butonul de mai jos. Rezultatele BTDigg vor apărea în Magnetra, cu opțiunea <strong>Send to Flud</strong>.</p>
-      <button id="btdiggImportFromClipboard" class="primary btdigg-guide-action" type="button">Importă rezultatele copiate</button>
-    </li>
-  </ol>
-  <details class="btdigg-more" id="btdiggMore">
-    <summary>Nu merge copierea? Alte opțiuni</summary>
-    <p class="muted">Dacă Safari afișează codul în loc să îl copieze, selectează-l și apasă <strong>Copiază</strong>. Apoi, în Magnetra, lipește codul mai jos și apasă <strong>Importă codul lipit</strong>.</p>
-    <label class="setting-label" for="btdiggPasteInput">Lipește codul din Safari</label>
-    <textarea id="btdiggPasteInput" rows="2" spellcheck="false" autocomplete="off" placeholder="BTDIGG_IMPORT:..."></textarea>
-    <button id="btdiggImportManual" type="button" class="secondary btdigg-guide-action">Importă codul lipit</button>
-    <p class="muted">Pentru browser pe computer, folosește <button id="copyBTDiggBookmarklet" type="button" class="btdigg-link-button">Copiază varianta pentru browser</button> sau trage unul dintre bookmarkuri în bara de marcaje: <a id="btdiggBookmarkletLink" href="#" draggable="true">BTDigg → Magnetra</a> · <a id="btdiggClipboardBookmarkletLink" href="#" draggable="true">BTDigg → copiere</a>.</p>
-  </details>
-  <p class="muted btdigg-disclaimer">Aceasta este o metodă manuală: BTDigg blochează momentan unele căutări automate. Nu sunt folosite alte indexere și nu se trimit automat magneturi către Flud.</p>
 </dialog>
 <dialog id="manualMagnetDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">DIRECT TO FLUD COMPANION</div><h2>Send a magnet</h2><p class="muted">Paste a magnet copied from BTDigg or another website. It will be sent through your paired Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Close">×</button></div>

@@ -126,7 +126,8 @@
       "torrentscsv",
       "thepiratebay",
       "internetarchive"
-    ]
+    ],
+    "manual_btdigg_import_forbidden": true
   },
   "pwa_cache": {
     "api_requests_never_cached": true,

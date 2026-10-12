@@ -4,9 +4,8 @@ import assert from "node:assert/strict";
 import {directSearchUrl,classifyProviderError} from "../src/provider-recovery.mjs";
 import worker from "../src/index.mjs";
 
-test("BTDigg browser search link is exact-source HTTPS and preserves query",()=>{
- const url=directSearchUrl("btdigg","linux & ubuntu");
- assert.equal(url,"https://btdig.com/search?q=linux%20%26%20ubuntu");
+test("BTDigg has no retired manual browser recovery URL",()=>{
+ assert.equal(directSearchUrl("btdigg","linux & ubuntu"),null);
  assert.equal(directSearchUrl("btdigg","x"),null);
  assert.equal(directSearchUrl("invented-provider","ubuntu"),null);
  assert.equal(directSearchUrl("btdigg","u".repeat(181)),null);
@@ -31,7 +30,7 @@ test("provider error categories distinguish timeouts, rate limits, access denial
  assert.equal(classifyProviderError("Provider redirect left the approved origin").code,"REDIRECT_BLOCKED");
  assert.equal(classifyProviderError("provider HTTP 530").code,"UPSTREAM_ERROR");
 });
-test("BTDigg HTTP 429 is reported honestly with a direct first-party search recovery link",async()=>{
+test("BTDigg HTTP 429 is reported without prompting the discarded manual browser workflow",async()=>{
  const original=globalThis.fetch;
  try{
   globalThis.fetch=async()=>new Response("Rate limited",{status:429});
@@ -43,7 +42,7 @@ test("BTDigg HTTP 429 is reported honestly with a direct first-party search reco
   assert.equal(data.errors[0].provider,"btdigg");
   assert.equal(data.errors[0].code,"RATE_LIMIT");
   assert.equal(data.errors[0].retryable,false);
-  assert.equal(data.errors[0].openUrl,"https://btdig.com/search?q=ubuntu");
+  assert.equal(data.errors[0].openUrl,null);
   assert.deepEqual(data.results,[],"Never impersonate another source's results as BTDigg");
  }finally{globalThis.fetch=original;}
 });
@@ -56,11 +55,11 @@ test("provider timeouts have explicit recovery metadata, not opaque failure text
   assert.equal(data.errors.length,1);
   assert.equal(data.errors[0].code,"TIMEOUT");
   assert.ok(data.errors[0].message.includes("respond"));
-  assert.equal(data.errors[0].openUrl,"https://btdig.com/search?q=ubuntu");
+  assert.equal(data.errors[0].openUrl,null);
  }finally{globalThis.fetch=original;}
 });
 
-test("manual browser fallback has an explicit user-gesture clipboard action and paste form",()=>{
+test("generic manual magnet action for Flud remains (not BTDigg browser importing)",()=>{
  const html=readFileSync(new URL("../../web/index.html",import.meta.url),"utf8");
  const app=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
  for(const id of ["pasteMagnetButton","manualMagnetDialog","manualMagnetForm","manualMagnetInput"])
@@ -73,8 +72,8 @@ test("manual browser fallback has an explicit user-gesture clipboard action and 
 
 test("PWA online assets are refreshed network-first but authenticated APIs never cached",()=>{
  const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
- assert.ok(sw.includes('CACHE="alexlab-magnetra-v4"'));
- assert.ok(sw.includes('new Set(["/app.js","/btdigg-bridge.js","/styles.css","/manifest.webmanifest"])'));
+ assert.ok(sw.includes('CACHE="alexlab-magnetra-v5"'));
+ assert.ok(sw.includes('new Set(["/app.js","/styles.css","/manifest.webmanifest"])'));
  assert.ok(sw.includes('fetch(event.request,{cache:"no-store"})'));
  assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
  assert.ok(sw.includes('event.request.method!=="GET"'));

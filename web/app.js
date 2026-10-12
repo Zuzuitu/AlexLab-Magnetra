@@ -188,11 +188,11 @@ function renderResults(){
    else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent="No results. Try another query or indexer.";
    return;
  }
- $("notice").textContent=state.importNote&&!state.bookmarksMode&&sorted.some(x=>x.importedFromBrowser)?state.importNote:"";
+ $("notice").textContent="";
  for(const item of sorted.slice(0,400)){
    const card=el("article","result");
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
-   info.append(el("span","tag",item.importedFromBrowser?"BTDigg · browser import":state.providers.find(p=>p.id===item.provider)?.name||item.provider));
+   info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
    for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?item.seeders+" seeders":null,item.peers!==null&&item.peers!==undefined?item.peers+" peers":null,item.date?String(item.date).slice(0,10):null]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));
    }
@@ -248,17 +248,11 @@ function renderProviderErrors(failures){
   const why=el("span","",message);
   if(failure.error)why.title=failure.error;
   line.append(why);entry.append(line);
-  const link=failure.openUrl || provider?.url;
+  const link=failure.provider==="btdigg"?null:(failure.openUrl || provider?.url);
   if(/^https:\/\//.test(link||"")){
    const a=el("a","source-open",failure.openUrl?"Open source search ↗":"Visit source ↗");
    a.href=link;a.target="_blank";a.rel="noopener noreferrer";
    entry.append(a);
-  }
-  if(failure.provider==="btdigg"){
-    const imported=el("button","source-open","BTDigg: ghid în 3 pași ↗");
-    imported.type="button";
-    imported.addEventListener("click",showBTDiggDialog);
-    entry.append(imported);
   }
   details.append(entry);
  }
@@ -278,45 +272,6 @@ function renderProviderErrors(failures){
  details.append(alternatives);
  root.append(details);
 }
-function showBTDiggDialog(){
- const q=$("query").value.trim();
- const url=new URL("https://btdig.com/");
- if(q)url.pathname="/search",url.searchParams.set("q",q);
- $("btdiggOpenSearch").href=url.toString();
- $("btdiggBookmarkletLink").href=BTDiggBridge.bookmarklet();
- $("btdiggClipboardBookmarkletLink").href=BTDiggBridge.bookmarklet("copy");
- openDialog("btdiggDialog");
-}
-function applyBTDiggImport(imported){
- if(!imported?.results?.length)throw Error("No BTDigg results were imported.");
- state.items=imported.results;
- state.bookmarksMode=false;
- if(imported.query)$("query").value=imported.query;
- state.importNote="Imported "+imported.results.length+" BTDigg result(s) from your browser; not independently server-verified.";
- renderResults();
-}
-function importBTDiggFromClipboard(text){
- if(!globalThis.BTDiggBridge)throw Error("BTDigg importer script is unavailable.");
- applyBTDiggImport(BTDiggBridge.parseClipboard(text.trim()));
-}
-function importBTDiggBrowserResults(){
- if(!location.hash.startsWith("#btdigg="))return;
- const fragment=location.hash;
- // Never persist magnet-bearing fragment URLs in navigation history.
- try{history.replaceState(null,"",location.pathname+location.search);}
- catch{
-  state.importNote="Browser import requires a history-safe context.";
-  $("notice").textContent=state.importNote;
-  return;
- }
- try{
-  if(!globalThis.BTDiggBridge)throw Error("BTDigg importer script is unavailable.");
-  applyBTDiggImport(BTDiggBridge.parsePayload(fragment));
- }catch(e){
-  state.importNote=e.message||"Invalid BTDigg import.";
-  $("notice").textContent=state.importNote;
- }
-}
 async function search(){
  if(state.searching){
   state.searchAbort?.abort();
@@ -328,7 +283,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast("Select at least one indexer.");return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];state.importNote=null;
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];
  $("searchButton").disabled=false;$("searchButton").textContent="Cancel search ×";
  $("notice").textContent="Searching "+ids.length+" indexers…";$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -390,7 +345,12 @@ async function status(){
  }catch(e){updatePairChip("Flud Companion · Unavailable");$("pairStatus").textContent=e.message;return false;}
 }
 function init(){
- importBTDiggBrowserResults();
+ // Previously shared import links may contain magnet URI metadata.
+ // Retired BTDigg imports are never parsed; scrub their old URL fragments.
+ if(location.hash.startsWith("#btdigg=")){
+  try{history.replaceState(null,"",location.pathname+location.search);}
+  catch{ /* Browser may prohibit history editing; no import processing occurs. */ }
+ }
  state.bookmarks=load(STORAGE.bookmarks,{});
  state.pairing=load(STORAGE.pairing,null);
  if(state.pairing){
@@ -426,44 +386,6 @@ function init(){
  });
 
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
- $("btdiggButton").addEventListener("click",showBTDiggDialog);
- async function copyBTDiggCode(mode){
-  const status=$("btdiggStepStatus");
-  try{
-   if(!globalThis.BTDiggBridge)throw Error("Codul BTDigg nu este disponibil.");
-   await navigator.clipboard.writeText(BTDiggBridge.bookmarklet(mode));
-   status.textContent="✓ Cod copiat! În Safari creează bookmarkul și lipește codul la «Adresă».";
-   toast("Codul Safari a fost copiat.");
-  }catch{
-   status.textContent="Copierea nu a reușit. Verifică permisiunea pentru clipboard și încearcă din nou.";
-  }
- }
- $("copyBTDiggBookmarklet").addEventListener("click",()=>copyBTDiggCode("open"));
- $("copyBTDiggClipboardBookmarklet").addEventListener("click",()=>copyBTDiggCode("copy"));
- $("btdiggImportFromClipboard").addEventListener("click",async()=>{
-  try{
-   const text=await navigator.clipboard.readText();
-   importBTDiggFromClipboard(text);
-   $("btdiggPasteInput").value="";
-   closeDialog("btdiggDialog");
-   toast("Rezultatele BTDigg au fost importate.");
-  }catch(e){
-   const reason=String(e?.message||"");
-   const tip=reason.includes("Clipboard does not contain")
-    ?"Clipboardul nu conține rezultate BTDigg. Execută bookmarkul din pasul 2, apoi revino aici."
-    :"Nu am putut citi rezultatele. Poți lipi codul manual în secțiunea de ajutor.";
-   toast(tip);
-   $("btdiggMore").open=true;
-  }
- });
- $("btdiggImportManual").addEventListener("click",()=>{
-  try{
-   importBTDiggFromClipboard($("btdiggPasteInput").value);
-   $("btdiggPasteInput").value="";
-   closeDialog("btdiggDialog");
-   toast("Rezultatele BTDigg au fost importate.");
-  }catch{toast("Cod invalid. Copiază rezultatele din Safari înainte de import.");}
- });
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{
   state.bookmarksMode=!state.bookmarksMode;
@@ -517,7 +439,7 @@ function init(){
   state.providers=providers;state.audit=audit||null;
   chooseProviders();renderProviders();
   const tested=providers.filter(p=>p.lastAudit?.state==="results").length;
-  $("notice").textContent=state.importNote||("Ready. "+providers.length+" source adapters; "+tested+" returned results in the last recorded test. Availability may change.");
+  $("notice").textContent=("Ready. "+providers.length+" source adapters; "+tested+" returned results in the last recorded test. Availability may change.");
   if(state.items.length)renderResults();
  }).catch(e=>$("notice").textContent="API unavailable: "+e.message);
  status();

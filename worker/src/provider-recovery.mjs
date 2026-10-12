@@ -4,6 +4,8 @@ import {LEGACY_SPECS,legacySearchUrl} from "./legacy-specs.mjs";
 
 /** Fixed-provider URLs only. Never reflect arbitrary remote Location headers. */
 export function directSearchUrl(id,query){
+ // Owner retired all manual BTDigg recovery paths; automatic search only.
+ if(id==="btdigg")return null;
  const p=PROVIDER_MAP.get(id);
  if(!p||typeof query!=="string"||query.trim().length<2||query.length>180)return null;
  let candidate=null,origin=null;
