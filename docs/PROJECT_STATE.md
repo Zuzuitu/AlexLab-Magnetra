@@ -407,3 +407,17 @@ This section supersedes *outdated present-tense status claims* in the historical
 ### Required next-chat completion criteria
 
 Check fresh `main`, merge/deploy status and actual Rock64 evidence first. Make real scoped improvements on a feature branch, run the repository guard, Node/Python/workerd regression suites and both Android CI variants, merge only with green CI, then deploy only if authorized. Report the precise GitHub commit/PR, real production SHA, last audit and the specific unverified external dependencies. The user also requested a complete new-chat Senior/Staff engineering master prompt; refer to the current handoff and this checkpoint, not the historical paragraphs as present-state instructions.
+
+## 2026-10-13 Rock64 first positive real-source proof and owner-approved code publication
+
+The owner ran the currently merged `rock64/btdigg_gateway.py` module directly on their **actual Rock64**, Armbian v26.11 Debian trixie ARM64, as an unprivileged `runner` user:
+```
+curl -fsSL https://raw.githubusercontent.com/Zuzuitu/AlexLab-Magnetra/main/rock64/btdigg_gateway.py -o /tmp/btdigg_gateway.py
+python3 -c 'import sys; sys.path.insert(0,"/tmp"); from btdigg_gateway import SearchProvider; s,h=SearchProvider.fetch("ubuntu"); print("HTTP:",s,"Rezultate:",h.count(b"one_result"),"Magneturi:",h.count(b"magnet:?xt=urn:btih:"))'
+HTTP: 200 Rezultate: 10 Magneturi: 20
+```
+This is **real positive residential HTTP 200 evidence with 10 HTML occurrences of `one_result` and 20 occurrences of the BTIH magnet prefix**. These are text counts, not yet a validated 10-result parsed API response nor unique torrents. It materially supersedes the old claim that no Python Rock64 source fetch had been tested. Owner approved: `Fa deploy dupa daca e necesar` for the already merged implementation and requested a complete new-chat Senior/Staff engineering prompt. Production code publication is approved; **public activation is a separate gate** involving an installed protected local service, a dedicated working Cloudflare Tunnel and a Worker secret.
+
+Live install status still unknown: the user's command downloaded a module into `/tmp` and invoked its static `SearchProvider.fetch`, **not** `rock64/install-btdigg.sh`, `rock64/check-btdigg.py`, a persistent systemd unit or Cloudflare Tunnel. Never claim `btdigg-rock64.alexlab.media` reachable, the Worker secret provisioned, or end-to-end PWA search recovered until actually observed. The alternative `btdig/dhtcrawler2` and independent DHT indexes do not count as BTDigg data. The old Safari bookmarklet path was retired on owner request and remains forbidden by `provider_recovery.manual_btdigg_import_forbidden`; keep 45 other engines and Flud Companion unchanged.
+
+Release mechanism: guarded GitHub Actions `Deploy Magnetra PWA` via an explicitly `[deploy-pwa]` marked squash release commit, after green PR CI, then production smoke and actual 46-source audit. It deploys the already merged *disabled-by-default* BTDigg gateway adapter to the current zero-new-paid-services Cloudflare Worker; without `BTDIGG_GATEWAY_TOKEN`, that adapter still uses the direct Cloudflare path and may time out. The release does not create or change Rock64 services, tunnel DNS, secrets, CalciDatum/NexaPanel, routers or Flud.
