@@ -491,6 +491,24 @@ def check_web_parity_and_companion(config: dict) -> None:
             if "renderProviderErrors" not in frontend_recovery or "Search with available indexers" not in frontend_recovery:
                 fail("PWA must provide explicitly attributed alternative search on source failure")
 
+    if recovery and recovery.get("manual_btdigg_import_forbidden"):
+        for retired in (
+            ROOT / "web" / "btdigg-bridge.js",
+            ROOT / "worker" / "test" / "btdigg-browser-import.test.mjs",
+            ROOT / "worker" / "test" / "btdigg-three-step-guide.test.mjs",
+        ):
+            if retired.exists():
+                fail("retired BTDigg manual import file must not exist: " + str(retired.relative_to(ROOT)))
+        for rel in ("web/index.html", "web/app.js", "web/styles.css", "web/sw.js"):
+            source = ROOT / rel
+            if source.is_file():
+                text = source.read_text(encoding="utf-8")
+                if any(x in text for x in (
+                    "BTDiggBridge", "btdiggDialog", "btdigg-guide-step",
+                    "copyBTDiggBookmarklet", "btdigg-bridge.js"
+                )):
+                    fail("retired BTDigg manual import UI remains in " + rel)
+
     pwa_cache = nested(config, "pwa_cache")
     if pwa_cache:
         sw_path = ROOT / "web" / "sw.js"
