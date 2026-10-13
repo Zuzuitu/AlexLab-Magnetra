@@ -536,8 +536,8 @@ def check_web_parity_and_companion(config: dict) -> None:
             if "export const SOURCE_AUDIT" not in audit_content:
                 fail("the date-stamped provider audit snapshot was removed")
         default_ids = recovery.get("default_searched_provider_ids", [])
-        if not default_ids or len(default_ids) != 4:
-            fail("the PWA and API must preserve the four explicitly audited default source IDs")
+        if not default_ids or len(default_ids) != 5 or default_ids[0] != "btdigg":
+            fail("the PWA and API must default to BTDigg first and four audited companion sources")
         else:
             ids_str = ",".join('"' + i + '"' for i in default_ids)
             if "const DEFAULT_IDS=[" + ids_str + "]" not in source_worker.read_text(encoding="utf-8"):
