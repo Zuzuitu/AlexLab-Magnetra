@@ -82,9 +82,17 @@ try:
         raise ValueError("invalid local credential file")
     req = Request("http://127.0.0.1:8796/healthz",
                   headers={"authorization": "Bearer " + match.group(1)})
-    with urlopen(req, timeout=5) as response:
-        if response.status != 200 or response.read(1000) != b'{"ok":true}':
-            raise ValueError("unexpected authenticated health response")
+    import time
+    for attempt in range(10):
+        try:
+            with urlopen(req, timeout=3) as response:
+                if response.status == 200 and response.read(1000) == b'{"ok":true}':
+                    break
+        except (OSError, ValueError):
+            pass
+        time.sleep(0.3)
+    else:
+        raise ValueError("gateway did not reach healthy state")
 except Exception:
     raise SystemExit("STOP: private gateway health probe failed.")
 print("PASS: Magnetra gateway responded to authenticated localhost health check.")
