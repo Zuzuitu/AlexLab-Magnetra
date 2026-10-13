@@ -7,18 +7,27 @@ import {webcrypto} from "node:crypto";
 const source=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
 const magnet="magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567";
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json"}});
-function harness(fetcher){
+function harness(fetcher,initialStorage={}){
+ const storage=new Map(Object.entries(initialStorage));
+ const localStorage={
+  getItem:key=>storage.get(key)??null,
+  setItem:(key,value)=>storage.set(key,String(value)),
+  removeItem:key=>storage.delete(key)
+ };
+ const makeElement=tag=>({
+  tagName:tag,children:[],textContent:"",value:"",disabled:false,
+  replaceChildren(...kids){this.children=[...kids]},append(...kids){this.children.push(...kids)},
+  addEventListener(){},scrollIntoView(){},showModal(){},close(){},
+  classList:{add(){},remove(){},toggle(){}}
+ });
  const elements=new Map();
  const element=id=>{
-  if(!elements.has(id))elements.set(id,{
-   textContent:"",value:"",disabled:false,
-   replaceChildren(){},scrollIntoView(){},showModal(){},close(){},
-   classList:{add(){},remove(){},toggle(){}}
-  });
+  if(!elements.has(id))elements.set(id,makeElement("div"));
   return elements.get(id);
  };
  const sandbox={
-  document:{getElementById:element,addEventListener(){}},
+  document:{getElementById:element,createElement:makeElement,addEventListener(){}},
+  localStorage,
   location:{origin:"https://index.alexlab.media"},
   fetch:fetcher,crypto:webcrypto,URL,URLSearchParams,AbortController,
   Response,DOMException,Date,Promise,Set,Map,
@@ -28,9 +37,10 @@ function harness(fetcher){
  renderResults=()=>{};
  renderProviderErrors=()=>{};
  toast=()=>{};
- globalThis.testing={state,search,sendMagnet,magnetIdentity};
+ globalThis.testing={state,search,sendMagnet,magnetIdentity,
+  chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg};
  `,sandbox,{filename:"web/app.js"});
- return {api:sandbox.testing,element};
+ return {api:sandbox.testing,element,storage};
 }
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
 
@@ -124,4 +134,63 @@ test("provider picker uses current browser-session outcomes without triggering a
  assert.equal(api.state.sessionAudit.btdigg.count,1);
  assert.equal(api.state.sessionAudit.other.state,"error");
  assert.equal(requests,2,"rendering status badges must not ping providers");
+});
+
+
+test("BTDigg is pinned; actual latest audit positives precede unknowns then source errors",()=>{
+ const {api,element}=harness(async()=>json({}));
+ const p=(id,name,category)=>({id,name,ported:true,lastAudit:{state:category}});
+ api.state.providers=[
+  p("zeta","Zeta","error"),
+  p("torrentscsv","TorrentsCSV","results"),
+  p("unknown","Unknown","empty-unverified"),
+  p("btdigg","BTDigg","results"),
+  p("knaben","Knaben","results"),
+  p("alpha","Alpha","error")
+ ];
+ assert.deepEqual(Array.from(api.orderedProviders(api.state.providers),p=>p.id),
+  ["btdigg","knaben","torrentscsv","unknown","alpha","zeta"]);
+ api.state.sessionAudit.alpha={state:"results",count:1,at:"now"};
+ assert.deepEqual(Array.from(api.orderedProviders(api.state.providers),p=>p.id),
+  ["btdigg","alpha","knaben","torrentscsv","unknown","zeta"],
+  "a successful in-session search can improve a stale error label");
+ api.renderProviders();
+ assert.equal(element("providerGrid").children.length,6);
+ assert.equal(element("providerGrid").children[0].children[0].children[1].textContent,"BTDigg");
+});
+
+test("fresh profiles include BTDigg, legacy defaults migrate, custom selection remains user-owned",()=>{
+ const all=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive","custom"];
+ const providers=all.map(id=>({id,ported:true}));
+ const create=(stored)=>{
+  const initial=stored===undefined?{}:{"magnetra.providers.v1":JSON.stringify(stored)};
+  const h=harness(async()=>json({}),initial);
+  h.api.state.providers=providers;
+  h.api.chooseProviders();
+  return {selected:Array.from(h.api.state.selected),stored:JSON.parse(h.storage.get("magnetra.providers.v1"))};
+ };
+ const defaults=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
+ assert.deepEqual(create().selected,defaults);
+ assert.deepEqual(create(["knaben","torrentscsv","thepiratebay","internetarchive"]).selected,defaults);
+ assert.deepEqual(create(["custom","knaben"]).selected,["custom","knaben"]);
+ assert.deepEqual(create(["btdigg"]).selected,["btdigg"]);
+ assert.deepEqual(create(["custom","knaben"]).stored,["custom","knaben"]);
+});
+
+test("rapid BTDigg distinct searches wait locally and aborted waits never reach the API",async()=>{
+ let calls=0;
+ const {api}=harness(async()=>{calls++;return json({results:[],stats:[],errors:[]});});
+ const now=Date.now();
+ api.btdiggPacing.nextAllowedAt=now+5500;
+ api.btdiggPacing.lastGoodQuery=null;
+ assert.ok(api.btdiggWaitMs("new term",now)>=5400);
+ api.btdiggPacing.lastGoodQuery="ubuntu";
+ api.btdiggPacing.lastGoodUntil=now+60000;
+ assert.equal(api.btdiggWaitMs("ubuntu",now),0,"reuse cached proven same-query results");
+ assert.ok(api.btdiggWaitMs("different",now)>=5400);
+ const controller=new AbortController();
+ const pending=api.waitForBTDigg("different",controller.signal);
+ controller.abort();
+ await assert.rejects(pending,/cancelled/i);
+ assert.equal(calls,0,"cancelled, not-yet-sent searches do not hit Rock64");
 });
