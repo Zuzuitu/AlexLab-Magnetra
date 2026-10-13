@@ -29,8 +29,11 @@ if [[ -f "$UNIT" ]] && ! grep -qF 'Description=Magnetra private BTDigg-only gate
   exit 1
 fi
 
-python3 -m unittest discover -s "$ROOT/rock64" -p 'test_*.py' -v
-python3 -m py_compile "$ROOT/rock64/btdigg_gateway.py"
+python3 -B -m unittest discover -s "$ROOT/rock64" -p 'test_*.py' -v
+python3 - "$ROOT/rock64/btdigg_gateway.py" <<'PY'
+import ast, pathlib, sys
+ast.parse(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"), filename=sys.argv[1])
+PY
 install -d -m 0755 "$DEST"
 install -d -m 0700 "$CFG"
 install -m 0644 "$ROOT/rock64/btdigg_gateway.py" "$DEST/btdigg_gateway.py"
