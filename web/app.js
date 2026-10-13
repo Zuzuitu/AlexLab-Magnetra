@@ -308,7 +308,11 @@ function renderProviderErrors(failures){
    :failure.message||failure.error||"Provider unavailable";
   const why=el("span","",message);
   if(failure.error)why.title=failure.error;
-  line.append(why);entry.append(line);
+  line.append(why);
+  // Expose safe categorical diagnostics on iPhone, without URL/token details.
+  if(failure.provider==="btdigg"&&/^BTDIGG_(?:SOURCE_TIMEOUT|TUNNEL_TIMEOUT|TUNNEL_ERROR|TUNNEL_1042)$/.test(failure.code||""))
+   line.append(el("small","diagnostic-code","Diagnostic: "+failure.code));
+  entry.append(line);
   const link=failure.provider==="btdigg"?null:(failure.openUrl || provider?.url);
   if(/^https:\/\//.test(link||"")){
    const a=el("a","source-open",failure.openUrl?"Open source search ↗":"Visit source ↗");
