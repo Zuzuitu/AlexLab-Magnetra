@@ -38,8 +38,11 @@ systemctl is-active --quiet "$SERVICE" || {
   echo "STOP: existing Magnetra gateway is not active; diagnose before replacing." >&2
   exit 1
 }
-python3 -m unittest discover -s "$ROOT/rock64" -p 'test_*.py' -q
-python3 -m py_compile "$SOURCE"
+python3 -B -m unittest discover -s "$ROOT/rock64" -p 'test_*.py' -q
+python3 - "$SOURCE" <<'PY'
+import ast, pathlib, sys
+ast.parse(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"), filename=sys.argv[1])
+PY
 if cmp -s "$SOURCE" "$DEST"; then
   echo "PASS: installed gateway already matches validated source."
   exit 0
