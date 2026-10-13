@@ -6,7 +6,7 @@ backend uses a dedicated Rock64-owned outgoing connection and the **existing**
 BTDigg HTMLRewriter adapter: it does not create a new torrent/DHT index and
 does not disguise other providers as BTDigg.
 
-**Current evidence:** on 2026-10-13 the owner verified the installed Rock64 gateway with local HTTP 200, 10 result rows and 10 valid magnet anchors; the public tunnel returned unauthenticated HTTP 401, but the owner subsequently reported PWA BTDigg search errors after deploying the Worker secret. The end-to-end connection is not yet proven. See `docs/PROJECT_STATE.md` for evidence limits. BTDigg working in a browser alone never establishes gateway success. Enable production only after the one-shot
+**Current evidence:** on 2026-10-13 the owner verified the installed Rock64 gateway with local HTTP 200, 10 result rows and 10 valid magnet anchors; the public tunnel returned unauthenticated HTTP 401. After the Worker secret was configured, a full real 46-source production audit on 2026-10-13 (run 38361367716) returned 10 BTDigg results; the owner later observed *intermittent* BTDigg search errors, not a permanent failure. See `docs/PROJECT_STATE.md` for evidence limits. BTDigg working in a browser alone never establishes gateway success. Enable production only after the one-shot
 real-source check prints `PASS`. Respect 429/challenge responses: no rotating
 IP addresses, CAPTCHAs, forced retry loop or web proxy service is implemented.
 
@@ -37,10 +37,12 @@ it only uses this dedicated gateway for BTDigg; if unavailable/rate-limited,
 the source reports a genuine error, never silently falls back to an unrelated
 index. All 45 other indexers and the Companion origin are unchanged.
 
-**Resource controls:** fixed HTTPS source, bearer validation before search,
-loopback-only bind, 5s minimum interval, one outstanding search, 30s in-memory
-repeat-query cache, 8s upstream timeout, strict 3MB HTML cap, disabled redirect
-following, no query/token logs and no public arbitrary proxy. Service CPU and
+**Resource controls (staged 2026-10-13 update):** fixed HTTPS source, bearer validation before search,
+loopback-only bind, 5s minimum interval, one outstanding *upstream* search,
+20-minute success-only bounded RAM cache (4 entries / 6 MB), same-query singleflight,
+12s upstream timeout, strict 3MB HTML cap, disabled redirects,
+no query/token logs and no public arbitrary proxy. Until you run the guarded updater,
+the currently installed Rock64 gateway retains its prior 30-second/8-second limits. Service CPU and
 memory limits are isolated from the existing NexaPanel/CalciDatum processes.
 
 ## Preflight (Rock64, read-only)
@@ -167,3 +169,28 @@ Platform references:
 The physical Rock64 gateway and isolated tunnel are active. Local gateway authenticated HTML probe passed (10 rows / 10 magnets); public tunnel `/healthz` without bearer correctly returned 401. Owner-supplied `/api/search?q=ubuntu&providers=btdigg` JSON captured from a browser reported `total:10`, `ok:true`, `errors:[]`. A separate public HTTP request using Python urllib from Rock64 returned HTML 403; do not treat it as proof that Worker-origin search is broken, nor change account-wide Cloudflare security without examining response headers and browser/network discrepancies.
 
 A BTDigg-specific magnet HTML entity issue in the API JSON was identified: literal `&amp;dn` / `&amp;tr` instead of `&dn` / `&tr`. PR #23 adds a one-layer BTDigg-only correction with both Node and real workerd fixture tests. Until that patch is deliberately deployed, public API responses can still contain these encoded separators. This does not require reinstalling the gateway or tunnel.
+
+## BTDigg stability patch (2026-10-13; staged code, not automatically installed)
+
+The bounded Python gateway stabilization is delivered by PR #26: 20-minute RAM-only success LRU (4 result pages, <=6MB), coalescing duplicate in-flight searches, original 5-second different-query limit, 12-second upstream timeout, no paid services/retries/challenge bypass. Only genuine BTDigg `one_result` HTML pages are cached. Existing Cloudflare Worker 16-second tunnel request timeout is coordinated with this implementation. New code copied to GitHub does not replace the running `/opt/magnetra-btdigg/btdigg_gateway.py`; an explicit guarded staging and `systemctl restart magnetra-btdigg.service` on the physical Rock64 are still required, followed by authenticated `check-btdigg.py` proof. Never run `cloudflared service install`, modify the isolated tunnel, show gateway.env, or touch other systemd units. User must confirm any interrupted or failing post-restart gateway, not assume success merely from CI.
+
+
+### Guarded upgrade command after the PR has passed CI and merged
+
+In a checkout pinned to the approved merged commit, run:
+
+```bash
+sudo bash rock64/update-btdigg.sh
+```
+
+This updater validates the source and dedicated systemd unit, runs local Python tests,
+stages only the Magnetra gateway source file with a temporary rollback copy,
+restarts **only** magnetra-btdigg.service, and verifies its authenticated
+`http://127.0.0.1:8796/healthz` endpoint without printing any secrets.
+If validation fails, it restores the previous source and attempts to restart
+the previous gateway. It does not touch /etc/magnetra-btdigg/gateway.env,
+tunnel-token, cloudflared, router, CalciDatum, NexaPanel or Flud Companion.
+
+The updater makes **no direct BTDigg search request**; one human-controlled
+`sudo python3 /opt/magnetra-btdigg/check-btdigg.py` can confirm real source
+results after the cache starts. No scheduled polling or retries are added.

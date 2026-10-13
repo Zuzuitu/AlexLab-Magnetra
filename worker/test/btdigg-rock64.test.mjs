@@ -37,3 +37,20 @@ test("gateway rejects redirects, unexpected HTML shape and rate limiting",async(
   await assert.rejects(()=>wrap(res)("https://btdig.com/search?q=ubuntu"));
  }
 });
+
+test("intermittent gateway failures expose safe, BTDigg-only cause and never auto-retry",async()=>{
+ const original="https://btdig.com/search?q=ubuntu";
+ const make=fn=>rock64BTDiggFetcher({BTDIGG_GATEWAY_TOKEN:secret},fn);
+ const cases=[
+  [()=>{throw new DOMException("The operation was aborted due to timeout","TimeoutError");},/gateway request timed out/],
+  [()=>{throw Error("Cloudflare subrequest error 1042");},/tunnel Cloudflare 1042/],
+  [()=>{throw TypeError("fetch failed: private connection URL");},/gateway transport failed/],
+  [()=>new Response('{"error":"timeout"}',{status:504,headers:{"content-type":"application/json"}}),/gateway timed out/]
+ ];
+ for(const [run,pattern] of cases){
+  let calls=0;
+  const fetcher=make(async()=>{calls++;return run();});
+  await assert.rejects(()=>fetcher(original),pattern);
+  assert.equal(calls,1,"a failed BTDigg search must never retry automatically");
+ }
+});

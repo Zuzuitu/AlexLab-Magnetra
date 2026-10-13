@@ -10,6 +10,7 @@ Python 3 stdlib only. No external dependencies or sensitive query logging.
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 import hmac
 import json
 import os
@@ -25,9 +26,13 @@ BIND = "127.0.0.1"
 PORT = 8796
 HOST = "https://btdig.com"
 SIZE_LIMIT = 3_000_000
-TIMEOUT_SECONDS = 8
-CACHE_SECONDS = 30
+TIMEOUT_SECONDS = 12
+# Fresh successful source HTML only. Small, bounded, in-memory LRU (no disk writes).
+CACHE_SECONDS = 20 * 60
+CACHE_MAX_ENTRIES = 4
+CACHE_MAX_BYTES = 6_000_000
 MIN_SEARCH_INTERVAL = 5
+INFLIGHT_WAIT_SECONDS = TIMEOUT_SECONDS + 1
 SOURCE_UA = (
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
@@ -44,11 +49,13 @@ class SearchProvider:
     def __init__(self, fetcher=None, clock=None):
         self.fetcher = fetcher or self.fetch
         self.clock = clock or time.monotonic
-        self._mutex = threading.Lock()
+        self._lock = threading.Lock()
         self._last = float("-inf")
-        self._cached_query = None
-        self._cached_content = b""
-        self._cached_at = float("-inf")
+        self._cache = OrderedDict()
+        self._cache_bytes = 0
+        # At most one upstream request at a time. An identical in-flight query
+        # can reuse its outcome rather than causing a spurious local 429.
+        self._inflight = None
 
     @staticmethod
     def fetch(query: str) -> tuple[int, bytes]:
@@ -80,31 +87,80 @@ class SearchProvider:
                     return 503, b""
                 return 200, raw
         except HTTPError as e:
-            # No retries on 429 / CAPTCHA; respect provider controls.
+            # Do not retry 429 or challenges or hide their real status.
             return (429 if e.code == 429 else 503), b""
         except (OSError, URLError, TimeoutError):
             return 504, b""
 
-    def search(self, query: str) -> tuple[int, bytes]:
-        if not self._mutex.acquire(blocking=False):
-            return 429, b""
-        try:
-            now = self.clock()
-            if self._cached_query == query and now - self._cached_at < CACHE_SECONDS:
-                return 200, self._cached_content
-            if now - self._last < MIN_SEARCH_INTERVAL:
-                return 429, b""
-            self._last = now
-            status, html = self.fetcher(query)
-            if status == 200 and html and len(html) <= SIZE_LIMIT:
-                self._cached_query = query
-                self._cached_content = html
-                self._cached_at = self.clock()
-                return 200, html
-            return status, b""
-        finally:
-            self._mutex.release()
+    def _prune(self, now):
+        expired = [q for q, (_, timestamp) in self._cache.items()
+                   if now - timestamp >= CACHE_SECONDS]
+        for q in expired:
+            html, _ = self._cache.pop(q)
+            self._cache_bytes -= len(html)
 
+    def _remember(self, query, html, now):
+        # Never cache error bodies or apparent zero-result/challenge documents.
+        if not html or b"one_result" not in html.lower():
+            return
+        if query in self._cache:
+            old, _ = self._cache.pop(query)
+            self._cache_bytes -= len(old)
+        self._cache[query] = (html, now)
+        self._cache_bytes += len(html)
+        while (len(self._cache) > CACHE_MAX_ENTRIES or
+               self._cache_bytes > CACHE_MAX_BYTES):
+            _, (old, _) = self._cache.popitem(last=False)
+            self._cache_bytes -= len(old)
+
+    def search(self, query: str) -> tuple[int, bytes]:
+        with self._lock:
+            now = self.clock()
+            self._prune(now)
+            cached = self._cache.get(query)
+            if cached is not None:
+                self._cache.move_to_end(query)
+                return 200, cached[0]
+            ongoing = self._inflight
+            if ongoing is not None:
+                if ongoing["query"] != query:
+                    return 429, b""
+                # The first request owns the upstream fetch; the waiter does
+                # not consume another BTDigg request or bypass its rate limits.
+                owner = False
+            elif now - self._last < MIN_SEARCH_INTERVAL:
+                return 429, b""
+            else:
+                owner = True
+                ongoing = {"query": query, "event": threading.Event(),
+                           "status": 504, "body": b""}
+                self._inflight = ongoing
+                self._last = now
+        if not owner:
+            if ongoing["event"].wait(INFLIGHT_WAIT_SECONDS):
+                return ongoing["status"], ongoing["body"]
+            return 504, b""
+
+        status, html = 504, b""
+        try:
+            status, html = self.fetcher(query)
+            if status != 200 or not html or len(html) > SIZE_LIMIT:
+                html = b""
+                if status == 200:
+                    status = 502
+        except Exception:
+            # Keep secrets/queries out of errors. Always wake waiting threads.
+            status, html = 504, b""
+        finally:
+            with self._lock:
+                if status == 200:
+                    self._prune(self.clock())
+                    self._remember(query, html, self.clock())
+                ongoing["status"] = status
+                ongoing["body"] = html
+                self._inflight = None
+                ongoing["event"].set()
+        return status, html
 
 def handler_class(secret: str, provider: SearchProvider):
     class Handler(BaseHTTPRequestHandler):

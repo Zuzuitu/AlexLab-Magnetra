@@ -20,7 +20,7 @@ class GatewayTests(unittest.TestCase):
         self.requests = []
         def upstream(query):
             self.requests.append(query)
-            return 200, b"<html>BTDigg genuine fixture</html>"
+            return 200, b"<html><div class=\"one_result\">BTDigg genuine fixture</div></html>"
         self.provider = gateway.SearchProvider(fetcher=upstream, clock=lambda: self.now[0])
         self.server = gateway.LimitedHTTPServer(
             ("127.0.0.1", 0),
@@ -78,6 +78,73 @@ class GatewayTests(unittest.TestCase):
             code, content = provider.search("ubuntu")
             self.assertEqual(code, status)
             self.assertEqual(content, b"")
+
+    def test_multiple_queries_bounded_lru_and_expiration(self):
+        self.assertEqual(self.provider.search("ubuntu")[0], 200)
+        self.now[0] += 6
+        self.assertEqual(self.provider.search("debian")[0], 200)
+        self.assertEqual(self.provider.search("ubuntu")[0], 200)
+        self.assertEqual(self.requests, ["ubuntu", "debian"],
+                         "cached hit must not use another upstream request")
+        for i in range(gateway.CACHE_MAX_ENTRIES):
+            self.now[0] += 6
+            self.assertEqual(self.provider.search("extra"+str(i))[0], 200)
+        self.assertLessEqual(len(self.provider._cache), gateway.CACHE_MAX_ENTRIES)
+        self.assertLessEqual(self.provider._cache_bytes, gateway.CACHE_MAX_BYTES)
+        # ubuntu must have been evicted by the LRU bound.
+        self.now[0] += 6
+        self.assertEqual(self.provider.search("ubuntu")[0], 200)
+        self.assertEqual(self.requests.count("ubuntu"), 2)
+        self.now[0] += gateway.CACHE_SECONDS + 1
+        self.assertEqual(self.provider.search("ubuntu")[0], 200)
+        self.assertEqual(self.requests.count("ubuntu"), 3,
+                         "expired HTML must not be represented as fresh")
+
+    def test_same_query_inflight_shares_one_real_request(self):
+        started = threading.Event()
+        release = threading.Event()
+        calls = []
+        def slow_fetch(query):
+            calls.append(query)
+            started.set()
+            self.assertTrue(release.wait(2), "test upstream was not released")
+            return 200, b'<div class="one_result"><div>Ubuntu</div></div>'
+        provider = gateway.SearchProvider(fetcher=slow_fetch, clock=lambda: 100.0)
+        results = []
+        first = threading.Thread(target=lambda: results.append(provider.search("ubuntu")))
+        second = threading.Thread(target=lambda: results.append(provider.search("ubuntu")))
+        first.start()
+        self.assertTrue(started.wait(1))
+        second.start()
+        self.assertEqual(provider.search("different")[0], 429,
+                         "other queries must not enter the active upstream fetch")
+        release.set()
+        first.join(2)
+        second.join(2)
+        self.assertFalse(first.is_alive())
+        self.assertFalse(second.is_alive())
+        self.assertEqual(calls, ["ubuntu"])
+        self.assertEqual([s for s, _ in results], [200, 200])
+
+    def test_no_cache_for_rate_limit_or_empty_rows_and_no_retry(self):
+        statuses = [429, 200, 200]
+        calls = []
+        def upstream(query):
+            status = statuses[len(calls)]
+            calls.append(query)
+            return (status, b'<div class="one_result">genuine</div>' if status == 200
+                    else b"")
+        provider = gateway.SearchProvider(fetcher=upstream, clock=lambda: self.now[0])
+        self.assertEqual(provider.search("ubuntu")[0], 429)
+        self.assertEqual(calls, ["ubuntu"], "429 cannot trigger automatic retries")
+        self.now[0] += 6
+        self.assertEqual(provider.search("ubuntu")[0], 200)
+        self.assertEqual(provider.search("ubuntu")[0], 200)
+        self.assertEqual(calls, ["ubuntu", "ubuntu"])
+        empty = gateway.SearchProvider(fetcher=lambda q:(200,b"<html>No results</html>"),
+                                       clock=lambda: self.now[0])
+        self.assertEqual(empty.search("ubuntu")[0], 200)
+        self.assertFalse(empty._cache, "empty or challenge-like HTML cannot be cached")
 
     def test_real_fetch_url_is_fixed(self):
         # A static contract check: arbitrary URLs cannot be influenced by request.

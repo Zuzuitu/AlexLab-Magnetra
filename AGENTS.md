@@ -61,7 +61,7 @@ Never leave the checkpoint behind the code.
 
 - `docs/NEXT_CHAT_HANDOFF.md` is the practical handoff for fresh ChatGPT sessions; `docs/PROJECT_STATE.md` and code on current `main` remain more authoritative. Treat all recorded SHAs and provider health snapshots as historical observations.
 - When the owner explicitly requests a complete session checkpoint, reconcile and update both the canonical `docs/PROJECT_STATE.md` and relevant handoff content in one guarded PR, without inventing decisions, replacing the source audit with guessed data, or rewriting unrelated historical sections.
-- The most recent fully recorded production provider audit on 2026-10-08 is **12 results / 14 empty-unverified / 20 source errors** (run 37827913584). The intentionally older UI snapshot is **12/12/22** (run 37816874771); do not confuse these. Source status is never 'live now' unless verified as such.
+- The latest fully recorded **pre-stabilization** production provider audit is from 2026-10-13: **13 with results / 14 empty-or-unverified / 19 provider errors / 0 transport errors**, run **38361367716**, for one benign `ubuntu` query per provider. This audit replaces the older 08-Oct 12/12/22 UI snapshot, which must not be presented as current. A date-stamped audit is **not live uptime**, and one failure must not cause any original indexer to be deleted.
 
 ## Technical-memory maintenance
 

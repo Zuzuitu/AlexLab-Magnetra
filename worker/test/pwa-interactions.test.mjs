@@ -105,3 +105,23 @@ test("Companion dispatch blocks concurrent repeat taps and reuses idempotency ID
  assert.equal(submissions[0].requestId,submissions[1].requestId,"relay request ID must remain stable for 110 seconds");
  assert.equal(api.magnetIdentity(magnet,"device"),api.magnetIdentity(magnet.toUpperCase().replace("MAGNET:?","magnet:?"),"device"));
 });
+
+test("provider picker uses current browser-session outcomes without triggering additional probes",async()=>{
+ let requests=0;
+ const {api,element}=harness(async(path)=>{
+  requests++;
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  if(id==="btdigg")return json({results:[{provider:id,name:"Ubuntu fixture"}],
+   stats:[{provider:id,count:1,ok:true}],errors:[]});
+  return json({results:[],stats:[{provider:id,count:0,ok:false}],
+   errors:[{provider:id,code:"TIMEOUT",message:"Provider timed out."}]});
+ });
+ element("query").value="ubuntu";
+ element("category").value="all";
+ api.state.selected=new Set(["btdigg","other"]);
+ await api.search();
+ assert.equal(api.state.sessionAudit.btdigg.state,"results");
+ assert.equal(api.state.sessionAudit.btdigg.count,1);
+ assert.equal(api.state.sessionAudit.other.state,"error");
+ assert.equal(requests,2,"rendering status badges must not ping providers");
+});
