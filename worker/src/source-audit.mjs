@@ -1,10 +1,10 @@
-// Immutable 46-provider production observation from GitHub Actions run 38361367716 (2026-10-13).
-// One benign "ubuntu" test per indexer; this is NOT a live uptime guarantee.
-// Failures and empty results must not cause deletion of valid provider adapters.
+// Immutable 46-provider production observation from GitHub Actions run 38373699387 (2026-10-13).
+// One benign "ubuntu" test per indexer; this is NOT live uptime.
+// Ranking is based on this sample plus this-browser-session outcomes; no deletions.
 export const SOURCE_AUDIT = Object.freeze({
-  observedAt: "2026-10-13T07:14:43Z",
+  observedAt: "2026-10-13T09:05:03Z",
   query: "ubuntu",
-  workflowRunId: 38361367716,
+  workflowRunId: 38373699387,
   outcomes: {
     "anirena": {
       "state": "error",
@@ -18,6 +18,14 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "empty-unverified",
       "count": 0
     },
+    "bangumimoe": {
+      "state": "empty-unverified",
+      "count": 0
+    },
+    "bitsearch": {
+      "state": "error",
+      "code": "REDIRECT_BLOCKED"
+    },
     "audiobookbay": {
       "state": "results",
       "count": 9
@@ -25,18 +33,6 @@ export const SOURCE_AUDIT = Object.freeze({
     "btdigg": {
       "state": "results",
       "count": 10
-    },
-    "bangumimoe": {
-      "state": "empty-unverified",
-      "count": 0
-    },
-    "bitsearch": {
-      "state": "error",
-      "code": "PROVIDER_ERROR"
-    },
-    "blueroms": {
-      "state": "empty-unverified",
-      "count": 0
     },
     "bt4g": {
       "state": "error",
@@ -46,9 +42,9 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "results",
       "count": 2
     },
-    "btsow": {
-      "state": "results",
-      "count": 30
+    "blueroms": {
+      "state": "empty-unverified",
+      "count": 0
     },
     "extdotto": {
       "state": "error",
@@ -62,25 +58,25 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "empty-unverified",
       "count": 0
     },
-    "fitgirlrepacks": {
-      "state": "empty-unverified",
-      "count": 0
-    },
-    "knaben": {
+    "btsow": {
       "state": "results",
-      "count": 100
-    },
-    "limetorrents": {
-      "state": "error",
-      "code": "REDIRECT_BLOCKED"
+      "count": 30
     },
     "internetarchive": {
       "state": "results",
       "count": 100
     },
-    "epublibre": {
+    "fitgirlrepacks": {
+      "state": "empty-unverified",
+      "count": 0
+    },
+    "limetorrents": {
+      "state": "error",
+      "code": "REDIRECT_BLOCKED"
+    },
+    "knaben": {
       "state": "results",
-      "count": 1
+      "count": 100
     },
     "linuxtracker": {
       "state": "results",
@@ -90,11 +86,11 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "empty-unverified",
       "count": 0
     },
-    "mikanproject": {
-      "state": "empty-unverified",
-      "count": 0
-    },
     "mypornclub": {
+      "state": "error",
+      "code": "ACCESS_DENIED"
+    },
+    "mikanproject": {
       "state": "empty-unverified",
       "count": 0
     },
@@ -106,17 +102,21 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "empty-unverified",
       "count": 0
     },
-    "nyaasi": {
-      "state": "error",
-      "code": "RATE_LIMIT"
-    },
     "oxtorrent": {
       "state": "error",
       "code": "ACCESS_DENIED"
     },
+    "nyaasi": {
+      "state": "error",
+      "code": "RATE_LIMIT"
+    },
     "subsplease": {
       "state": "empty-unverified",
       "count": 0
+    },
+    "epublibre": {
+      "state": "results",
+      "count": 1
     },
     "rutorinfo": {
       "state": "empty-unverified",
@@ -126,15 +126,15 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "results",
       "count": 100
     },
+    "1337x": {
+      "state": "error",
+      "code": "ACCESS_DENIED"
+    },
     "therarbag": {
       "state": "results",
       "count": 39
     },
     "tokyotoshokan": {
-      "state": "error",
-      "code": "ACCESS_DENIED"
-    },
-    "1337x": {
       "state": "error",
       "code": "ACCESS_DENIED"
     },
@@ -146,10 +146,6 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "error",
       "code": "ACCESS_DENIED"
     },
-    "torrentdownloadinfo": {
-      "state": "error",
-      "code": "REDIRECT_BLOCKED"
-    },
     "torrentdownloads": {
       "state": "error",
       "code": "ACCESS_DENIED"
@@ -157,6 +153,10 @@ export const SOURCE_AUDIT = Object.freeze({
     "torrentkitty": {
       "state": "error",
       "code": "ACCESS_DENIED"
+    },
+    "torrentdownloadinfo": {
+      "state": "error",
+      "code": "REDIRECT_BLOCKED"
     },
     "torrentscsv": {
       "state": "results",
@@ -182,11 +182,11 @@ export const SOURCE_AUDIT = Object.freeze({
       "state": "results",
       "count": 29
     },
-    "xxxtracker": {
-      "state": "empty-unverified",
-      "count": 0
-    },
     "sukebeinyaa": {
+      "state": "error",
+      "code": "TIMEOUT"
+    },
+    "xxxtracker": {
       "state": "error",
       "code": "TIMEOUT"
     }
