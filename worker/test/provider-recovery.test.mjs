@@ -29,8 +29,8 @@ test("provider error categories distinguish timeouts, rate limits, access denial
  assert.equal(classifyProviderError("provider anti-bot challenge").code,"CHALLENGE");
  assert.equal(classifyProviderError("Provider redirect left the approved origin").code,"REDIRECT_BLOCKED");
  assert.equal(classifyProviderError("provider HTTP 530").code,"UPSTREAM_ERROR");
- assert.equal(classifyProviderError("BTDigg Rock64 gateway request timed out.").code,"TIMEOUT");
- assert.equal(classifyProviderError("BTDigg Rock64 gateway timed out (HTTP 504).").code,"TIMEOUT");
+ assert.equal(classifyProviderError("BTDigg Rock64 tunnel timed out (16-second request).").code,"BTDIGG_TUNNEL_TIMEOUT");
+ assert.equal(classifyProviderError("BTDigg Rock64 source timed out (HTTP 504).").code,"BTDIGG_SOURCE_TIMEOUT");
  assert.equal(classifyProviderError("BTDigg Rock64 tunnel Cloudflare 1042.").code,"BTDIGG_TUNNEL_1042");
  assert.equal(classifyProviderError("BTDigg Rock64 gateway transport failed.").code,"BTDIGG_TUNNEL_ERROR");
 });
