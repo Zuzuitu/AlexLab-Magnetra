@@ -71,10 +71,10 @@ function renderProviders(){
   label.append(input,name);
   const recent=state.sessionAudit[p.id];
   const audit=recent?.state||p.lastAudit?.state;
-  const label=recent
+  const auditLabel=recent
    ?(audit==="results"?"RESULTS THIS SESSION":audit==="error"?"ERROR THIS SESSION":"0 THIS SESSION")
    :(audit==="results"?"RESULTS IN AUDIT":audit==="empty-unverified"?"0 IN AUDIT":audit==="error"?"ERROR IN AUDIT":"NOT AUDITED");
-  const marker=el("small","audit-"+(audit||"unknown"),p.ported?label:"PORT PENDING");
+  const marker=el("small","audit-"+(audit||"unknown"),p.ported?auditLabel:"PORT PENDING");
   if(recent)marker.title="Search in this browser session at "+recent.at+
     "; "+recent.count+" results. Not a continuous live status.";
   else if(audit)marker.title="Historical "+(state.audit?.query||"")+
