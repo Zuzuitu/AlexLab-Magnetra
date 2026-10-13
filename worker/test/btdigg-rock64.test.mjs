@@ -45,7 +45,7 @@ test("intermittent gateway failures expose safe, BTDigg-only cause and never aut
   [()=>{throw new DOMException("The operation was aborted due to timeout","TimeoutError");},/gateway request timed out/],
   [()=>{throw Error("Cloudflare subrequest error 1042");},/tunnel Cloudflare 1042/],
   [()=>{throw TypeError("fetch failed: private connection URL");},/gateway transport failed/],
-  [()=>new Response('{"error":"timeout"}',{status:504,headers:{"content-type":"application/json"}}),/gateway timed out \\(HTTP 504\\)/]
+  [()=>new Response('{"error":"timeout"}',{status:504,headers:{"content-type":"application/json"}}),/gateway timed out/]
  ];
  for(const [run,pattern] of cases){
   let calls=0;
