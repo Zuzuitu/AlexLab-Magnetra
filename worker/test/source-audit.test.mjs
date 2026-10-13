@@ -11,11 +11,11 @@ test("dated production snapshot covers each of the original 46 providers, withou
  assert.deepEqual(ids.sort(),PROVIDERS.map(p=>p.id).sort());
  assert.match(SOURCE_AUDIT.observedAt,/^2026-10-13T/);
  assert.equal(SOURCE_AUDIT.query,"ubuntu");
- assert.equal(SOURCE_AUDIT.workflowRunId,38361367716);
+ assert.equal(SOURCE_AUDIT.workflowRunId,38373699387);
  const rows=Object.values(SOURCE_AUDIT.outcomes);
  assert.equal(rows.filter(x=>x.state==="results").length,13);
- assert.equal(rows.filter(x=>x.state==="empty-unverified").length,14);
- assert.equal(rows.filter(x=>x.state==="error").length,19);
+ assert.equal(rows.filter(x=>x.state==="empty-unverified").length,12);
+ assert.equal(rows.filter(x=>x.state==="error").length,21);
  assert.deepEqual(auditFor("btdigg"),{state:"results",count:10});
  assert.equal(auditFor("nyaasi").code,"RATE_LIMIT");
  assert.equal(auditFor("knaben").state,"results");
@@ -25,7 +25,7 @@ test("provider endpoint conveys timestamped audit metadata and all 46 source sta
  const result=await worker.fetch(new Request("https://index.alexlab.media/api/providers"),{});
  assert.equal(result.status,200);
  const data=await result.json();
- assert.equal(data.audit.workflowRunId,38361367716);
+ assert.equal(data.audit.workflowRunId,38373699387);
  assert.equal(data.providers.length,46);
  for(const p of data.providers)assert.deepEqual(p.lastAudit,SOURCE_AUDIT.outcomes[p.id],p.id);
 });
@@ -41,12 +41,12 @@ test("source-selection UI never treats all implemented adapters as verified work
  assert.ok(html.includes('not live uptime'));
 });
 
-test("server and PWA default search profiles are the same four audit-positive indexers",()=>{
+test("server and PWA default search profiles pin BTDigg first plus the four proven sources",()=>{
  const backend=readFileSync(new URL("../src/index.mjs",import.meta.url),"utf8");
  const frontend=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
- const profile='["knaben","torrentscsv","thepiratebay","internetarchive"]';
+ const profile='["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"]';
  assert.ok(backend.includes("const DEFAULT_IDS="+profile));
  assert.ok(frontend.includes("const preferred="+profile));
- for(const id of ["knaben","torrentscsv","thepiratebay","internetarchive"])
+ for(const id of ["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"])
   assert.equal(SOURCE_AUDIT.outcomes[id].state,"results",id);
 });
