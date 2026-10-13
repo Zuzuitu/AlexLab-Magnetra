@@ -1,4 +1,4 @@
-import {HTML_PROVIDER_SPECS} from "../src/html-adapters.mjs";
+import {HTML_PROVIDER_SPECS,normalizeBTDiggMagnet} from "../src/html-adapters.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
@@ -17,6 +17,17 @@ test("all 46 Android built-in providers are inventoried in original order",()=>{
  const classNames=PROVIDERS.map(p=>p.id==="1337x"?"ThirteenThirtySevenX":p.id==="0magnet"?"ZeroMagnet":p.name.replace(/[^a-zA-Z0-9]/g,"")).map(x=>x.toLowerCase()).sort();
  assert.deepEqual(classNames,imports.map(x=>x.toLowerCase()).sort());
  for(const p of PROVIDERS){assert.ok(p.url.startsWith("https://"));assert.equal(p.ported,hasAdapter(p.id));}
+});
+test("BTDigg-only magnet HTML entity normalization preserves BTIH and proper query fields",()=>{
+ const doubleEncoded=magnet+"&amp;dn=Ubuntu+ISO&amp;tr=udp%3A%2F%2Ftracker.example%3A80";
+ const actual=normalizeBTDiggMagnet(doubleEncoded);
+ assert.equal(actual,magnet+"&dn=Ubuntu+ISO&tr=udp%3A%2F%2Ftracker.example%3A80");
+ const parsed=new URL(actual);
+ assert.equal(parsed.searchParams.get("xt"),"urn:btih:"+hash);
+ assert.equal(parsed.searchParams.get("dn"),"Ubuntu ISO");
+ assert.equal(parsed.searchParams.get("tr"),"udp://tracker.example:80");
+ assert.equal(normalizeBTDiggMagnet(actual),actual);
+ assert.equal(normalizeBTDiggMagnet(null),null);
 });
 test("reject invalid magnet hashes",()=>{
  assert.equal(magnetFromHash(hash),magnet);
