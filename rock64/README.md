@@ -161,3 +161,9 @@ automatically send torrents to Nvidia Shield.
 Platform references:
 - Cloudflare Tunnel routing: https://developers.cloudflare.com/tunnel/concepts/routing/
 - Cloudflare Tunnel run parameters: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/run-parameters/
+
+## Operational troubleshooting — 2026-10-13
+
+The physical Rock64 gateway and isolated tunnel are active. Local gateway authenticated HTML probe passed (10 rows / 10 magnets); public tunnel `/healthz` without bearer correctly returned 401. Owner-supplied `/api/search?q=ubuntu&providers=btdigg` JSON captured from a browser reported `total:10`, `ok:true`, `errors:[]`. A separate public HTTP request using Python urllib from Rock64 returned HTML 403; do not treat it as proof that Worker-origin search is broken, nor change account-wide Cloudflare security without examining response headers and browser/network discrepancies.
+
+A BTDigg-specific magnet HTML entity issue in the API JSON was identified: literal `&amp;dn` / `&amp;tr` instead of `&dn` / `&tr`. PR #23 adds a one-layer BTDigg-only correction with both Node and real workerd fixture tests. Until that patch is deliberately deployed, public API responses can still contain these encoded separators. This does not require reinstalling the gateway or tunnel.
