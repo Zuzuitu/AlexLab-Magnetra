@@ -118,6 +118,13 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
 function fromHash(hash) {
  return /^(?:[a-f0-9]{40}|[a-z2-7]{32})$/i.test(hash||"")?"magnet:?xt=urn:btih:"+hash.toLowerCase():null;
 }
+// BTDigg magnet hrefs can retain HTML entity separators (e.g. &amp;dn).
+// Convert one literal entity layer to real URL separators only for BTDigg;
+// never rewrite metadata text, other providers, or the Companion relay.
+export function normalizeBTDiggMagnet(magnet) {
+ return typeof magnet==="string" && magnet.startsWith("magnet:?")
+  ? magnet.replace(/&amp;/gi,"&") : magnet;
+}
 function normalizeUrl(link,host) {
  if(!link)return null;
  try{
@@ -198,7 +205,7 @@ export async function runHtmlAdapter(id,q,category,fetcher=fetch) {
    return {
      id:derivedHash||row.details||i,
      name:(row.name||"").replace(/\s+/g," ").trim(),
-     magnet:row.magnet||fromHash(derivedHash),
+     magnet:(id==="btdigg"?normalizeBTDiggMagnet(row.magnet):row.magnet)||fromHash(derivedHash),
      size:(row.size||"").trim(),
      seeders:row.seeders?.trim().replace(/,/g,"")||null,
      peers:row.peers?.trim().replace(/,/g,"")||null,
