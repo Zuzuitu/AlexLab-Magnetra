@@ -33,6 +33,10 @@ export function directSearchUrl(id,query){
 }
 export function classifyProviderError(err){
  const raw=String(err?.message||err||"").slice(0,180);
+ if(/BTDigg Rock64 tunnel timed out/i.test(raw))
+  return {code:"BTDIGG_TUNNEL_TIMEOUT",message:"Cloudflare did not receive a response from the Rock64 gateway within 16 seconds.",retryable:false};
+ if(/BTDigg Rock64 source timed out \(HTTP 504\)/i.test(raw))
+  return {code:"BTDIGG_SOURCE_TIMEOUT",message:"Rock64 could not complete the BTDigg source request in time (about 12 seconds).",retryable:false};
  if(/BTDigg Rock64 tunnel Cloudflare 1042/i.test(raw))
   return {code:"BTDIGG_TUNNEL_1042",message:"Cloudflare rejected the BTDigg tunnel subrequest (1042).",retryable:false};
  if(/BTDigg Rock64 gateway transport failed/i.test(raw))

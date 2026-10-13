@@ -31,7 +31,7 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
    const detail=String(e?.message||"");
    if(e?.name==="TimeoutError"||e?.name==="AbortError"||
       /timed? ?out|timeout|aborted/i.test(detail))
-    throw Error("BTDigg Rock64 gateway request timed out.");
+    throw Error("BTDigg Rock64 tunnel timed out (16-second request).");
    if(/(?:^|\D)1042(?:\D|$)/.test(detail))
     throw Error("BTDigg Rock64 tunnel Cloudflare 1042.");
    throw Error("BTDigg Rock64 gateway transport failed.");
@@ -41,7 +41,7 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
   if(response.status===401||response.status===403)
    throw Error("BTDigg Rock64 gateway authorization failed.");
   if(response.status===429)throw Error("BTDigg gateway/provider HTTP 429 (rate limited).");
-  if(response.status===504)throw Error("BTDigg Rock64 gateway timed out (HTTP 504).");
+  if(response.status===504)throw Error("BTDigg Rock64 source timed out (HTTP 504).");
   if(!response.ok)throw Error("BTDigg Rock64 gateway HTTP "+response.status);
   if(!/text\/html/i.test(response.headers.get("content-type")||""))
    throw Error("BTDigg gateway returned non-HTML data.");
