@@ -22,7 +22,7 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
   let response;
   try{
    response=await transport(gateway.toString(),{
-    method:"GET",redirect:"manual",signal:AbortSignal.timeout(10000),
+    method:"GET",redirect:"manual",signal:AbortSignal.timeout(16000),
     headers:{"authorization":"Bearer "+secret,"accept":"text/html"}
    });
   }catch(e){
