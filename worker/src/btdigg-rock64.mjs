@@ -25,12 +25,23 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
     method:"GET",redirect:"manual",signal:AbortSignal.timeout(10000),
     headers:{"authorization":"Bearer "+secret,"accept":"text/html"}
    });
-  }catch{throw Error("BTDigg Rock64 gateway is unreachable.");}
+  }catch(e){
+   // Do not publish arbitrary transport exception text (it can contain URLs).
+   // Distinguish the main failure modes without retries or weakening tunnel auth.
+   const detail=String(e?.message||"");
+   if(e?.name==="TimeoutError"||e?.name==="AbortError"||
+      /timed? ?out|timeout|aborted/i.test(detail))
+    throw Error("BTDigg Rock64 gateway request timed out.");
+   if(/(?:^|\D)1042(?:\D|$)/.test(detail))
+    throw Error("BTDigg Rock64 tunnel Cloudflare 1042.");
+   throw Error("BTDigg Rock64 gateway transport failed.");
+  }
   if(response.status>=300&&response.status<400)
    throw Error("BTDigg gateway redirect refused.");
   if(response.status===401||response.status===403)
    throw Error("BTDigg Rock64 gateway authorization failed.");
   if(response.status===429)throw Error("BTDigg gateway/provider HTTP 429 (rate limited).");
+  if(response.status===504)throw Error("BTDigg Rock64 gateway timed out (HTTP 504).");
   if(!response.ok)throw Error("BTDigg Rock64 gateway HTTP "+response.status);
   if(!/text\/html/i.test(response.headers.get("content-type")||""))
    throw Error("BTDigg gateway returned non-HTML data.");
