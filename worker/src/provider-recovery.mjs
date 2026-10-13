@@ -33,6 +33,10 @@ export function directSearchUrl(id,query){
 }
 export function classifyProviderError(err){
  const raw=String(err?.message||err||"").slice(0,180);
+ if(/BTDigg Rock64 tunnel Cloudflare 1042/i.test(raw))
+  return {code:"BTDIGG_TUNNEL_1042",message:"Cloudflare rejected the BTDigg tunnel subrequest (1042).",retryable:false};
+ if(/BTDigg Rock64 gateway transport failed/i.test(raw))
+  return {code:"BTDIGG_TUNNEL_ERROR",message:"Connection to the Rock64 BTDigg tunnel failed.",retryable:false};
  if(/abort|timed? ?out|timeout/i.test(raw))return {code:"TIMEOUT",message:"The provider did not respond in time.",retryable:false};
  if(/HTTP 429|too many requests/i.test(raw))return {code:"RATE_LIMIT",message:"Provider rate-limited this connection.",retryable:false};
  if(/cf-mitigated|cloudflare challenge|challenge requires|anti-bot challenge/i.test(raw))
