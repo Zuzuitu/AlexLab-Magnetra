@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1"};
 const preferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{}};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -69,10 +69,15 @@ function renderProviders(){
   });
   const name=el("strong","",p.name);
   label.append(input,name);
-  const audit=p.lastAudit?.state;
-  const message=audit==="results"?"RESULTS IN TEST":audit==="empty-unverified"?"0 IN TEST":audit==="error"?"ERROR IN TEST":"NOT AUDITED";
-  const marker=el("small","audit-"+(audit||"unknown"),p.ported?message:"PORT PENDING");
-  if(audit)marker.title="Historical "+(state.audit?.query||"")+
+  const recent=state.sessionAudit[p.id];
+  const audit=recent?.state||p.lastAudit?.state;
+  const label=recent
+   ?(audit==="results"?"RESULTS THIS SESSION":audit==="error"?"ERROR THIS SESSION":"0 THIS SESSION")
+   :(audit==="results"?"RESULTS IN AUDIT":audit==="empty-unverified"?"0 IN AUDIT":audit==="error"?"ERROR IN AUDIT":"NOT AUDITED");
+  const marker=el("small","audit-"+(audit||"unknown"),p.ported?label:"PORT PENDING");
+  if(recent)marker.title="Search in this browser session at "+recent.at+
+    "; "+recent.count+" results. Not a continuous live status.";
+  else if(audit)marker.title="Historical "+(state.audit?.query||"")+
     " query on "+(state.audit?.observedAt||"unknown date")+
     (p.lastAudit?.code?"; "+p.lastAudit.code:"")+
     (p.lastAudit?.count!=null?"; "+p.lastAudit.count+" results":"");
@@ -302,13 +307,20 @@ async function search(){
      if(controller.signal.aborted)return;
      state.items.push(...(data.results||[]));
      for(const e of data.errors||[])failures.push(e);
+     const observed=(data.stats||[]).find(s=>s.provider===id);
+     if(observed)state.sessionAudit[id]={
+      state:observed.ok?(observed.count>0?"results":"empty-unverified"):"error",
+      count:observed.count||0,at:new Date().toLocaleString()
+     };
     }catch(e){
      if(controller.signal.aborted)return;
      failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});
+     state.sessionAudit[id]={state:"error",count:0,at:new Date().toLocaleString()};
     }
     if(controller.signal.aborted)return;
     completed++;
     renderResults();
+    renderProviders(); // Update session-only observations; no extra provider calls.
     $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" results found.";
     renderProviderErrors(failures);
    }
