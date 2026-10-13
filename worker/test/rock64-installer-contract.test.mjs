@@ -8,6 +8,6 @@ for (const filename of ["install-btdigg.sh", "update-btdigg.sh"]) {
   assert.match(source, /python3 -B -m unittest discover/);
   assert.match(source, /ast\.parse\(/);
   assert.doesNotMatch(source, /python3 -m py_compile/);
-  assert.match(source, /set -Ee?uo pipefail/);
+  assert.match(source, /set -(?:Ee|e)uo pipefail/);
  });
 }
