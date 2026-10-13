@@ -22,10 +22,10 @@ export default {
   try{
    const hash="0123456789abcdef0123456789abcdef01234567";
    const magnet="magnet:?xt=urn:btih:"+hash;
-   // BTDigg HTML sometimes contains double-encoded &amp;amp; separators.
-   // HTMLRewriter decodes one layer; the BTDigg adapter must decode the second.
+   // Reproduce the HTML attribute &amp; separators observed in real BTDigg JSON.
+   // The BTDigg adapter must produce actual magnet URL parameter delimiters.
    const fullMagnet=magnet+"&dn=Ubuntu+ISO&tr=udp%3A%2F%2Ftracker.example%3A80";
-   const htmlMagnet=fullMagnet.replaceAll("&","&amp;amp;");
+   const htmlMagnet=fullMagnet.replaceAll("&","&amp;");
    const sample='<div class="one_result"><div>'+
      '<div class="torrent_name"><a href="/torrent/'+hash+'">Ubuntu ISO fixture</a></div>'+
      '<div class="torrent_magnet"><div class="fa-magnet"><a href="'+htmlMagnet+'">Magnet</a></div></div>'+
@@ -39,7 +39,7 @@ export default {
    if(rows.length!==1||rows[0].name!=="Ubuntu ISO fixture"||rows[0].magnet!==fullMagnet||
       rows[0].size!=="1.2 GB"||rows[0].details!=="https://btdig.com/torrent/"+hash||
       rows[0].seeders!==null||rows[0].peers!==null)
-    invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields"});
+    invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields",extractedMagnet:rows[0]?.magnet||null});
   }catch(e){invalid.push({id:"btdigg-fixture",error:String(e).slice(0,250)});}
   return new Response(JSON.stringify({ok:invalid.length===0,checked:verified.length+invalid.length,verified,invalid}),{
     status:invalid.length?500:200,headers:{"content-type":"application/json"}
