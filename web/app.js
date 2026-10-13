@@ -293,15 +293,19 @@ function renderProviderErrors(failures){
  if(failures.length<=2)details.open=true;
  const summary=el("summary","failed-sources-title",failures.length+" indexer"+(failures.length===1?"":"s")+" unavailable · See alternatives");
  details.append(summary);
- const message=el("p","failed-sources-note",
-  "Some external sites restrict searches from Cloudflare. Magnetra cannot bypass their verification. You can open a source directly or search independently through other indexers.");
+ const onlyBTDigg=failures.every(f=>f.provider==="btdigg");
+ const message=el("p","failed-sources-note",onlyBTDigg
+  ?"BTDigg searches run from Rock64 at home, not from your phone. A temporary upstream limit, timeout or tunnel issue does not mean this indexer is permanently offline."
+  :"Some external sites restrict searches from Cloudflare. Magnetra cannot bypass their verification. You can open a source directly or search independently through other indexers.");
  details.append(message);
  for(const failure of failures){
   const entry=el("div","source-failure");
   const line=el("div","source-failure-content");
   const provider=state.providers.find(p=>p.id===failure.provider);
   line.append(el("strong","",provider?.name||failure.provider));
-  const message=failure.message||failure.error||"Provider unavailable";
+  const message=failure.provider==="btdigg"&&failure.code==="RATE_LIMIT"
+   ?"BTDigg is limiting requests. Wait a few seconds before another search."
+   :failure.message||failure.error||"Provider unavailable";
   const why=el("span","",message);
   if(failure.error)why.title=failure.error;
   line.append(why);entry.append(line);
@@ -355,7 +359,11 @@ async function search(){
     url.searchParams.set("q",query);url.searchParams.set("category",category);
     url.searchParams.set("providers",id);
     try{
-     if(id==="btdigg")await waitForBTDigg(query,controller.signal);
+     if(id==="btdigg"){
+      await waitForBTDigg(query,controller.signal);
+      // Guard even a cancelled HTTP request: Rock64 may still be working.
+      btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
+     }
      const data=await api(url.pathname+url.search,{signal:controller.signal});
      if(controller.signal.aborted)return;
      state.items.push(...(data.results||[]));
@@ -374,7 +382,11 @@ async function search(){
       btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
      }
     }catch(e){
-     if(controller.signal.aborted)return;
+     if(controller.signal.aborted){
+      if(id==="btdigg")btdiggPacing.nextAllowedAt=
+       Math.max(btdiggPacing.nextAllowedAt,Date.now()+BTDIGG_MIN_GAP_MS);
+      return;
+     }
      failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});
      state.sessionAudit[id]={state:"error",count:0,at:new Date().toLocaleString()};
      if(id==="btdigg")btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
