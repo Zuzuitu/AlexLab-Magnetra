@@ -3,6 +3,37 @@ const $=id=>document.getElementById(id);
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
+const BTDIGG_MIN_GAP_MS=5500;
+// Client-side pacing only. This does not bypass the Rock64 rate limit or retry
+// failed searches; it defers one user-requested search and is abortable.
+const btdiggPacing={nextAllowedAt:0,lastGoodQuery:null,lastGoodUntil:0};
+function btdiggWaitMs(query,at=Date.now()){
+ if(query===btdiggPacing.lastGoodQuery&&at<btdiggPacing.lastGoodUntil)return 0;
+ return Math.max(0,btdiggPacing.nextAllowedAt-at);
+}
+async function waitForBTDigg(query,signal){
+ const wait=btdiggWaitMs(query);
+ if(wait){
+  $("notice").textContent="BTDigg: waiting "+Math.ceil(wait/1000)+"s to respect source search limits…";
+  await new Promise((resolve,reject)=>{
+   if(signal.aborted){reject(new DOMException("Search cancelled","AbortError"));return;}
+   let done=false;
+   let timer;
+   const finish=(cancelled)=>{
+    if(done)return;
+    done=true;
+    clearTimeout(timer);
+    signal.removeEventListener("abort",onAbort);
+    if(cancelled)reject(new DOMException("Search cancelled","AbortError"));
+    else resolve();
+   };
+   const onAbort=()=>finish(true);
+   signal.addEventListener("abort",onAbort,{once:true});
+   timer=setTimeout(()=>finish(false),wait);
+  });
+ }
+ if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
+}
 const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{}};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
@@ -324,6 +355,7 @@ async function search(){
     url.searchParams.set("q",query);url.searchParams.set("category",category);
     url.searchParams.set("providers",id);
     try{
+     if(id==="btdigg")await waitForBTDigg(query,controller.signal);
      const data=await api(url.pathname+url.search,{signal:controller.signal});
      if(controller.signal.aborted)return;
      state.items.push(...(data.results||[]));
@@ -333,10 +365,19 @@ async function search(){
       state:observed.ok?(observed.count>0?"results":"empty-unverified"):"error",
       count:observed.count||0,at:new Date().toLocaleString()
      };
+     if(id==="btdigg"){
+      // Only a real positive result is reused by Rock64's 20-minute cache.
+      if(observed?.ok&&observed.count>0){
+       btdiggPacing.lastGoodQuery=query;
+       btdiggPacing.lastGoodUntil=Date.now()+20*60*1000;
+      }
+      btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
+     }
     }catch(e){
      if(controller.signal.aborted)return;
      failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});
      state.sessionAudit[id]={state:"error",count:0,at:new Date().toLocaleString()};
+     if(id==="btdigg")btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
     }
     if(controller.signal.aborted)return;
     completed++;
