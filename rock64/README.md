@@ -1,4 +1,4 @@
-# Magnetra — BTDigg via Rock64 (operational on owner Rock64, 2026-10-13)
+# Magnetra — BTDigg via Rock64 (gateway/tunnel operational, PWA error under diagnosis)
 
 **Purpose:** retain real `btdig.com` results in Magnetra without leaving the PWA.
 Historical direct Cloudflare-to-BTDigg fetch attempts returned timeout/429 before the Rock64 activation. This optional
@@ -6,7 +6,7 @@ backend uses a dedicated Rock64-owned outgoing connection and the **existing**
 BTDigg HTMLRewriter adapter: it does not create a new torrent/DHT index and
 does not disguise other providers as BTDigg.
 
-**Current evidence:** on 2026-10-13 the owner verified the installed Rock64 gateway with local HTTP 200, 10 result rows and 10 valid magnet anchors; the public tunnel returned unauthenticated HTTP 401, and the owner reports automatic PWA results after deploying the Worker secret. See `docs/PROJECT_STATE.md` for evidence limits. BTDigg working in a browser alone never establishes gateway success. Enable production only after the one-shot
+**Current evidence:** on 2026-10-13 the owner verified the installed Rock64 gateway with local HTTP 200, 10 result rows and 10 valid magnet anchors; the public tunnel returned unauthenticated HTTP 401, but the owner subsequently reported PWA BTDigg search errors after deploying the Worker secret. The end-to-end connection is not yet proven. See `docs/PROJECT_STATE.md` for evidence limits. BTDigg working in a browser alone never establishes gateway success. Enable production only after the one-shot
 real-source check prints `PASS`. Respect 429/challenge responses: no rotating
 IP addresses, CAPTCHAs, forced retry loop or web proxy service is implemented.
 
