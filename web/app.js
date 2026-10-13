@@ -1,7 +1,8 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1"};
-const preferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
+const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
+const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
 const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{}};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
@@ -41,7 +42,13 @@ function updatePairChip(text,online=false){
 function updateBookmarkCount(){const count=$("bookmarkCount");if(count)count.textContent=String(Object.keys(state.bookmarks).length);}
 function chooseProviders(){
  const stored=load(STORAGE.selected,null);
- if(Array.isArray(stored))state.selected=new Set(stored);
+ if(Array.isArray(stored)){
+  // One-time, non-destructive migration: only the exact old default
+  // gets BTDigg added. A user's custom selection or manual opt-out wins.
+  const wasOldDefault=stored.length===previousPreferred.length&&
+    previousPreferred.every(id=>stored.includes(id));
+  state.selected=new Set(wasOldDefault?preferred:stored);
+ }
  const valid=new Set(state.providers.filter(x=>x.ported).map(x=>x.id));
  state.selected=new Set([...state.selected].filter(x=>valid.has(x)));
  if(!state.selected.size)state.selected=new Set(preferred.filter(x=>valid.has(x)));
@@ -49,13 +56,27 @@ function chooseProviders(){
  updateProviderCount();
 }
 function updateProviderCount(){$("providerCount").textContent=String(state.selected.size)+"/"+state.providers.length;}
+function orderedProviders(providers){
+ // Pinned BTDigg always first; then sources proven by the latest dated audit
+ // (or by a search in this browser session), then unverified, then errors.
+ // This is display order, not a claim of live uptime or automatic probing.
+ const rank=p=>{
+  if(p.id==="btdigg")return -1;
+  if(!p.ported)return 3;
+  const status=state.sessionAudit[p.id]?.state||p.lastAudit?.state;
+  return status==="results"?0:status==="error"?2:1;
+ };
+ return [...providers].sort((a,b)=>rank(a)-rank(b)||
+  a.name.localeCompare(b.name,undefined,{sensitivity:"base"})||
+  a.id.localeCompare(b.id));
+}
 function renderProviders(){
  const grid=$("providerGrid");grid.replaceChildren();
  const ported=state.providers.filter(p=>p.ported).length;
  const audited=state.providers.filter(p=>p.lastAudit?.state==="results").length;
  const day=state.audit?.observedAt?new Date(state.audit.observedAt).toLocaleDateString():"unknown date";
  $("catalogSummary").textContent=ported+" adapters · "+audited+" returned results for '"+(state.audit?.query||"test")+"' on "+day+" (not live status)";
- for(const p of state.providers){
+ for(const p of orderedProviders(state.providers)){
   const row=el("div","provider-row"+(p.ported?"":" missing"));
   const label=el("label");
   const input=document.createElement("input");
@@ -405,7 +426,7 @@ function init(){
   renderResults();
  });
  $("selectWorking").addEventListener("click",()=>{
-  const ids=state.providers.filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
+  const ids=orderedProviders(state.providers).filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
   if(!ids.length){toast("No tested sources with results in the saved audit.");return;}
   state.selected=new Set(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
