@@ -82,3 +82,44 @@ test("PWA online assets are refreshed network-first but authenticated APIs never
  assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
  assert.ok(sw.includes('event.request.method!=="GET"'));
 });
+
+test("public BTDigg API distinguishes upstream HTTP 504 from tunnel fetch timeout",async()=>{
+ const original=globalThis.fetch;
+ const endpoint=new Request("https://index.alexlab.media/api/search?q=supernatural&providers=btdigg");
+ const cases=[
+  {
+   code:"BTDIGG_SOURCE_TIMEOUT",
+   mocked:async()=>new Response('{"error":"BTDigg request timed out"}',{status:504,headers:{"content-type":"application/json"}})
+  },
+  {
+   code:"BTDIGG_TUNNEL_TIMEOUT",
+   mocked:async()=>{throw new DOMException("The operation was aborted due to timeout","TimeoutError");}
+  }
+ ];
+ try{
+  for(const {code,mocked} of cases){
+   let calls=0;
+   globalThis.fetch=async()=>{calls++;return mocked()};
+   const res=await worker.fetch(endpoint,{BTDIGG_GATEWAY_TOKEN:"x".repeat(64)});
+   assert.equal(res.status,200);
+   const payload=await res.json();
+   assert.equal(payload.total,0);
+   assert.equal(payload.errors?.length,1);
+   assert.equal(payload.errors[0].provider,"btdigg");
+   assert.equal(payload.errors[0].code,code);
+   assert.equal(payload.errors[0].retryable,false);
+   assert.equal(payload.errors[0].openUrl,null);
+   assert.equal(payload.stats[0].ok,false);
+   assert.equal(calls,1,"must not retry BTDigg automatically");
+   assert.ok(payload.errors[0].message);
+  }
+ }finally{globalThis.fetch=original;}
+});
+
+test("PWA exposes safe BTDigg diagnostic codes visibly on mobile",()=>{
+ const app=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
+ assert.match(app,/diagnostic-code/);
+ assert.match(app,/SOURCE_TIMEOUT/);
+ assert.match(app,/TUNNEL_TIMEOUT/);
+ assert.match(app,/failure\.provider==="btdigg"/);
+});
