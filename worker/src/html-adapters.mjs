@@ -118,9 +118,9 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
 function fromHash(hash) {
  return /^(?:[a-f0-9]{40}|[a-z2-7]{32})$/i.test(hash||"")?"magnet:?xt=urn:btih:"+hash.toLowerCase():null;
 }
-// BTDigg sometimes double-encodes HTML attribute separators (e.g. &amp;amp;dn).
-// HTMLRewriter decodes one layer, leaving literal &amp; in the returned magnet.
-// Decode ONLY this BTDigg magnet attribute, not text fields or other providers.
+// BTDigg magnet hrefs can retain HTML entity separators (e.g. &amp;dn).
+// Convert one literal entity layer to real URL separators only for BTDigg;
+// never rewrite metadata text, other providers, or the Companion relay.
 export function normalizeBTDiggMagnet(magnet) {
  return typeof magnet==="string" && magnet.startsWith("magnet:?")
   ? magnet.replace(/&amp;/gi,"&") : magnet;
