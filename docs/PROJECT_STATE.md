@@ -454,3 +454,16 @@ In the same session, a Python standard-library `urllib.request.urlopen` call fro
 ## 2026-10-13 approved BTDigg release
 
 The owner approved deployment of the merged BTDigg-only magnet parameter normalization from PR #23, based on GitHub main `a9d23b1206e867157ba4fb42ebd4b0a283503d74`. The release must use the existing gated GitHub Actions workflow; verification of the deployed version and API response is still required. No changes to other search providers or Rock64 services are included in this release marker.
+
+## 2026-10-13 BTDigg magnet normalization — verified production deployment receipt
+
+Production release PR #24 was squash-merged on `main` as `62a30d7b25da1ebcb6e6d35e27b840ba3dee8aac` with explicit `[deploy-pwa]` authorization marker. GitHub Actions deployment run **38361367716** completed with **success**. The workflow verified invariant guards, Node provider/Flud safety tests, Wrangler deployment, production HTTP/TLS/PWA smoke (`/api/health` and `/api/providers`, 46/46 adapters), and a full 46-provider live `ubuntu` audit.
+
+- Cloudflare Worker name: `alexlab-magnetra`, custom domain `https://index.alexlab.media`.
+- Actual Cloudflare Worker **Version ID** from deploy log: `b0375998-666b-4160-8390-987f62457f01`.
+- Real production audit **13 providers returned results / 14 empty-or-unverified / 19 provider errors / 0 transport request errors**.
+- Specifically `{"id":"btdigg","state":"results","count":10}` appeared in the production audit. This confirms that the deployed Worker can query the authenticated Rock64 BTDigg service and return BTDigg search results from the live path.
+- The BTDigg-only `&amp;` query-separator normalization fix was included in the deployed code, with passing Node and actual Cloudflare workerd fixture tests. An independent live raw JSON magnet-field inspection **was not possible** from the assistant's environment (DNS/HTTP client limitation); do not claim a physical Flud send or a real-client magnet-delivery verification.
+- Prior Python `urllib` HTTP 403 on Rock64 is a separate client-path observation; do not infer that the PWA/Worker search failed from that response.
+
+No gateway/tunnel/repository changes to the other 45 indexers or Flud Companion were required for this release. No automatic Flud action was initiated. To complete human acceptance, the owner may search via BTDigg in the installed PWA, confirm results and optionally initiate an explicit lawful magnet send to Flud Companion; avoid unapproved background downloads, retries or paid infrastructure.
