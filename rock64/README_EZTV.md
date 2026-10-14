@@ -72,3 +72,17 @@ Verify a *known-positive* IMDb (from recent official source) returns >0 authenti
 - Remove only Worker `EZTV_GATEWAY_TOKEN` to restore existing direct Cloudflare behavior.
 - Separately disable only `magnetra-eztv-tunnel.service` and `magnetra-eztv.service` if installed.
 - Do not restart BTDigg or mutate any existing tunnel/network configuration.
+
+## 2026-10-14 — post-install local smoke failed before authenticated health
+
+Owner ran the guarded installer from commit `a51585ef9e27c14da6b7183457491ba11178edca`: twice 5/5 EZTV Python gateway unit tests PASS; `magnetra-eztv.service` enabled and reported active on loopback `127.0.0.1:8797`; the immediately following `check-eztv-gateway.py` printed only its generic FAIL. The missing `EZTV local authenticated health: PASS` proves the failure occurred **before** the recent-source and filtered-source probes. Root cause is **not yet verified**; possibilities include startup readiness, invalid/unavailable local credential file, 401, or local listener failure. Do not reinstall or alter BTDigg.
+
+This follow-up changes **only the read-only acceptance checker**, providing short, bounded retries solely for a refused local health connection after startup, never for provider HTTP 429/403 or searches. It prints the nonsecret failure stage (`credentials`, `local-health`, `recent-source` or `local-filtered`) and safe HTTP status, never tokens, IMDb IDs, magnet URLs or raw response bodies.
+
+Immediate unprivileged health probe:
+```bash
+systemctl is-active magnetra-eztv.service
+ss -ltn '( sport = :8797 )'
+curl --noproxy '*' --max-time 3 -sS -o /dev/null -w 'HTTP %{http_code}\\n' http://127.0.0.1:8797/healthz
+```
+Without Authorization, HTTP **401** is expected when the gateway listener is healthy. If inactive or `000`, inspect only `magnetra-eztv.service`; avoid restarting other units. After merging the checker update, rerun the pinned script with `sudo python3 -B` to get the exact stage. **Do not install a Cloudflare Tunnel or Worker secret until positive local check passes.**

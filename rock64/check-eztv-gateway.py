@@ -11,6 +11,7 @@ import json
 import pathlib
 import re
 import sys
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
@@ -54,6 +55,17 @@ def get_json(url, headers):
         return parsed
 
 
+def health_when_ready(auth, attempts=9, delay=0.5):
+    """Bounded loopback-startup wait ONLY; never retry actual EZTV searches."""
+    for attempt in range(attempts):
+        try:
+            return get_json(LOCAL_HEALTH, auth)
+        except URLError as error:
+            if not isinstance(error.reason, ConnectionRefusedError) or attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+
+
 def choose_known_positive(recent):
     """Use a positive original EZTV magnet row, never the global torrents count."""
     if not isinstance(recent, dict) or not isinstance(recent.get("torrents"), list):
@@ -86,20 +98,24 @@ def inspect_filtered(data, target):
 
 
 def main():
+    stage = "credentials"
     try:
         token = read_token()
         auth = {"Authorization": "Bearer " + token, "Accept": "application/json"}
-        health = get_json(LOCAL_HEALTH, auth)
+        stage = "local-health"
+        health = health_when_ready(auth)
         if health.get("ok") is not True:
-            raise ValueError("Local EZTV service health response invalid")
+            raise ValueError("Invalid local health response")
         print("EZTV local authenticated health: PASS")
 
+        stage = "recent-source"
         recent = get_json(RECENT, {"Accept": "application/json", "User-Agent":
             "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
             "Accept-Encoding": "identity"})
         target = choose_known_positive(recent)
         if not target:
             raise ValueError("No recent release with a valid IMDb and magnet")
+        stage = "local-filtered"
         result = get_json(LOCAL_SEARCH + target, auth)
         rows, valid = inspect_filtered(result, target)
         print("EZTV filtered source rows:", rows)
@@ -108,9 +124,14 @@ def main():
             raise ValueError("No genuine filtered magnet found")
         print("PASS: genuine EZTV magnet metadata reached isolated local gateway")
         return 0
-    except (OSError, HTTPError, URLError, ValueError, TypeError, TimeoutError, json.JSONDecodeError):
-        print("FAIL: local EZTV gateway or genuine source validation did not pass (no secrets printed)")
-        return 1
+    except HTTPError as error:
+        # Output code and controlled stage only; never leak URL, token or body.
+        print(f"FAIL stage={stage} HTTP={error.code}")
+    except URLError:
+        print(f"FAIL stage={stage} cause=network-or-listener")
+    except (OSError, ValueError, TypeError, TimeoutError, json.JSONDecodeError):
+        print(f"FAIL stage={stage} cause=local-data-or-response")
+    return 1
 
 
 if __name__ == "__main__":
