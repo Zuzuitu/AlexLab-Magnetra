@@ -1,5 +1,6 @@
 import {SOURCE_HEADERS,fetchProviderSameOrigin} from "./request-headers.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
+import {searchEZTVOfficial} from "./eztv-official-api.mjs";
 import {legacySearch,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
 // Source-specific ports of the upstream Kotlin provider contracts.
@@ -69,6 +70,10 @@ function catFromKnaben(values) {
 export const adapters=Object.freeze({
   ...Object.fromEntries(Object.keys(LEGACY_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await legacySearch(id,q,category,fetcher),id)])),
   ...Object.fromEntries(Object.keys(HTML_PROVIDER_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await runHtmlAdapter(id,q,category,fetcher),id)])),
+  async eztvx(q,category,fetcher) {
+    const items=await searchEZTVOfficial(q,category,fetcher);
+    return parsed(items.map(item=>({...item,size:bytes(item.sizeBytes)})),"eztvx");
+  },
   async anilibria(q,_category,fetcher) {
     const base="https://anilibria.top/api/v1";
     const releases=await requestJson(base+"/app/search/releases?query="+encodeURIComponent(q),{},fetcher);
