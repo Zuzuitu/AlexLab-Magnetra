@@ -110,6 +110,43 @@ test("EZTV API response must confirm exact IMDb ID, otherwise never show recent 
  assert.equal(calls,1);
 });
 
+test("real Rock64 zero-hit JSON without torrents is a valid empty EZTV response",async()=>{
+ // Actual response shape observed on 2026-10-14, not a synthetic torrent list.
+ for(const count of [0,"0"]){
+  let calls=0;
+  const payload={imdb_id:460681,torrents_count:count,limit:2,page:1};
+  const result=await searchEZTVOfficial("tt0460681","all",async url=>{
+   calls++;
+   assert.equal(new URL(url).searchParams.get("imdb_id"),"460681");
+   return asResponse(payload);
+  });
+  assert.deepEqual(result,[]);
+  assert.equal(calls,1,"no fallback into unrelated recent releases");
+ }
+});
+
+test("missing torrents with positive, missing or invalid count is still an error",async()=>{
+ for(const payload of [
+  {imdb_id:460681,torrents_count:2,limit:2,page:1},
+  {imdb_id:460681,torrents_count:"2",limit:2,page:1},
+  {imdb_id:460681,limit:2,page:1},
+  {imdb_id:460681,torrents:null,torrents_count:0},
+  {imdb_id:460681,torrents_count:0,error:"API failed"},
+  {imdb_id:460681,torrents_count:0,errors:["API failed"]}
+ ]){
+  await assert.rejects(
+   ()=>searchEZTVOfficial("tt0460681","all",async()=>asResponse(payload)),
+   /EZTV API (shape unexpected|reported an error)/
+  );
+ }
+});
+
+test("empty EZTV response with a different IMDb echo remains untrusted",async()=>{
+ const payload={imdb_id:460682,limit:2,page:1,torrents_count:0};
+ const result=await searchEZTVOfficial("tt0460681","all",async()=>asResponse(payload));
+ assert.deepEqual(result,[]);
+});
+
 test("non-series search never requests metadata or torrents from EZTV",async()=>{
  for(const category of ["movies","books","apps","porn","games","music","other","anime"]){
   let calls=0;
