@@ -1,0 +1,29 @@
+[Unit]
+Description=Magnetra private EZTV-only API gateway (Rock64)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/magnetra-eztv
+EnvironmentFile=/etc/magnetra-eztv/gateway.env
+ExecStart=/usr/bin/python3 -I /opt/magnetra-eztv/eztv_gateway.py
+Restart=on-failure
+RestartSec=12
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=144M
+CPUQuota=25%
+TasksMax=24
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

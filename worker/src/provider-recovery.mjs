@@ -43,6 +43,14 @@ export function classifyProviderError(err){
   return {code:"BTDIGG_TUNNEL_ERROR",message:"Connection to the Rock64 BTDigg tunnel failed.",retryable:false};
  if(/EZTV series title ambiguous/i.test(raw))
   return {code:"AMBIGUOUS_TITLE",message:"Several TV series have this exact title. Search by its IMDb ID.",retryable:false};
+ if(/EZTV Rock64 tunnel timed out/i.test(raw))
+  return {code:"EZTV_TUNNEL_TIMEOUT",message:"The isolated EZTV tunnel did not respond.",retryable:false};
+ if(/EZTV Rock64 upstream timed out/i.test(raw))
+  return {code:"EZTV_SOURCE_TIMEOUT",message:"The EZTV API timed out from Rock64.",retryable:false};
+ if(/EZTV Rock64 gateway authorization failed/i.test(raw))
+  return {code:"EZTV_GATEWAY_AUTH",message:"The private EZTV gateway rejected the server's credentials.",retryable:false};
+ if(/EZTV Rock64 tunnel transport failed|EZTV Rock64 gateway HTTP|EZTV Rock64 tunnel redirect refused/i.test(raw))
+  return {code:"EZTV_GATEWAY_ERROR",message:"The isolated EZTV gateway could not complete the request.",retryable:false};
  if(/abort|timed? ?out|timeout/i.test(raw))return {code:"TIMEOUT",message:"The provider did not respond in time.",retryable:false};
  if(/HTTP 429|too many requests/i.test(raw))return {code:"RATE_LIMIT",message:"Provider rate-limited this connection.",retryable:false};
  if(/cf-mitigated|cloudflare challenge|challenge requires|anti-bot challenge/i.test(raw))
