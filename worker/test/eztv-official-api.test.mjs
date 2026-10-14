@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {searchEZTVOfficial} from "../src/eztv-official-api.mjs";
 import {searchProvider,hasAdapter} from "../src/providers.mjs";
+import {classifyProviderError} from "../src/provider-recovery.mjs";
 const hash="0123456789abcdef0123456789abcdef01234567";
 const magnet="magnet:?xt=urn:btih:"+hash+"&dn=Supernatural.S01E01";
 const asResponse=object=>new Response(JSON.stringify(object),{
@@ -71,6 +72,31 @@ test("ambiguous or fuzzy TVmaze matches do not silently claim another show's tor
   assert.deepEqual(result,[]);
   assert.equal(calls,1,"ambiguous/unmatched series must not query EZTV with guessed IMDb IDs");
  }
+});
+
+test("live-observed duplicate exact TV titles cannot silently choose the wrong IMDb ID",async()=>{
+ const tvmaze=[
+  {show:{name:"Supernatural",externals:{imdb:"tt0460681"}}},
+  {show:{name:"Supernatural",externals:{imdb:"tt0396375"}}}
+ ];
+ let calls=0;
+ let failure;
+ await assert.rejects(
+  ()=>searchEZTVOfficial("Supernatural","series",async()=>{
+   calls++;
+   return asResponse(tvmaze);
+  }),
+  err=>{
+   failure=err;
+   return /EZTV series title ambiguous/.test(err.message);
+  }
+ );
+ assert.equal(calls,1,"ambiguity must not trigger a torrent API call");
+ assert.deepEqual(classifyProviderError(failure),{
+  code:"AMBIGUOUS_TITLE",
+  message:"Several TV series have this exact title. Search by its IMDb ID.",
+  retryable:false
+ });
 });
 
 test("EZTV API response must confirm exact IMDb ID, otherwise never show recent unrelated releases",async()=>{
