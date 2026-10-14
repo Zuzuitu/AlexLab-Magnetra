@@ -606,3 +606,15 @@ Worker remains independently 403-blocked in observed runs; this parser fix
 does not prove the PWA can access EZTV or guarantee an EZTV result. Deploy
 only following CI and explicit release confirmation; do not modify the global
 network or any other provider.
+
+## 2026-10-14 — EZTV residential gateway prepared, NOT activated
+
+**Owner-verified real source evidence (twice) on physical Rock64 Armbian:**
+- `imdb_id=460681` => HTTP 200 JSON, `torrents_count=0`, no `torrents` key, exact echoed IMDb; PR #40 parser handles it as an honest zero, and this is not an adapter error.
+- Recent `limit=2` => HTTP 200 JSON, 2/2 valid source magnet links; `torrents_count=1092185` is the API-wide declared total, not results fetched.
+- Filtered on a real IMDb ID extracted from one recent row => HTTP 200, exact echoed root and row IDs, `torrents_count=15`, **2 source rows with 2/2 valid magnets in the requested page**. No files or torrents downloaded.
+- Independent GitHub Actions/Cloudflare egress previously received HTTP 403 from the API. The residential success establishes only the origin works from Rock64, not Cloudflare connectivity or a production result.
+
+**Staged opt-in technical solution:** new `eztvx`-only `worker/src/eztv-rock64.mjs` authenticates with optional Worker Secret `EZTV_GATEWAY_TOKEN` to the **proposed and not yet created** host `https://eztv-rock64.alexlab.media`. The new independent Python gateway `rock64/eztv_gateway.py` is designed for `127.0.0.1:8797` (port availability not yet verified), with a distinct `MAGNETRA_EZTV_TOKEN`, official fixed EZTV HTTPS API, exact numeric IMDb only, no redirects, 1MB JSON bound, root/row matching IDs, protected status propagation, short read-only RAM cache and source rate limit. TVmaze continues by direct official API connection. No existing BTDigg listener/tunnel/process is modified, and 44 other provider adapters and Flud stay on prior paths. Without secret, normal direct Cloudflare path is unchanged.
+
+**Repo state only:** templates `rock64/magnetra-eztv.service`, `rock64/magnetra-eztv-tunnel.service`, `rock64/install-eztv.sh`, safety tests/guards and `rock64/README_EZTV.md` are staged on a PR. There is **no physical EZTV service**, DNS record, new tunnel, Worker secret or new production deploy proven or claimed. Explicit owner authorization plus real Rock64 local health/result proof, tunnel proof (watch for same-zone 1042) and protected production deploy are required separately. No NordVPN, global routes, DNS, firewall, Tailscale, paid services or other project restart.
