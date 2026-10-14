@@ -626,3 +626,36 @@ Owner supplied physical Rock64 output after PR #41 merged (`f175032e9334d06d751d
 ## 2026-10-14 — EZTV gateway installed but local acceptance not yet validated
 
 Owner installed `magnetra-eztv.service` using approved commit `a51585ef9e27c14da6b7183457491ba11178edca`: installer printed `PASS: dedicated EZTV API service on 127.0.0.1:8797`, `systemctl enable --now` completed, and five Python tests passed twice. The immediately following `check-eztv-gateway.py` printed a generic FAIL **without** first printing authenticated health PASS. No diagnostic stage or HTTP status was reported, so this is *not* evidence of a source EZTV failure, and no genuine filtered magnet reached the gateway through that acceptance check yet. No Cloudflare Tunnel, Worker Secret or production deploy was performed. A follow-up PR adds bounded listener-ready waiting and stage-specific, secret-safe diagnostics to the standalone smoke script only. Do not reinstall or restart unrelated services; inspect listener and safe HTTP 401 first, then rerun the updated local checker.
+
+
+## 2026-10-15 — broader residential gateway question; evidence-first diagnostics staged
+
+The owner confirmed the separate EZTV Rock64 local gateway authenticates
+successfully (`EZTV local authenticated health: PASS`) but its
+known-positive recent-IMDb filtered request returned **0 page rows / 0
+valid magnet links** (`FAIL stage=local-filtered cause=local-data-or-response`).
+This is not full EZTV recovery. A previous direct Rock64 API probe for an
+IMDb from real latest results returned 2 genuine rows/2 magnets at
+`limit=2`, while the installed gateway's upstream query uses `limit=100`.
+**Different limit, temporal source variation and local gateway RAM cache are
+competing hypotheses, not confirmed causes.** No Cloudflare Tunnel or Worker
+Secret has yet been activated for EZTV.
+
+The owner asked whether the successful EZTV/BTDigg architecture could also
+serve Torrentz, UIndex, 1337x, BT4G, Ext and other failing source adapters.
+The answer is conditional: the 2026-10-13 Cloudflare snapshot says
+`torrentz=UPSTREAM_ERROR`, `uindex=ACCESS_DENIED`,
+`1337x/bt4g/extdotto=ACCESS_DENIED`. Prior **physical Rock64**
+GETs to 1337x, BT4G and Ext also returned HTTP 403; blindly adding a
+Rock64 proxy cannot be claimed to repair those sites.
+
+A read-only diagnostics PR stages `rock64/diagnose-eztv-filter.py`, a
+same-IMDb **direct `limit=2` vs direct `limit=100` vs authenticated
+EZTV loopback gateway** comparison without ID, magnet, title or secret
+output. `rock64/probe-more-indexers.py` checks five original HTML sources
+from fixed allowlisted URLs, or eleven with `--extended`, once each with
+no redirects/proxy environment and short timeouts. An HTML marker is not
+proof of parsed results; do not activate any additional gateway until source
+rows and deferred magnet resolution are verified. No new tunnel/service,
+secret, NordVPN, DNS, firewall, global route, paid service or production
+deploy is authorized. See `rock64/README_MULTI_INDEXER_EGRESS.md`.
