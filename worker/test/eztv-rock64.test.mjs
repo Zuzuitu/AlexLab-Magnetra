@@ -91,3 +91,30 @@ test("no source substitution: no-result gateway answer stays empty",async()=>{
  }));
  assert.deepEqual(await searchProvider("eztvx","tt0460681","all",source),[]);
 });
+
+test("full Worker API uses EZTV gateway only when its secret is supplied",async()=>{
+ const {default:app}=await import("../src/index.mjs");
+ const originalFetch=globalThis.fetch;
+ const origins=[];
+ try{
+  globalThis.fetch=async(url,options={})=>{
+   const parsed=new URL(url);
+   origins.push(parsed.origin);
+   if(parsed.origin!==EZTV_GATEWAY_ORIGIN)
+    throw Error("A non-EZTV request tried to leave the mock");
+   assert.equal(options.headers.authorization,"Bearer "+secret);
+   return ok(fixture);
+  };
+  const request=new Request("https://index.alexlab.media/api/search?q=tt0460681&providers=eztvx");
+  const response=await app.fetch(request,{EZTV_GATEWAY_TOKEN:secret});
+  const parsed=await response.json();
+  assert.equal(response.status,200);
+  assert.deepEqual(parsed.stats,[{provider:"eztvx",count:1,ok:true}]);
+  assert.equal(parsed.total,1);
+  assert.equal(parsed.results[0].provider,"eztvx");
+  assert.equal(parsed.results[0].magnet,row.magnet_url);
+  assert.deepEqual(origins,[EZTV_GATEWAY_ORIGIN]);
+ } finally{
+  globalThis.fetch=originalFetch;
+ }
+});
