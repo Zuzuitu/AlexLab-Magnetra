@@ -1,0 +1,74 @@
+# EZTV official API via separate Rock64 gateway — staged, NOT activated
+
+Evidence from the physical Rock64 on 2026-10-14 (two successful one-shot probes):
+- imdb `tt0460681`: HTTP 200, exact echo, `torrents_count=0`, no `torrents` field.
+- recent 2 entries: HTTP 200, 2/2 magnet URLs present.
+- filtered by an IMDb ID occurring in recent entries: HTTP 200, exact root/row IMDb IDs, `torrents_count=15`, 2/2 magnet URLs. **Count 15 is upstream total, not 15 fetched rows.**
+- GitHub Actions/cloud egress previously returned HTTP 403 for the EZTV origin.
+
+These results verify the source API on this home's IP, NOT connectivity through a new Cloudflare Tunnel. No paid services, NordVPN, or other routes are needed for this prototype.
+
+## Design and isolation
+
+```text
+Magnetra /api/search (eztvx ONLY, with private EZTV_GATEWAY_TOKEN)
+ -> fixed proposed host https://eztv-rock64.alexlab.media/v1/torrents?imdb_id=NNN
+ -> OPTIONAL separate Cloudflare Tunnel (not created yet)
+ -> Rock64 127.0.0.1:8797 (new independent service)
+ -> GET https://eztvx.to/api/get-torrents?imdb_id=NNN&limit=100&page=1
+ -> only original JSON, validated exact IMDb -> existing EZTV parser.
+```
+
+TVmaze title-to-IMDb continues via `https://api.tvmaze.com/search/shows` and is never proxied by Rock64. Direct IMDb searches skip TVmaze. If `EZTV_GATEWAY_TOKEN` is absent from the Cloudflare Worker, no requests reach the EZTV gateway and the existing direct Cloudflare behavior is preserved.
+
+**This gateway is single-source and not an open proxy.** The bearer token is checked first. Only GET `/v1/torrents?imdb_id=NNN` and authorized `/healthz` are allowed; no arbitrary hostname, path, redirect, port, file or query parameter. Only HTTPS official EZTV source is fetched. Upstream HTTP 429/403, malformed JSON, mismatched IMDb or errors cause explicit failure; never substitute recent results, never forward an unverified row. One upstream request at a time per IMDb, different queries limited to 3-second gaps, 60-second bounded RAM-only successful-response cache, no disk cache, no retry, maximum 1MB response and 10-second source timeout.
+
+The new service does not touch BTDigg's `127.0.0.1:8796`, existing `cloudflared` units, Tailscale, DNS, firewall, Plex, NexaPanel, CalciDatum, Flud or other 44 providers. The proposed separate loopback port **8797 and hostname are not verified to exist or be available yet**.
+
+## Before activation — inspect only
+
+Do not execute the installer or create a tunnel until the owner approves these exact changes.
+
+On Rock64 from a current clean Magnetra checkout of an approved merged revision:
+```bash
+python3 -B -m unittest discover -s rock64 -p 'test_eztv_gateway.py' -v
+python3 -B rock64/inspect-eztv-api.py
+command -v cloudflared
+ss -ltn '( sport = :8797 )'
+systemctl is-active magnetra-btdigg.service || true
+systemctl is-active nexapanel-preview.service || true
+```
+Do not output any credential, .env, tunnel token or other services' private data.
+
+## First-time local service (requires separate approval)
+
+After passing tests and checking port availability, run `sudo bash rock64/install-eztv.sh` from the verified checkout. This guarded installer creates only `/opt/magnetra-eztv`, `/etc/magnetra-eztv/gateway.env` (mode 0600, auto-generated secret) and `magnetra-eztv.service`. It refuses existing unit collisions and symlink paths and will not modify other service units. Local service starts only when the owner explicitly runs the installer.
+
+Perform an **authenticated loopback** smoke without printing the token:
+```bash
+sudo python3 - <<'PY'
+import urllib.request
+from pathlib import Path
+path=Path('/etc/magnetra-eztv/gateway.env')
+token=path.read_text(encoding='ascii').strip().split('=',1)[1]
+req=urllib.request.Request('http://127.0.0.1:8797/healthz',headers={'Authorization':'Bearer '+token})
+with urllib.request.urlopen(req,timeout=3) as r:
+ print('EZTV private health HTTP:',r.status)
+PY
+```
+Test a source-positive IMDb only after this health check, using a local command that prints result counts/valid magnet counts only, not credentials or magnet strings.
+
+## Optional separate Cloudflare Tunnel — NOT installed by repository code
+
+Use a **new** Cloudflare Tunnel for the proposed `eztv-rock64.alexlab.media` hostname to route to `http://127.0.0.1:8797`. Do NOT use `cloudflared service install`, which could overwrite existing global service ownership. The optional `rock64/magnetra-eztv-tunnel.service` template has separate credentials at `/etc/magnetra-eztv/tunnel-token`; verify actual `cloudflared` path and token-file support before installation. Never paste tokens into chat or GitHub.
+
+Same-zone Worker-to-Tunnel requests may fail with Cloudflare error 1042. Test exact connectivity before altering any compatibility flags, because a global flag may affect existing Flud/BTDigg network behavior. If 1042 cannot be isolated safely, STOP and revisit architecture.
+
+**Only after owner approval and physical end-to-end tests:** configure a Worker **Secret** `EZTV_GATEWAY_TOKEN` (matching the local `MAGNETRA_EZTV_TOKEN`) privately and release through the protected `[deploy-pwa]` workflow. DO NOT configure this in `web/` or as public variables. An ordinary PR merge without deployment leaves production unchanged.
+
+Verify a *known-positive* IMDb (from recent official source) returns >0 authentic `provider:eztvx` results with valid magnet fields through `index.alexlab.media/api/search`. Re-verify the zero-result `tt0460681`, and unrelated BTDigg/default searches. Never send magnets automatically to Flud.
+
+## Rollback
+- Remove only Worker `EZTV_GATEWAY_TOKEN` to restore existing direct Cloudflare behavior.
+- Separately disable only `magnetra-eztv-tunnel.service` and `magnetra-eztv.service` if installed.
+- Do not restart BTDigg or mutate any existing tunnel/network configuration.
