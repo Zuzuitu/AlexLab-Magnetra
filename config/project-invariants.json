@@ -128,7 +128,18 @@
       "thepiratebay",
       "internetarchive"
     ],
-    "manual_btdigg_import_forbidden": true
+    "manual_btdigg_import_forbidden": true,
+    "eztv_api": {
+      "host": "https://eztvx.to",
+      "upstream_api": "https://eztvx.to/api/get-torrents",
+      "metadata_lookup": "https://api.tvmaze.com/search/shows",
+      "series_only": true,
+      "exact_title_match_required": true,
+      "exact_imdb_id_required": true,
+      "tvmaze_attribution_required": true,
+      "external_api_keys_required": false,
+      "fabricated_legacy_html_results_forbidden": true
+    }
   },
   "pwa_cache": {
     "api_requests_never_cached": true,

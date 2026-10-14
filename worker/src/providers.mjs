@@ -1,5 +1,6 @@
 import {SOURCE_HEADERS,fetchProviderSameOrigin} from "./request-headers.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
+import {searchEZTVOfficial} from "./eztv-official-api.mjs";
 import {legacySearch,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
 // Source-specific ports of the upstream Kotlin provider contracts.
@@ -27,8 +28,14 @@ function normalize(item,provider) {
   const magnet=clean(item.magnet);
   if (magnet && (!magnet.toLowerCase().startsWith("magnet:?") || magnet.length > 12000)) return null;
   const details=clean(item.details),torrentFile=clean(item.torrentFile),source=clean(item.magnetSource);
-  const allowedDetails=provider in LEGACY_SPECS ? validateLegacyDetail(provider,details) : /^https:\/\//.test(details)?details:null;
-  const allowedSource=provider in LEGACY_SPECS ? validateLegacyDetail(provider,source) : null;
+  // An empty optional details/magnetSource URL must stay absent. Passing ""
+  // into new URL("", origin) would invent the indexer's home page as a
+  // result-specific details link, including for genuine EZTV API magnets.
+  const allowedDetails=details ? (provider in LEGACY_SPECS
+   ? validateLegacyDetail(provider,details)
+   : /^https:\/\//.test(details)?details:null) : null;
+  const allowedSource=source&&provider in LEGACY_SPECS
+   ? validateLegacyDetail(provider,source) : null;
   if (!magnet && !allowedDetails && !allowedSource) return null;
   return {
     id:provider+":"+(clean(item.id)||magnet.slice(0,180)),
@@ -69,6 +76,10 @@ function catFromKnaben(values) {
 export const adapters=Object.freeze({
   ...Object.fromEntries(Object.keys(LEGACY_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await legacySearch(id,q,category,fetcher),id)])),
   ...Object.fromEntries(Object.keys(HTML_PROVIDER_SPECS).map(id=>[id,async(q,category,fetcher)=>parsed(await runHtmlAdapter(id,q,category,fetcher),id)])),
+  async eztvx(q,category,fetcher) {
+    const items=await searchEZTVOfficial(q,category,fetcher);
+    return parsed(items.map(item=>({...item,size:bytes(item.sizeBytes)})),"eztvx");
+  },
   async anilibria(q,_category,fetcher) {
     const base="https://anilibria.top/api/v1";
     const releases=await requestJson(base+"/app/search/releases?query="+encodeURIComponent(q),{},fetcher);
