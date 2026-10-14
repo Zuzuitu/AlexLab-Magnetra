@@ -4,6 +4,7 @@ on:
     branches: [ "main" ]
     paths:
       - "scripts/diagnose-eztv-shape.mjs"
+      - "rock64/inspect-eztv-api.py"
       - ".github/workflows/eztv-shape-probe.yml"
   workflow_dispatch:
 permissions:
@@ -19,5 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Compile safe Rock64 diagnostic
+        run: python3 -m py_compile rock64/inspect-eztv-api.py
       - name: One-shot EZTV shape probe (metadata only; no torrent downloads)
         run: node scripts/diagnose-eztv-shape.mjs
