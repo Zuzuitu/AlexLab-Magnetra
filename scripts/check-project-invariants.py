@@ -733,6 +733,66 @@ def check_btdigg_residential_gateway(config: dict) -> None:
     if "BTDigg Rock64" not in state:
         fail("project state missing Rock64 gateway decision")
 
+
+def check_eztv_residential_gateway(config: dict) -> None:
+    """Never allow the EZTV feature flag to broaden the original source proxy."""
+    gw = nested(config, "eztv_residential_gateway")
+    if not isinstance(gw, dict):
+        return
+    expected = {
+        "upstream_api": "https://eztvx.to/api/get-torrents",
+        "proposed_tunnel_origin": "https://eztv-rock64.alexlab.media",
+        "worker_secret_name": "EZTV_GATEWAY_TOKEN",
+        "rock64_secret_name": "MAGNETRA_EZTV_TOKEN",
+        "loopback_listener": "127.0.0.1:8797",
+        "allowed_provider": "eztvx",
+        "max_response_bytes": 1000000,
+        "auth_required": True,
+        "disabled_without_worker_secret": True,
+        "open_proxy_forbidden": True,
+        "no_cross_origin_redirects": True,
+        "independent_of_btdigg_and_other_services": True,
+        "activation_requires_owner_approval": True,
+    }
+    for key, value in expected.items():
+        require_equal(gw.get(key), value, "eztv_residential_gateway." + key)
+    required = [
+        "worker/src/eztv-rock64.mjs",
+        "worker/test/eztv-rock64.test.mjs",
+        "rock64/eztv_gateway.py",
+        "rock64/test_eztv_gateway.py",
+        "rock64/magnetra-eztv.service",
+        "rock64/magnetra-eztv-tunnel.service",
+        "rock64/install-eztv.sh",
+        "rock64/README_EZTV.md",
+    ]
+    for p in required:
+        require_file(ROOT / p)
+    if any(not (ROOT / p).is_file() for p in required):
+        return
+    worker = (ROOT / "worker/src/index.mjs").read_text(encoding="utf8")
+    proxy = (ROOT / "worker/src/eztv-rock64.mjs").read_text(encoding="utf8")
+    gateway = (ROOT / "rock64/eztv_gateway.py").read_text(encoding="utf8")
+    for phrase in ('id==="eztvx"&&eztvFetcher', 'rock64EZTVFetcher(env)'):
+        if phrase not in worker:
+            fail("EZTV gateway missing source-scoped Worker integration: " + phrase)
+    for phrase in ("EZTV_GATEWAY_TOKEN", "https://eztv-rock64.alexlab.media",
+                   "https://eztvx.to/api/get-torrents", "redirect:\"manual\""):
+        if phrase not in proxy:
+            fail("EZTV Rock64 Worker allowlist/auth is missing: " + phrase)
+    for phrase in ("127.0.0.1", "https://eztvx.to/api/get-torrents",
+                   "MAGNETRA_EZTV_TOKEN", "hmac.compare_digest",
+                   "NoRedirect", "ProxyHandler({})"):
+        if phrase not in gateway:
+            fail("EZTV Rock64 source isolation missing: " + phrase)
+    pwa = (ROOT / ".github/workflows/pwa.yml").read_text(encoding="utf8")
+    if "rock64/eztv_gateway.py" not in pwa or "test_*.py" not in pwa:
+        fail("PWA CI must compile and test EZTV gateway")
+    state = STATE_PATH.read_text(encoding="utf8")
+    if "EZTV residential gateway" not in state:
+        fail("canonical project state must include EZTV residential gateway decision")
+
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
@@ -750,6 +810,7 @@ def main() -> int:
         check_secret_content(config)
         check_web_parity_and_companion(config)
         check_btdigg_residential_gateway(config)
+        check_eztv_residential_gateway(config)
 
     if ERRORS:
         print("Project invariant check FAILED:", file=sys.stderr)
