@@ -28,8 +28,14 @@ function normalize(item,provider) {
   const magnet=clean(item.magnet);
   if (magnet && (!magnet.toLowerCase().startsWith("magnet:?") || magnet.length > 12000)) return null;
   const details=clean(item.details),torrentFile=clean(item.torrentFile),source=clean(item.magnetSource);
-  const allowedDetails=provider in LEGACY_SPECS ? validateLegacyDetail(provider,details) : /^https:\/\//.test(details)?details:null;
-  const allowedSource=provider in LEGACY_SPECS ? validateLegacyDetail(provider,source) : null;
+  // An empty optional details/magnetSource URL must stay absent. Passing ""
+  // into new URL("", origin) would invent the indexer's home page as a
+  // result-specific details link, including for genuine EZTV API magnets.
+  const allowedDetails=details ? (provider in LEGACY_SPECS
+   ? validateLegacyDetail(provider,details)
+   : /^https:\/\//.test(details)?details:null) : null;
+  const allowedSource=source&&provider in LEGACY_SPECS
+   ? validateLegacyDetail(provider,source) : null;
   if (!magnet && !allowedDetails && !allowedSource) return null;
   return {
     id:provider+":"+(clean(item.id)||magnet.slice(0,180)),
