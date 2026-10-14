@@ -79,7 +79,10 @@ def norm_id(value):
 def choose_recent(data):
     if not isinstance(data, dict):
         return None
-    for row in data.get("torrents", [])[:2]:
+    rows = data.get("torrents")
+    if not isinstance(rows, list):
+        return None
+    for row in rows[:2]:
         if not isinstance(row, dict):
             continue
         chosen = norm_id(row.get("imdb_id"))
