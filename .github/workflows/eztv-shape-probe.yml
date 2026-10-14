@@ -1,0 +1,23 @@
+name: Diagnose EZTV JSON shape (read-only)
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "scripts/diagnose-eztv-shape.mjs"
+      - ".github/workflows/eztv-shape-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Verify Magnetra project invariants
+        run: python3 scripts/check-project-invariants.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: One-shot EZTV shape probe (metadata only; no torrent downloads)
+        run: node scripts/diagnose-eztv-shape.mjs
