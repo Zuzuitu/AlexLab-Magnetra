@@ -110,8 +110,8 @@ test("EZTV API response must confirm exact IMDb ID, otherwise never show recent 
  assert.equal(calls,1);
 });
 
-test("real Rock64 zero-hit JSON without torrents is a valid empty EZTV response",async()=>{
- // Actual response shape observed on 2026-10-14, not a synthetic torrent list.
+test("Rock64-observed absent torrent array with explicit zero count is an empty response",async()=>{
+ // Field set is real (2026-10-14); zero count remains to be confirmed by probe.
  for(const count of [0,"0"]){
   let calls=0;
   const payload={imdb_id:460681,torrents_count:count,limit:2,page:1};
