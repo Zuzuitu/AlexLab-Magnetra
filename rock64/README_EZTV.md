@@ -23,7 +23,7 @@ TVmaze title-to-IMDb continues via `https://api.tvmaze.com/search/shows` and is 
 
 **This gateway is single-source and not an open proxy.** The bearer token is checked first. Only GET `/v1/torrents?imdb_id=NNN` and authorized `/healthz` are allowed; no arbitrary hostname, path, redirect, port, file or query parameter. Only HTTPS official EZTV source is fetched. Upstream HTTP 429/403, malformed JSON, mismatched IMDb or errors cause explicit failure; never substitute recent results, never forward an unverified row. One upstream request at a time per IMDb, different queries limited to 3-second gaps, 60-second bounded RAM-only successful-response cache, no disk cache, no retry, maximum 1MB response and 10-second source timeout.
 
-The new service does not touch BTDigg's `127.0.0.1:8796`, existing `cloudflared` units, Tailscale, DNS, firewall, Plex, NexaPanel, CalciDatum, Flud or other 44 providers. The proposed separate loopback port **8797 and hostname are not verified to exist or be available yet**.
+Rock64 preflight on 2026-10-14: 5/5 Python tests PASS, `ss` shows 8797 free, BTDigg reports active and `command -v cloudflared` returns `/usr/local/bin/cloudflared`. The dedicated tunnel template uses this observed path; **recheck the binary and token-file CLI support before configuring or starting the tunnel**. No service has been installed by this preflight.\n\nThe new service does not touch BTDigg's `127.0.0.1:8796`, existing `cloudflared` units, Tailscale, DNS, firewall, Plex, NexaPanel, CalciDatum, Flud or other 44 providers. The proposed separate loopback port **8797 and hostname are not verified to exist or be available yet**.
 
 ## Before activation — inspect only
 
@@ -56,7 +56,7 @@ with urllib.request.urlopen(req,timeout=3) as r:
  print('EZTV private health HTTP:',r.status)
 PY
 ```
-Test a source-positive IMDb only after this health check, using a local command that prints result counts/valid magnet counts only, not credentials or magnet strings.
+After the local health check, execute `sudo python3 -B rock64/check-eztv-gateway.py` from the approved Magnetra checkout. This read-only test accesses two fixed GET endpoints (EZTV recent and the authenticated local gateway for one genuine IMDb ID), and outputs only result and valid-magnet **counts**. It never prints the selected IMDb ID, token, title, hash or magnet; it never downloads a torrent or sends to Flud. A `PASS` is required before tunnel activation.
 
 ## Optional separate Cloudflare Tunnel — NOT installed by repository code
 
