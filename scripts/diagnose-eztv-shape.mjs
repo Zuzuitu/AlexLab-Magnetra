@@ -60,7 +60,7 @@ for(const title of ["Supernatural","Breaking Bad"]){
    const exact=Array.isArray(rows)?rows.filter(x=>String(x?.show?.name||"").toLowerCase()===title.toLowerCase()):[];
    out.root=rootType(rows);
    out.exactCount=exact.length;
-   out.uniqueExactImdbIds=[...new Set(exact.map(x=>x?.show?.externals?.imdb).filter(x=>/^tt\\d{5,12}$/.test(String(x))))].slice(0,8);
+   out.uniqueExactImdbIds=[...new Set(exact.map(x=>x?.show?.externals?.imdb).filter(x=>/^tt\d{5,12}$/.test(String(x))))].slice(0,8);
   }
  }catch(err){out.networkError=err?.name==="TimeoutError"?"timeout":"fetch-failed";}
  console.log(JSON.stringify(out));
