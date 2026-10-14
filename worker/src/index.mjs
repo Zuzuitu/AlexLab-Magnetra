@@ -5,6 +5,7 @@ import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
+import {rock64EZTVFetcher} from "./eztv-rock64.mjs";
 
 const DEFAULT_IDS=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 // Exact endpoint allowlist: never forward to an arbitrary hostname or URL.
@@ -28,17 +29,22 @@ async function getSearch(url,env) {
  if(ids.length>46||ids.length===0||new Set(ids).size!==ids.length)return error("Choose 1–46 distinct providers.");
  if(ids.some(id=>!PROVIDER_MAP.has(id)))return error("Unknown provider.");
  if(ids.some(id=>!hasAdapter(id)))return error("One or more selected providers are not ported yet.");
- // Only BTDigg can opt in to the private fixed-host Rock64 gateway.
- // All other 45 adapters retain their existing network behavior.
- let btdiggFetcher;
- try{btdiggFetcher=ids.includes("btdigg")?rock64BTDiggFetcher(env):null;}
+ // BTDigg and EZTV use independent opt-in private fixed-origin gateways;
+ // the other 44 adapters and the Flud relay keep their existing transport.
+ let btdiggFetcher,eztvFetcher;
+ try{
+  btdiggFetcher=ids.includes("btdigg")?rock64BTDiggFetcher(env):null;
+  eztvFetcher=ids.includes("eztvx")?rock64EZTVFetcher(env):null;
+ }
  catch(e){return error(String(e?.message||e),503);}
  const results=[],errors=[],stats=[];
  // Bounded concurrency reduces load on providers and keeps resource consumption predictable.
  for(let i=0;i<ids.length;i+=3){
    const batch=await Promise.all(ids.slice(i,i+3).map(async id=>{
      try {
-       const found=await searchProvider(id,q,category,id==="btdigg"&&btdiggFetcher?btdiggFetcher:fetch);
+       const sourceFetch=id==="btdigg"&&btdiggFetcher?btdiggFetcher:
+        id==="eztvx"&&eztvFetcher?eztvFetcher:fetch;
+       const found=await searchProvider(id,q,category,sourceFetch);
        return {provider:id,results:found,count:found.length};
      } catch(e){
        const reason=classifyProviderError(e);
