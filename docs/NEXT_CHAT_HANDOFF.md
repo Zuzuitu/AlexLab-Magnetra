@@ -248,3 +248,29 @@ Owner ran 5/5 Python tests (PASS), `ss -ltn '( sport = :8797 )'` returned no lis
 ## 2026-10-14 — EZTV physical install succeeded; smoke check blocked before local health
 
 User ran pin `a51585ef9e27c14da6b7183457491ba11178edca`: gateway installer enabled `magnetra-eztv.service`, reported PASS on `127.0.0.1:8797`, and 5/5 gateway tests passed twice. Immediate `check-eztv-gateway.py` gave generic FAIL *before* `EZTV local authenticated health: PASS`. Root cause unknown. Possible startup race vs auth file mismatch vs health route unavailable, not a proven upstream EZTV error. Gateway may now be running but is not yet validated. Do not reinstall service, change BTDigg, or create Cloudflare tunnel. Follow-up branch `fix/eztv-local-health-readiness-diagnostics-20261014` adds bounded local-listener readiness retries and safe stage/cause output. Obtain `systemctl is-active magnetra-eztv.service`, `ss -ltn '( sport = :8797 )'`, and no-auth health HTTP code (expected 401), then run the updated check. Install/activation must stop until authentic positive result is proven locally.
+
+
+## 2026-10-15 — EZTV local filtered zero, broader residential provider audit
+
+Physical Rock64 EZTV service at `127.0.0.1:8797` is active, unauthenticated
+`/healthz` correctly reports HTTP 401, BTDigg remains active. Updated
+authenticated checker printed `EZTV local authenticated health: PASS`,
+then `EZTV filtered source rows: 0`, `valid magnet: 0`,
+`FAIL stage=local-filtered`. This is an unresolved discrepancy versus the
+earlier direct EZTV positive filtered lookup (`limit=2`, two magnets);
+the installed EZTV gateway queries `limit=100`. Do not configure
+`eztv-rock64.alexlab.media`, set the Worker Secret or deploy production yet.
+
+Owner wants the same Rock64 method considered for Torrentz, UIndex, 1337x,
+BT4G, Ext and other failed original adapters. Prior Rock64 1337x/BT4G/Ext
+403 means source access needs independent proof before any residential
+gateway. Staged two read-only, fixed-origin source diagnostics
+(`rock64/probe-more-indexers.py` with optional `--extended`, and
+`rock64/diagnose-eztv-filter.py` requiring sudo for an in-memory gateway
+credential). They neither modify existing services nor print sensitive
+data. See `rock64/README_MULTI_INDEXER_EGRESS.md`, current GitHub main and
+current diagnostics PR. Only after the owner supplies actual physical
+per-source status and, for positive sources, genuine HTML/magnet evidence,
+start a separate guardrailed gateway design. Preserve all 46 provider IDs,
+source attribution, all Flud actions, BTDigg's 8796 tunnel, EZTV's 8797
+service, other Rock64 projects and no paid/global VPN changes.
