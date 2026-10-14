@@ -48,3 +48,20 @@ for(const [name,url] of urls){
  }catch(err){out.networkError=err?.name==="TimeoutError"?"timeout":"fetch-failed";}
  console.log(JSON.stringify(out));
 }
+
+for(const title of ["Supernatural","Breaking Bad"]){
+ const out={probe:"tvmaze-"+title.toLowerCase().replace(/ /g,"-")};
+ try{
+  const res=await fetch("https://api.tvmaze.com/search/shows?q="+encodeURIComponent(title),{
+    headers:{"accept":"application/json"},redirect:"manual",signal:AbortSignal.timeout(9000)});
+  out.httpStatus=res.status;
+  if(res.ok){
+   const rows=await res.json();
+   const exact=Array.isArray(rows)?rows.filter(x=>String(x?.show?.name||"").toLowerCase()===title.toLowerCase()):[];
+   out.root=rootType(rows);
+   out.exactCount=exact.length;
+   out.uniqueExactImdbIds=[...new Set(exact.map(x=>x?.show?.externals?.imdb).filter(x=>/^tt\\d{5,12}$/.test(String(x))))].slice(0,8);
+  }
+ }catch(err){out.networkError=err?.name==="TimeoutError"?"timeout":"fetch-failed";}
+ console.log(JSON.stringify(out));
+}
