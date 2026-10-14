@@ -160,5 +160,20 @@
     "auto_retry_429_forbidden": true,
     "must_not_modify_companion_or_other_providers": true,
     "requires_real_rock64_probe_before_production_activation": true
+  },
+  "eztv_residential_gateway": {
+    "upstream_api": "https://eztvx.to/api/get-torrents",
+    "proposed_tunnel_origin": "https://eztv-rock64.alexlab.media",
+    "worker_secret_name": "EZTV_GATEWAY_TOKEN",
+    "rock64_secret_name": "MAGNETRA_EZTV_TOKEN",
+    "loopback_listener": "127.0.0.1:8797",
+    "allowed_provider": "eztvx",
+    "max_response_bytes": 1000000,
+    "auth_required": true,
+    "disabled_without_worker_secret": true,
+    "open_proxy_forbidden": true,
+    "no_cross_origin_redirects": true,
+    "independent_of_btdigg_and_other_services": true,
+    "activation_requires_owner_approval": true
   }
 }
