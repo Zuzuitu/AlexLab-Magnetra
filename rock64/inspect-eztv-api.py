@@ -32,7 +32,7 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def shape(value):
+def shape(value, expected_imdb="460681"):
     if not isinstance(value, dict):
         return {"root": type(value).__name__}
     rows = value.get("torrents")
@@ -40,6 +40,8 @@ def shape(value):
         rows = None
     first = rows[0] if rows and isinstance(rows[0], dict) else {}
     echo = value.get("imdb_id")
+    count = value.get("torrents_count")
+    explicit_count = int(count) if isinstance(count, (str, int)) and str(count).isdigit() and len(str(count)) <= 8 else None
     return {
         "root": "object",
         "recognized_keys": sorted(FIELDS.intersection(value)),
@@ -47,10 +49,11 @@ def shape(value):
         "torrents_type": type(value.get("torrents")).__name__
                           if "torrents" in value else "missing",
         "torrents_count": len(rows) if rows is not None else None,
-        "imdb_echo_matches": str(echo).removeprefix("tt") == "460681"
+        "declared_torrents_count": explicit_count,
+        "imdb_echo_matches": str(echo).removeprefix("tt") == expected_imdb
                               if echo is not None else None,
         "first_row_fields": sorted(ROW_FIELDS.intersection(first)),
-        "first_row_imdb_matches": str(first.get("imdb_id")).removeprefix("tt") == "460681"
+        "first_row_imdb_matches": str(first.get("imdb_id")).removeprefix("tt") == expected_imdb
                                    if "imdb_id" in first else None,
         "valid_magnets_in_page": sum(
             bool(re.match(r"^magnet:\?xt=urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})(?:&|$)",
@@ -62,8 +65,9 @@ def shape(value):
     }
 
 
-def probe(label, url):
+def probe(label, url, expected_imdb="460681", discover=False):
     out = {"probe": label}
+    selected = None
     request = Request(url, headers=HEADERS, method="GET")
     opener = build_opener(ProxyHandler({}), NoRedirect())
     try:
@@ -80,7 +84,16 @@ def probe(label, url):
                     out["body"] = "not-json-content-type"
                 else:
                     try:
-                        out["shape"] = shape(json.loads(body))
+                        parsed = json.loads(body)
+                        out["shape"] = shape(parsed, expected_imdb)
+                        if discover and isinstance(parsed, dict):
+                            rows = parsed.get("torrents")
+                            for row in rows if isinstance(rows, list) else []:
+                                candidate = str(row.get("imdb_id", "")) if isinstance(row, dict) else ""
+                                if re.fullmatch(r"[0-9]{5,12}", candidate):
+                                    # Never emit a torrent name, magnet, hash or raw response.
+                                    selected = candidate
+                                    break
                     except (ValueError, UnicodeError):
                         out["body"] = "malformed-json"
     except HTTPError as error:
@@ -90,8 +103,15 @@ def probe(label, url):
     except (URLError, OSError, TimeoutError):
         out["network_error"] = "request-failed-or-timeout"
     print(json.dumps(out, separators=(",", ":")))
+    return selected
 
 
 if __name__ == "__main__":
     for label, url in URLS:
-        probe(label, url)
+        if label == "recent":
+            candidate = probe(label, url, discover=True)
+            if candidate:
+                probe("recent-imdb-filter", BASE + "?imdb_id=" + candidate + "&limit=2&page=1",
+                      expected_imdb=candidate)
+        else:
+            probe(label, url)
