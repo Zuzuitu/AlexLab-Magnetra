@@ -42,6 +42,12 @@ async function findExactShowImdb(query,fetcher){
  // Never let a fuzzy match silently impersonate another series or combine
  // ambiguous remakes under the same name. Users may enter an IMDb ID instead.
  const exact=data.filter(row=>normalizedTitle(row?.show?.name)===key);
+ // An exact title is not necessarily a unique series: the live TVmaze API
+ // currently returns two distinct IMDb IDs for "Supernatural".
+ if(exact.length>1){
+  const ids=new Set(exact.map(row=>imdbDigits(row?.show?.externals?.imdb)).filter(Boolean));
+  if(ids.size>1)throw Error("EZTV series title ambiguous: search by IMDb ID");
+ }
  if(exact.length!==1)return null;
  return imdbDigits(exact[0]?.show?.externals?.imdb);
 }

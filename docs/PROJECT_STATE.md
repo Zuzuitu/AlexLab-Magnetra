@@ -555,3 +555,27 @@ The official EZTV API's `/api/get-torrents` supports IMDb-ID queries but not arb
 The independently existing BTDigg residential gateway is untouched, and no NordVPN service/proxy has been installed. Other 45 providers' search code paths and magnet/Flud dispatch stay unchanged. New tests cover exact title/IMDb lookups, mismatch and ambiguous name rejection, HTTP 403/429, category safety, magnet validation and attribution. This is **staged code only**, not evidence that Cloudflare Workers can reach TVmaze and the EZTV API from their real egress; it must pass CI plus targeted real Worker origin verification before any Cloudflare release. Whether the residential 1337x/BT4G/Ext 403s originate at ISP filtering or remote site is still not established; no proxy-bypass changes are authorized.
 
 **Additional normalizer defect found by new CI test (same PR):** `worker/src/providers.mjs` historically passed a blank `details` field into `validateLegacyDetail`, where the base-URL resolver interpreted it as the source homepage (`https://eztvx.to/`). A magnet-only result was thus given a fabricated details link. The scoped fix ensures absent details and magnetSource fields remain `null` for **all** providers instead of inventing a result page; source identity/magnets are unaffected. The EZTV regression fixture catches off-origin details links and validates that missing details cannot become the homepage. This is a safety correction, not a provider availability workaround.
+
+## 2026-10-14 — exact-title ambiguity evidence and safe UX patch
+
+A read-only GitHub Actions diagnostic (PR #38, run 38584353452) returned 403
+`text/html` for EZTV's API from the runner, and production
+`/api/search?q=tt0460681&providers=eztvx` reported `ACCESS_DENIED`
+(upstream HTTP 403). The owner's earlier `EZTV API shape unexpected`
+observation is valid but remains an unverified *response body structure*:
+different egress paths have produced different failures. Do **not** assert
+that the EZTV API is functional; no authentic torrents were verified.
+
+TVmaze's real exact-title search returned two distinct series titled
+`Supernatural` (`tt0460681` and `tt0396375`); the adapter previously
+returned `[]` silently because `exact.length !== 1`.
+This patch preserves the fail-closed rule but surfaces the typed
+`AMBIGUOUS_TITLE` error with instruction to search by IMDb ID.
+No show is guessed, no torrents are substituted and all 46 provider IDs,
+default preferences, BTDigg, Rock64, Flud and other projects are unchanged.
+Breaking Bad returned a unique exact title (`tt0903747`) during diagnosis,
+but its EZTV torrent response is not yet verified. A separate Rock64
+read-only probe (`rock64/inspect-eztv-api.py` in PR #38) is awaiting
+the physical host's response to distinguish real API schema errors from
+egress blocking; do not deploy arbitrary schema guesses or broaden network
+routing.
