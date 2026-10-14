@@ -46,7 +46,7 @@ class LocalCheckTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "gateway.env"
             value = "T" * 64
-            path.write_text("MAGNETRA_EZTV_TOKEN=" + value + "\\n", encoding="ascii")
+            path.write_text("MAGNETRA_EZTV_TOKEN=" + value + "\n", encoding="ascii")
             with patch.object(mod, "CONFIG", path):
                 self.assertEqual(mod.read_token(), value)
 
