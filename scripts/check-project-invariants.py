@@ -458,6 +458,35 @@ def check_web_parity_and_companion(config: dict) -> None:
             fail("CI must validate the actual JSON result for all 35 HTML selector adapters")
 
     recovery = nested(config, "provider_recovery")
+    if recovery and recovery.get("eztv_api"):
+        eztv = recovery["eztv_api"]
+        expected = {
+            "host": "https://eztvx.to",
+            "upstream_api": "https://eztvx.to/api/get-torrents",
+            "metadata_lookup": "https://api.tvmaze.com/search/shows",
+            "series_only": True,
+            "exact_title_match_required": True,
+            "exact_imdb_id_required": True,
+            "tvmaze_attribution_required": True,
+            "external_api_keys_required": False,
+            "fabricated_legacy_html_results_forbidden": True,
+        }
+        for key, value in expected.items():
+            require_equal(eztv.get(key), value, "provider_recovery.eztv_api." + key)
+        eztv_module = ROOT / "worker" / "src" / "eztv-official-api.mjs"
+        eztv_test = ROOT / "worker" / "test" / "eztv-official-api.test.mjs"
+        for path in (eztv_module, eztv_test):
+            require_file(path)
+        if eztv_module.is_file():
+            code = eztv_module.read_text(encoding="utf-8")
+            for token in (expected["upstream_api"], expected["metadata_lookup"],
+                          "exact.length!==1", "imdb_id", "sourceMagnet"):
+                if token not in code:
+                    fail("EZTV official API parity or attribution guard missing: " + token)
+        if provider_impl.is_file() and 'async eztvx(q,category,fetcher)' not in provider_impl.read_text(encoding="utf-8"):
+            fail("EZTV must use the original-source official API adapter")
+        if frontend.is_file() and 'href="https://www.tvmaze.com"' not in frontend.parent.joinpath("index.html").read_text(encoding="utf-8"):
+            fail("PWA must attribute TVmaze title metadata")
     if recovery:
         recovery_path = ROOT / "worker" / "src" / "provider-recovery.mjs"
         recovery_test = ROOT / "worker" / "test" / "provider-recovery.test.mjs"
