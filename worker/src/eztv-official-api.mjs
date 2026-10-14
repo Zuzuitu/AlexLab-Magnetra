@@ -84,8 +84,8 @@ export async function searchEZTVOfficial(query,category="all",fetcher=fetch){
  // to a searched series; require the response's explicit exact IMDb ID.
  const returned=String(data.imdb_id??"").replace(/^tt/i,"");
  if(!/^\d+$/.test(returned)||BigInt(returned)!==BigInt(imdb))return [];
- // Actual Rock64 API response (2026-10-14): a confirmed zero-hit search
- // has no "torrents" field, but does include torrents_count. Treat only an
+ // Actual Rock64 API response (2026-10-14): an IMDb-filtered search
+ // omitted "torrents" but included torrents_count. Treat only an
  // explicit zero as empty; do not mask malformed/blocked/unexpected payloads.
  if(!Object.hasOwn(data,"torrents") &&
     (data.torrents_count===0||data.torrents_count==="0"))return [];
