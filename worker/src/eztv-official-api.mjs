@@ -76,11 +76,20 @@ export async function searchEZTVOfficial(query,category="all",fetcher=fetch){
  if(!imdb)return [];
  const url=EZTV_API+"?imdb_id="+encodeURIComponent(imdb)+"&limit=100&page=1";
  const data=await getJson(url,fetcher);
- if(!data||!Array.isArray(data.torrents))throw Error("EZTV API shape unexpected");
+ if(!data||typeof data!=="object"||Array.isArray(data))
+  throw Error("EZTV API shape unexpected");
+ if(Object.hasOwn(data,"error")||Object.hasOwn(data,"errors"))
+  throw Error("EZTV API reported an error");
  // EZTV can return recent releases if no IMDb match. Never attribute them
  // to a searched series; require the response's explicit exact IMDb ID.
- const returned=String(data.imdb_id||"").replace(/^tt/i,"");
+ const returned=String(data.imdb_id??"").replace(/^tt/i,"");
  if(!/^\d+$/.test(returned)||BigInt(returned)!==BigInt(imdb))return [];
+ // Actual Rock64 API response (2026-10-14): an IMDb-filtered search
+ // omitted "torrents" but included torrents_count. Treat only an
+ // explicit zero as empty; do not mask malformed/blocked/unexpected payloads.
+ if(!Object.hasOwn(data,"torrents") &&
+    (data.torrents_count===0||data.torrents_count==="0"))return [];
+ if(!Array.isArray(data.torrents))throw Error("EZTV API shape unexpected");
  const results=[];
  for(const row of data.torrents.slice(0,MAX_ITEMS)){
   if(!row||typeof row!=="object")continue;

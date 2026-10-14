@@ -579,3 +579,30 @@ read-only probe (`rock64/inspect-eztv-api.py` in PR #38) is awaiting
 the physical host's response to distinguish real API schema errors from
 egress blocking; do not deploy arbitrary schema guesses or broaden network
 routing.
+
+## 2026-10-14 — confirmed EZTV empty-response format (Rock64, owner terminal)
+
+The physical Rock64 one-shot check of `https://eztvx.to/api/get-torrents`
+received HTTP 200 JSON for IMDb `tt0460681` with exact root fields
+`imdb_id`, `torrents_count`, `limit`, `page` and **no `torrents` key**.
+The simultaneous unfiltered `limit=2&page=1` call received HTTP 200
+JSON containing 2 genuine magnet-bearing row records, proving that EZTV
+does expose source metadata from this residential egress. No result for
+`tt0460681` has yet been proven. The original JSON-shape exception was
+triggered by treating a missing torrent list as malformed. The PR's safe
+adapter fix treats the absent array as empty **only if the exact IMDb echo
+matches and `torrents_count` is explicitly zero**. Missing-array/
+positive-count and API error envelopes still fail, and no unrelated recent
+releases are substituted. Note that the original one-shot tool did not print
+the numeric `torrents_count`, so this zero-count premise still requires
+confirmation from the enhanced diagnostic.
+
+For confidence that an actual known-positive IMDb search yields genuine
+magnet-bearing rows, the upgraded Rock64 probe automatically selects an IMDb
+ID from the unfiltered recent rows and performs a single fixed-origin
+filtered lookup with only structural/magnet-count logging, never filenames,
+hashes, magnets, credentials, downloads or external redirects. The Cloudflare
+Worker remains independently 403-blocked in observed runs; this parser fix
+does not prove the PWA can access EZTV or guarantee an EZTV result. Deploy
+only following CI and explicit release confirmation; do not modify the global
+network or any other provider.
