@@ -508,3 +508,10 @@ Do not conflate staged code/CI green with live runtime. Protect
 shared Rock64 host: BTDigg tunnel/8796, EZTV 8797, Plex, Flud,
 NexaPanel, CalciDatum, Tailscale, NordVPN, global cloudflared,
 firewall/DNS/default route and other unrelated services.
+
+
+## 2026-10-16 — installer PR handoff (staged, not activated)
+
+Main was verified at `05239e212f75638f93ce3987efbea445ef00f6f6`. The next work is the 8798 installer PR on `feat/rock64-central-8798-installer`: `rock64/install-magnetra-gateway.sh`, `rock64/check-magnetra-gateway.py` and `rock64/test_magnetra_install.py`, with PWA CI syntax/unit guard and updated source-of-truth documentation. These are NOT evidence of a physically installed daemon, live 8798 magnets, a new Cloudflare route, a Worker secret, or a production PWA deploy. Complete CI/PR review before a separate user-approved SSH install. Do not demand screenshots or redo the historical 8796/8797 preflight as a development prerequisite. Physical installer nevertheless must check the protected old services immediately before changing the machine.
+
+After the opt-in install, run `sudo python3 -B /opt/magnetra-gateway/check-magnetra-gateway.py`; it auto-selects a recent legitimate source-owned positive IMDb privately and requires exact source/8797/8798 magnet equality without revealing the IMDb, magnets or credentials. Report PASS/FAIL truthfully. Then only with new approval add `magnetra-rock64.alexlab.media` -> `http://127.0.0.1:8798` on the EXISTING BTDigg tunnel. Preserve 8796 route, existing units, all 46 IDs and zero-new-cost rule. No Worker deploy or global compatibility changes. The old separated EZTV tunnel is deprecated.
