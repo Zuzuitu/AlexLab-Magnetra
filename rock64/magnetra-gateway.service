@@ -1,0 +1,30 @@
+[Unit]
+Description=Magnetra centralized loopback dispatcher (optional, not installed)
+After=network-online.target magnetra-eztv.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/magnetra-gateway
+EnvironmentFile=/etc/magnetra-gateway/gateway.env
+EnvironmentFile=/etc/magnetra-eztv/gateway.env
+ExecStart=/usr/bin/python3 -I /opt/magnetra-gateway/magnetra_gateway.py
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=128M
+CPUQuota=20%
+TasksMax=24
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
