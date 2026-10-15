@@ -274,3 +274,13 @@ per-source status and, for positive sources, genuine HTML/magnet evidence,
 start a separate guardrailed gateway design. Preserve all 46 provider IDs,
 source attribution, all Flud actions, BTDigg's 8796 tunnel, EZTV's 8797
 service, other Rock64 projects and no paid/global VPN changes.
+
+## 2026-10-15 — 11-source owner audit + reproducible EZTV filtered mismatch
+
+Latest physical Rock64 11-source read-only `ubuntu` audit:
+- Torrentz (`torrentz2.nz`): NETWORK_OR_TIMEOUT in 0.07 s, cause not yet categorized.
+- UIndex, 1337x, BT4G, Ext, TorrentDatabase, TorrentDownloads, TokyoToshokan: HTTP 403 **also from residential IP**.
+- OxTorrent, Torrent9, BitSearch: HTTP 301 with no redirects followed; determine same-origin vs new host before any adapter change.
+- EZTV: recent HTTP 200 and valid magnet candidate, but for the **same sampled IMDb** direct `limit=2`, direct `limit=100`, and authenticated loopback gateway each HTTP 200 exact echo declared 0 / no torrents list. Earlier direct positive filtered IMDb was real at another time/sample; do not infer `limit=100` bug. EZTV service 8797 and BTDigg service both active. No EZTV tunnel/secret/deploy.
+
+Next: merged `rock64/probe-indexer-followup.py` for FOUR targeted original HTML hosts (safe redirect class/destination host, exact Torrentz transport category) plus up to FOUR different genuine recent EZTV IMDb samples, with no IDs or magnets logged. It is read-only, never follows redirect, no network/service changes. Evaluate owner output; do not invent Torrentz replacements or proxy 403 websites. Stage separate canonical-migration patch only if the redirect host/path proves safe and authentic content can be verified.

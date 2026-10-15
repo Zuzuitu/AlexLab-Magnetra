@@ -79,3 +79,29 @@ CalciDatum, Plex, Tailscale, NordVPN, the router or any existing Cloudflare
 Tunnel while running these diagnostics. Avoid enabling paid services.
 Never replace source error statuses in the permanent 46-indexer audit from
 one narrow test. Preserve source names, Flud behavior and all 46 adapters.
+
+## 2026-10-15 follow-up after real Rock64 output
+
+The user-provided 11-indexer run observed seven HTTP 403, three HTTP 301
+and one fast network failure (Torrentz). The EZTV direct `limit=2`,
+direct `limit=100` and authenticated local `limit=100` test
+all returned 0 rows for the SAME recent-magnet IMDb candidate.
+Thus the limit discrepancy is **not sufficient** to explain this sample;
+the earlier 2-magnet result may reflect different real candidate data or
+temporally variable source indexing.
+
+Next one-time, read-only:
+```bash
+python3 -B rock64/probe-indexer-followup.py
+```
+It performs exactly four source HTTPS GETs (Torrentz, OxTorrent,
+Torrent9 and BitSearch) **without following redirects**, and up to
+five EZTV API GETs (one last-five and at most four distinct verified
+recent IMDb filters). Output for redirects includes **only host**, not
+full Location URL/path or credentials; output for Torrentz is only a
+transport cause category. The EZTV output is only a sample ordinal,
+declared upstream result count, page row count and count of valid magnets
+matching the sampled IMDb; never the ID/name/magnet/hash. No sudo or
+local gateway token is needed. No torrent data is downloaded.
+A redirect that changes host is **not** automatically authorized:
+separate source legitimacy, origin allowlist and parser tests are needed.
