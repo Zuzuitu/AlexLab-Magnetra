@@ -1,3 +1,9 @@
+# SUPERSEDED: EZTV-only Cloudflare Tunnel plan cancelled
+
+On 2026-10-15 the owner explicitly rejected one Cloudflare Tunnel per indexer. **Do not follow the old standalone EZTV tunnel creation, token, or service instructions below.** The separate EZTV local gateway at 127.0.0.1:8797 remains valid and proven. The new plan is ONE existing BTDigg Tunnel plus ONE central Magnetra dispatcher on localhost:8798; see docs/SHARED_MAGNETRA_GATEWAY.md. The previously staged EZTV tunnel installer/template have been removed by the superseding change. No new public route, gateway dispatcher, or production deployment has been installed by this change. Older notes below are historical only.
+
+---
+
 # EZTV official API via separate Rock64 gateway — staged, NOT activated
 
 Evidence from the physical Rock64 on 2026-10-14 (two successful one-shot probes):
