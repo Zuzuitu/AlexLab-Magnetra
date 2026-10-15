@@ -161,6 +161,7 @@ def main():
             return 2
         target, ordinal, direct_rows, direct_valid = positive
         print("EZTV direct source-positive sample:", ordinal)
+        print("EZTV direct filtered rows:", direct_rows)
         print("EZTV direct matching magnet count:", direct_valid)
 
         stage = "local-filtered"
