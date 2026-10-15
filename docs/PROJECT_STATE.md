@@ -780,3 +780,40 @@ Owner explicitly rejected continuing the dedicated EZTV Tunnel as an independent
 Architecture: reuse the **existing BTDigg Cloudflare Tunnel connector** and its current BTDigg published application unchanged; after verifying Dashboard management mode and physical service state, plan ONE additional published hostname magnetra-rock64.alexlab.media pointing to ONE future authenticated loopback dispatcher on 127.0.0.1:8798. Dispatcher can serve EZTV (via current 8797) and additional providers only after verification; no tunnel/DNS change per provider. No dispatcher is deployed yet. A new read-only rock64/check-shared-tunnel.sh preflight checks service states, listener counts and unauth protected health HTTP codes without leaking credentials. Cloudflare supports many hostnames to local services on one tunnel. Same-zone Worker fetch error 1042 needs isolated staging check; do not globally add compatibility flags that affect existing Flud/BTDigg. Sources with residential Rock64 HTTP 403 remain blocked regardless of a shared tunnel, requiring independent source validation, no misattributed fallback. Source-specific proxies/egress are not authorized or installed. Current legacy optional EZTV Worker host and invariant are inactive proposals that require migration in a future gated PR before any Worker secret/deploy.
 
 See docs/SHARED_MAGNETRA_GATEWAY.md. No new Tunnel, route, DNS, Worker Secret, PWA deploy, VPN/global network configuration, or paid service is authorized by this correction without staged verification.
+
+
+## 2026-10-15 — shared existing BTDigg tunnel confirmed as selected architecture; 8798 code staged
+
+Owner explicitly affirmed: **reuse the EXISTING BTDigg Cloudflare
+Tunnel without altering its existing BTDigg route; later add only one
+new published application `magnetra-rock64.alexlab.media` to a new
+central allowlisted gateway on local 127.0.0.1:8798**, which delegates
+to EZTV's proven existing 8797 and future individually verified
+providers. Before activating, verify tunnel mode/route in Cloudflare
+Dashboard and actual Rock64 services, and isolate same-zone Worker 1042.
+
+A dedicated PR now stages an **offline-only** central dispatcher
+`rock64/magnetra_gateway.py`, loopback-only, authenticated with
+a new `MAGNETRA_GATEWAY_TOKEN`, one exact
+`/v1/eztvx/torrents?imdb_id=...` route, forwarding only to
+`127.0.0.1:8797` with the *different existing private*
+`MAGNETRA_EZTV_TOKEN`. All other provider IDs/paths and arbitrary
+URLs are rejected; no URL proxy, no redirects, no provider swapping,
+no fake magnet rows; authenticated health 200 and unauthenticated 401,
+bounded 1MB response, 8 concurrent connections, sanitized errors,
+no extra retry or cache. The existing 8796 BTDigg gateway and its
+tunnel remain untouched. Optional new resource-limited
+`rock64/magnetra-gateway.service` is **NOT installed or started**;
+no secret file or port listener has been created on physical Rock64.
+
+Worker optional EZTV-only fetcher is staged for the new *shared*
+origin `https://magnetra-rock64.alexlab.media` and distinct
+`MAGNETRA_GATEWAY_TOKEN`. Obsolete worker
+`EZTV_GATEWAY_TOKEN` is ignored; this change is **NOT** published
+to production. The original 46 provider IDs, original EZTV
+matching/metadata tests, and Flud dispatch remain unchanged.
+Service installer, Cloudflare Published application route, DNS,
+Worker secret, staging same-zone 1042 test, paid infrastructure,
+network/VPN changes, and PWA production deploy are **NOT performed**.
+Run the merged read-only `rock64/check-shared-tunnel.sh` next and
+verify Dashboard management mode before any physical installation.
