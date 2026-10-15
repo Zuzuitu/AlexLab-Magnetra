@@ -16,6 +16,7 @@ import re
 import stat
 import subprocess
 import sys
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
@@ -31,6 +32,10 @@ MAGNET = re.compile(r"^magnet:\?xt=urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})(?:&|$)
 TOKEN = re.compile(r"^[A-Za-z0-9_-]{48,256}$")
 MAX_BYTES = 1_000_000
 MAX_CANDIDATES = 4
+
+
+class SmokeFailure(ValueError):
+    """Only controlled, non-sensitive stage identifiers reach diagnostic output."""
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -155,18 +160,57 @@ def units_healthy() -> bool:
     return True
 
 
+def wait_for_central_ready(attempts: int = 25, pause: float = 0.25) -> None:
+    """Wait at most ~6 s for NEW listener; never retry provider/source requests.
+
+    systemctl Type=simple active means process spawned, not necessarily bound.
+    Only connection-refused can be retried. Any HTTP status besides 401,
+    or other transport failure, is a hard failure.
+    """
+    for index in range(attempts):
+        try:
+            status = get_status(CENTRAL + "/healthz")
+        except URLError as exc:
+            if isinstance(exc.reason, ConnectionRefusedError):
+                if index + 1 < attempts:
+                    time.sleep(pause)
+                    continue
+                raise SmokeFailure("central-listener-timeout") from None
+            raise SmokeFailure("central-listener-transport") from None
+        except (OSError, TimeoutError):
+            raise SmokeFailure("central-listener-transport") from None
+        if status != 401:
+            raise SmokeFailure("unauth-8798-status")
+        return
+    raise SmokeFailure("central-listener-timeout")
+
+
 def check_smoke(hub_token: str, eztv_token: str) -> None:
     if hub_token == eztv_token:
-        raise ValueError("credentials must differ")
+        raise SmokeFailure("credentials-not-independent")
     if not units_healthy():
-        raise ValueError("Magnetra service inactive")
-    for port in (8796, 8797, 8798):
-        if get_status(f"http://127.0.0.1:{port}/healthz") != 401:
-            raise ValueError("unauthenticated health mismatch")
-    if get_json(CENTRAL + "/healthz", hub_token).get("ok") is not True:
-        raise ValueError("central auth health mismatch")
-    if get_json(BACKEND + "/healthz", eztv_token).get("ok") is not True:
-        raise ValueError("EZTV auth health mismatch")
+        raise SmokeFailure("required-service-inactive")
+    for port in (8796, 8797):
+        try:
+            status = get_status(f"http://127.0.0.1:{port}/healthz")
+        except (URLError, OSError, TimeoutError):
+            raise SmokeFailure(f"unauth-{port}-transport") from None
+        if status != 401:
+            raise SmokeFailure(f"unauth-{port}-status")
+    wait_for_central_ready()
+    for stage, url, token in (
+        ("auth-8798", CENTRAL + "/healthz", hub_token),
+        ("auth-8797", BACKEND + "/healthz", eztv_token),
+    ):
+        try:
+            result = get_json(url, token)
+            if result.get("ok") is not True:
+                raise SmokeFailure(stage + "-invalid")
+        except SmokeFailure:
+            raise
+        except (HTTPError, URLError, OSError, TimeoutError, ValueError,
+                TypeError, json.JSONDecodeError):
+            raise SmokeFailure(stage + "-failed") from None
     print("PASS: 8798 auth=200 unauth=401; 8797 auth=200 unauth=401; BTDigg 8796=401")
     print("PASS: existing BTDigg, tunnel and EZTV services remain active")
 
@@ -230,9 +274,17 @@ def main() -> int:
     try:
         hub_token = read_private_token(CENTRAL_ENV, "MAGNETRA_GATEWAY_TOKEN")
         eztv_token = read_private_token(EZTV_ENV, "MAGNETRA_EZTV_TOKEN")
+    except (ValueError, OSError, UnicodeError):
+        print("FAIL stage=local-credential-read")
+        return 1
+    try:
         check_smoke(hub_token, eztv_token)
-    except (ValueError, OSError, TimeoutError, URLError, HTTPError, subprocess.SubprocessError):
-        print("FAIL: local credentials, service integrity or authenticated health")
+    except SmokeFailure as error:
+        print("FAIL stage=" + str(error))
+        return 1
+    except (ValueError, OSError, TimeoutError, URLError, HTTPError,
+            subprocess.SubprocessError):
+        print("FAIL stage=local-smoke-unexpected")
         return 1
     if len(sys.argv) == 2:
         print("PASS: local smoke; real-source acceptance intentionally not run")
