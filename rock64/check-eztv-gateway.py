@@ -105,8 +105,9 @@ def source_candidates(recent):
     return candidates
 
 
-def find_source_positive(candidates, get=get_json):
+def find_source_positive(candidates, get=None):
     """One direct official API GET per candidate; never fallback to unrelated shows."""
+    get = get or get_json
     headers = {"Accept": "application/json", "User-Agent": SOURCE_UA,
                "Accept-Encoding": "identity"}
     for ordinal, imdb in enumerate(candidates[:MAX_CANDIDATES], 1):
