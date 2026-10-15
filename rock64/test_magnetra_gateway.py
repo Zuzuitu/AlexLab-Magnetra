@@ -66,6 +66,18 @@ class GatewayTests(unittest.TestCase):
         self.assertLessEqual(hub.MAX_BYTES, 1_000_000)
         self.assertLessEqual(hub.TIMEOUT, 12)
 
+    def test_optional_service_is_strictly_isolated(self):
+        unit = pathlib.Path(__file__).with_name("magnetra-gateway.service").read_text(encoding="utf8")
+        self.assertIn("DynamicUser=yes", unit)
+        self.assertIn("EnvironmentFile=/etc/magnetra-gateway/gateway.env", unit)
+        self.assertIn("EnvironmentFile=/etc/magnetra-eztv/gateway.env", unit)
+        self.assertIn("MemoryMax=128M", unit)
+        self.assertIn("CPUQuota=20%", unit)
+        self.assertIn("ProtectSystem=strict", unit)
+        self.assertIn("NoNewPrivileges=yes", unit)
+        self.assertNotIn("magnetra-btdigg", unit.lower())
+        self.assertNotIn("cloudflared", unit.lower())
+
     def test_original_exact_imdb_and_magnet_validation(self):
         self.assertTrue(hub.valid_original_eztv(OK, ID))
         self.assertTrue(hub.valid_original_eztv(ZERO, ID))
