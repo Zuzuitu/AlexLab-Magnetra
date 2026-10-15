@@ -284,3 +284,29 @@ Latest physical Rock64 11-source read-only `ubuntu` audit:
 - EZTV: recent HTTP 200 and valid magnet candidate, but for the **same sampled IMDb** direct `limit=2`, direct `limit=100`, and authenticated loopback gateway each HTTP 200 exact echo declared 0 / no torrents list. Earlier direct positive filtered IMDb was real at another time/sample; do not infer `limit=100` bug. EZTV service 8797 and BTDigg service both active. No EZTV tunnel/secret/deploy.
 
 Next: merged `rock64/probe-indexer-followup.py` for FOUR targeted original HTML hosts (safe redirect class/destination host, exact Torrentz transport category) plus up to FOUR different genuine recent EZTV IMDb samples, with no IDs or magnets logged. It is read-only, never follows redirect, no network/service changes. Evaluate owner output; do not invent Torrentz replacements or proxy 403 websites. Stage separate canonical-migration patch only if the redirect host/path proves safe and authentic content can be verified.
+
+## 2026-10-15 — EZTV filtered-positive source evidence and redirect destinations
+
+New physical Rock64 read-only report:
+`torrentz` has TRANSPORT_FAILURE (no HTTP). OxTorrent HTTP 301 →
+`www.oxtorrent.co`, Torrent9 HTTP 301 → `www7.torrent9.to`,
+BitSearch HTTP 301 → `bitsearch.eu`, all **OFF_ORIGIN** and none
+followed. Do not change catalog/legacy-spec host until authenticity,
+HTML rows, safe exact-origin redirects and deferred magnets verified.
+Other seven Rock64 HTTP 403 sources remain blocked and untouched.
+
+EZTV official `limit=100` API retrieved matching authentic magnet
+results for **three distinct recent IMDb IDs**: 16/16, 31/31 and
+100/100 returned records; fourth recent candidate had no filtered
+results. This proves the upstream API works, and picking a zero-result
+recent candidate is the local smoke's false-negative issue. The
+installed private Rock64 `magnetra-eztv.service` at 8797 is
+authenticated, but **positive filtered results through it are still
+UNVERIFIED**. A scoped PR adjusts only standalone
+`rock64/check-eztv-gateway.py` (up to 4 official positive candidates,
+then exactly one same-ID authenticated gateway GET) and adds
+`rock64/probe-redirect-candidates.py` for the three observed new
+hostnames read-only with markers, no redirects. CI must pass, then
+owner performs two pinned checks from the Rock64. **No tunnel, secret,
+production deploy, service changes, new cost or 403 bypass** until
+end-to-end evidence and explicit owner approval.
