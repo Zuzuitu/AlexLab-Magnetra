@@ -105,3 +105,25 @@ matching the sampled IMDb; never the ID/name/magnet/hash. No sudo or
 local gateway token is needed. No torrent data is downloaded.
 A redirect that changes host is **not** automatically authorized:
 separate source legitimacy, origin allowlist and parser tests are needed.
+
+## 2026-10-15 — redirects observed, hosts still unverified
+
+The exact owner-supplied redirects (with **no destination followed**)
+were OxTorrent `oxtorrent.co` → `www.oxtorrent.co`,
+Torrent9 `www6.torrent9.to` → `www7.torrent9.to`, and
+BitSearch `bitsearch.to` → `bitsearch.eu`. Torrentz
+`torrentz2.nz` failed with `TRANSPORT_FAILURE` before an HTTP
+status, despite the prior low-latency error. This categorization does
+not identify why the connection failed or prove a replacement domain.
+
+New independent read-only `rock64/probe-redirect-candidates.py`
+performs exactly **three** fixed HTTPS search GETs at those recorded
+redirect hostnames, with redirects disabled, at most 256KB of each
+HTML page, 8-second timeout and no proxy environment. The output
+contains only status, coarse layout hints/counts, challenge indicators,
+and if redirected, only a destination hostname. This is not proof of
+authentic torrent search results and is **not** permission to migrate
+the original provider origin, follow another redirect or dispatch
+magnets. A later owner-approved origin migration would require source
+verification and updated exact-origin guards, parsers, deferred details
+handling, tests and project invariants.

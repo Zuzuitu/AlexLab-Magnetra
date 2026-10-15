@@ -696,3 +696,34 @@ This differentiates API filter inconsistency from sampling a recent
 release not indexed by the filter. Do not broaden proxies, change the
 46-indexer catalog or historic audit, bypass 403 protections, run VPN,
 change Rock64 network/services, pay for infrastructure or deploy.
+
+## 2026-10-15 — real positive EZTV source sample and observed canonical redirects
+
+Owner executed `probe-indexer-followup.py` on physical Rock64 with
+read-only output:
+- Torrentz `torrentz2.nz`: **TRANSPORT_FAILURE** before HTTP; specific
+  cause not identified, no source replacement established.
+- OxTorrent original HTTP 301 → `www.oxtorrent.co` (OFF_ORIGIN);
+  Torrent9 → `www7.torrent9.to` (OFF_ORIGIN);
+  BitSearch → `bitsearch.eu` (OFF_ORIGIN). No redirects followed,
+  no destination HTML or true magnet availability verified.
+- Official EZTV recent: HTTP 200, **four distinct recent authentic
+  IMDb candidates**. Fixed `limit=100` filtered lookups for these
+  showed 16/16, 31/31 and 100/100 valid IMDb-matching magnet rows
+  respectively; fourth returned zero. The third advertised 2,026 total
+  matching releases with 100 actually returned (page limit). No IDs
+  or magnet content exposed. This establishes the API works for real
+  filtered queries from Rock64; no mismatch attributable to limit=100.
+
+**Next gated action** is to prove identical source-positive IMDb and
+gateway-positive results on installed `127.0.0.1:8797`. A guarded
+branch/PR updates only the standalone `check-eztv-gateway.py` test to
+find a positive exact IMDb from up to four recent source candidates
+before checking the loopback gateway once. Distinguishes source
+UNVERIFIED (all sampled IDs zero) from gateway ERROR and prints
+count-only proof. No service reinstall, no EZTV tunnel/Worker Secret
+or PWA production deploy. Separate
+`probe-redirect-candidates.py` tests exactly the three observed
+canonical hostnames read-only, without redirect following or altering
+any provider. **Do not automatically migrate hosts or relax exact
+origin policy**. Preserve BTDigg, Flud and all 46 indexers.
