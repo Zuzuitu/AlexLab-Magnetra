@@ -25,4 +25,4 @@ done
 echo '=== NEXT CONFIGURATION GATE ==='
 echo 'Check in Cloudflare Dashboard whether existing BTDigg hostname belongs to a remotely managed tunnel that permits a second Published application route.'
 echo 'Never share or display tunnel tokens, service environment, or existing tunnel credentials.'
-echo 'Do not execute cloudflared service install, restart units or alter DNS yet.'
+echo 'Do not install another connector, restart any units or alter DNS yet.'
