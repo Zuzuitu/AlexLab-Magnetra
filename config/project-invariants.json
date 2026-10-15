@@ -182,7 +182,7 @@
     "per_indexer_new_tunnel_forbidden": true,
     "proposed_gateway_origin": "https://magnetra-rock64.alexlab.media",
     "proposed_loopback_listener": "127.0.0.1:8798",
-    "gateway_deployed": false,
+    "gateway_deployed": true,
     "legacy_btdigg_route_must_remain_unchanged": true,
     "authenticated_provider_allowlist_required": true,
     "global_worker_compatibility_changes_forbidden": true,
@@ -198,6 +198,6 @@
     "new_dns_route_created": false,
     "installer_code_staged": true,
     "read_only_acceptance_code_staged": true,
-    "physical_8798_acceptance_passed": false
+    "physical_8798_acceptance_passed": true
   }
 }
