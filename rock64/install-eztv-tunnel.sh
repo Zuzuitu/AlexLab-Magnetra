@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Install ONLY the optional new EZTV Cloudflare Tunnel systemd unit.
-# Requires owner-created remotely managed Cloudflare Tunnel and Published application route.
+# Requires owner-created remotely managed Cloudflare Tunnel; publish its route after connector becomes healthy.
 set -Eeuo pipefail
 umask 077
 export LC_ALL=C
 stop() { printf 'STOP: %s\n' "$*" >&2; exit 1; }
 
-[[ "$(id -u)" == 0 ]] || stop "use sudo; only after creating the dedicated tunnel"
+[[ "$(id -u)" == 0 ]] || stop "use sudo; only after creating a NEW dedicated tunnel in Cloudflare Dashboard"
 [[ -x /usr/local/bin/cloudflared ]] || stop "cloudflared not at expected path"
 [[ -d /etc/magnetra-eztv && ! -L /etc/magnetra-eztv ]] || stop "EZTV credentials directory missing or linked"
 [[ -f /etc/magnetra-eztv/gateway.env ]] || stop "EZTV gateway not installed"
