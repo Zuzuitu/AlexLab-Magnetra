@@ -115,3 +115,44 @@ with `sudo python3 -B` for private local token read; do not reinstall
 `magnetra-eztv.service`. Configure no EZTV Cloudflare Tunnel or Worker
 Secret without successful source-to-gateway verification and the
 owner's separate approval.
+
+
+## 2026-10-15 — local gateway positive acceptance complete
+
+Owner physically verified `magnetra-eztv.service` running with authenticated
+`127.0.0.1:8797`, official filtered EZTV API **100 / 100 genuine matching magnets**
+and gateway **100 / 100 genuine matching magnets for the exact same IMDb**. The
+up-to-four source-positive acceptance checker now prints `PASS: genuine EZTV
+magnet metadata reached isolated local gateway`. BTDigg was independently
+`active`. **Stop re-running acceptance/sampling unless later debugging is
+needed.** The isolated EZTV API backend is ready for the separately gated tunnel
+step; this is *not* public tunnel, DNS, Worker or PWA deployment verification.
+
+The tunnel is NOT created by the scripts. An optional dedicated
+`magnetra-eztv-tunnel.service` template exists but has not been installed
+or started. Official cloudflared documentation confirms remotely managed
+`cloudflared tunnel run --token-file <PATH>` / environment
+`TUNNEL_TOKEN_FILE` support requires **cloudflared 2025.4.0 or newer**.
+Before beginning an approved activation, inspect locally, without emitting
+any sensitive token or existing service environment:
+```bash
+/usr/local/bin/cloudflared --version
+/usr/local/bin/cloudflared tunnel run --help 2>&1 | grep -i -- 'token-file' || true
+systemctl is-active magnetra-eztv.service
+systemctl is-active magnetra-btdigg.service
+systemctl show -p LoadState --value magnetra-eztv-tunnel.service
+```
+Only after **explicit owner consent**, create a **new** remotely managed Cloudflare
+Tunnel in the correct account/zone, routing only `eztv-rock64.alexlab.media`
+to `http://127.0.0.1:8797`. Keep its secret token private; do not paste
+the `cloudflared service install` token command in chat or execute it.
+Use only the independent dedicated service with `LoadCredential` and protected
+token file; validate actual machine flag support before starting. Avoid
+starting/updating/restarting existing cloudflared, BTDigg, Plex, Flud, NexaPanel
+or other systemd services. Do not change global DNS/routes/Tailscale/VPN or
+`global_fetch_strictly_public` merely to work around possible same-zone
+Worker-to-Tunnel 1042. Stage end-to-end HTTPS authenticated checks before
+entering Worker Secret `EZTV_GATEWAY_TOKEN` and owner-approved
+`[deploy-pwa]` production deployment, and retain independent rollback.
+Source reference for token-file requirements:
+`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/run-parameters/`.
