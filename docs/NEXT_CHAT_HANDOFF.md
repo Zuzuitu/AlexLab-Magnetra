@@ -310,3 +310,12 @@ hostnames read-only with markers, no redirects. CI must pass, then
 owner performs two pinned checks from the Rock64. **No tunnel, secret,
 production deploy, service changes, new cost or 403 bypass** until
 end-to-end evidence and explicit owner approval.
+
+
+## 2026-10-15 — decisive same-IMDb Rock64 EZTV gateway 100/100 PASS
+
+Owner ran latest read-only scripts from `35d1b47e406eaf0e4e9deda5d313eae21ca8bdb3`. Source-positive official EZTV API filtered result: `direct filtered rows:100`, `direct matching magnet count:100`. Authenticated independent loopback gateway `127.0.0.1:8797` for the **same hidden IMDb**: `gateway filtered rows:100`, `gateway matching magnet count:100`, exact acceptance `PASS: genuine EZTV magnet metadata reached isolated local gateway`. Both `magnetra-eztv.service` and `magnetra-btdigg.service` active. Local function is proven, **no need for further sampling or gateway code changes**. This is *not* Worker/Tunnel or PWA production success.
+
+Original off-origin 301 target checks from residential Rock64: OxTorrent `www.oxtorrent.co` HTTP 200 / only 3 generic HTML table rows / 0 magnet anchors; Torrent9 `www7.torrent9.to` HTTP 200 / only 4 generic table rows / 0 magnet anchors; BitSearch `bitsearch.eu` HTTP 520. Nothing is verified as a genuine searchable torrent result, and no provider origins or parsers should yet be silently modified. Torrentz transport failed, seven others 403 even on Rock64.
+
+Next practical milestone: request **explicit owner permission to create a NEW Cloudflare-managed tunnel and DNS route** for `eztv-rock64.alexlab.media` to local `http://127.0.0.1:8797`, then separately activate only `magnetra-eztv-tunnel.service` with private tunnel token stored outside GitHub and chat. Existing `/usr/local/bin/cloudflared` must be checked for version 2025.4+ / token-file support per official docs. `rock64/magnetra-eztv-tunnel.service` is a standalone template that uses `LoadCredential=tunnel-token` and `TUNNEL_TOKEN_FILE=%d/tunnel-token`; do not use globally destructive `cloudflared service install`. Monitor Worker-to-Tunnel same-zone 1042 with an isolated test and **never enable global fetch compatibility flags** affecting unrelated projects without explicit approval. Worker `EZTV_GATEWAY_TOKEN` and a protected `[deploy-pwa]` release only after tunnel proof and separate consent; no live tunnel, DNS or Worker secret is known to exist yet. No paid/cloudflare upgrade authorization, no VPN/global routing changes.
