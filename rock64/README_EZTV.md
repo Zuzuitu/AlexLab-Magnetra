@@ -86,3 +86,32 @@ ss -ltn '( sport = :8797 )'
 curl --noproxy '*' --max-time 3 -sS -o /dev/null -w 'HTTP %{http_code}\\n' http://127.0.0.1:8797/healthz
 ```
 Without Authorization, HTTP **401** is expected when the gateway listener is healthy. If inactive or `000`, inspect only `magnetra-eztv.service`; avoid restarting other units. After merging the checker update, rerun the pinned script with `sudo python3 -B` to get the exact stage. **Do not install a Cloudflare Tunnel or Worker secret until positive local check passes.**
+
+## 2026-10-15 — fixed positive-source validation before gateway acceptance
+
+Physical source proof: the official EZTV API returned valid 16/16,
+31/31 and 100/100 magnet-bearing rows (all matching their exact
+respective IMDb IDs) from three of four distinct, genuine recent
+IMDb samples on the Rock64. The fourth showed honest zero. The prior
+local gateway smoke failed after choosing one zero-result IMDb, which
+is **not** proof that the gateway cannot return valid magnet data.
+
+Updated `rock64/check-eztv-gateway.py` does **NOT** change or restart
+the installed EZTV service. It authenticates the loopback health
+first, obtains up to five recent genuine source records, deduplicates up
+to four IMDb IDs and performs one official fixed-origin `limit=100`
+filtered GET for each until the first **positive** original result with
+matching IMDb and valid magnet metadata. It then makes at most **one**
+authenticated GET through the installed loopback gateway for the exact
+same ID and checks the matching magnet count. Every request is one-shot;
+no retries on HTTP 429/403, no fabricated success, no fallback to
+other indexers, no credentials, titles, IMDb IDs, magnet URLs or hashes
+printed. If none of the four is source-positive, it exits **UNVERIFIED**
+without blaming the gateway. A successful result validates the
+residential loopback path, **not** Cloudflare Tunnel or production.
+
+After green CI and merged commit, run the updated pinned checker
+with `sudo python3 -B` for private local token read; do not reinstall
+`magnetra-eztv.service`. Configure no EZTV Cloudflare Tunnel or Worker
+Secret without successful source-to-gateway verification and the
+owner's separate approval.
