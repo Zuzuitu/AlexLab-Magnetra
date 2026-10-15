@@ -8,6 +8,7 @@ import pathlib
 import subprocess
 import sys
 import unittest
+from urllib.error import HTTPError, URLError
 from collections import Counter
 from unittest.mock import patch
 
@@ -166,6 +167,54 @@ class AcceptanceTests(unittest.TestCase):
         self.assertTrue(accept.TOKEN.fullmatch("H" * 64))
         self.assertFalse(accept.TOKEN.fullmatch("weak"))
         self.assertIsNone(accept.normalized_imdb("bad"))
+
+
+    def test_8798_readiness_waits_only_for_connection_refused(self):
+        refused = URLError(ConnectionRefusedError(111, "Connection refused"))
+        with patch.object(accept, "get_status", side_effect=[refused, 401]) as probe, \
+             patch.object(accept.time, "sleep") as sleeping:
+            accept.wait_for_central_ready(attempts=2, pause=0.01)
+        self.assertEqual(probe.call_count, 2)
+        sleeping.assert_called_once_with(0.01)
+
+    def test_8798_readiness_timeout_is_bounded_and_safe(self):
+        refused = URLError(ConnectionRefusedError(111, "Connection refused"))
+        with patch.object(accept, "get_status", side_effect=[refused, refused]) as probe, \
+             patch.object(accept.time, "sleep") as sleeping, \
+             self.assertRaisesRegex(accept.SmokeFailure, "central-listener-timeout"):
+            accept.wait_for_central_ready(attempts=2, pause=0.01)
+        self.assertEqual(probe.call_count, 2)
+        sleeping.assert_called_once()
+
+    def test_8798_readiness_never_retries_wrong_http_or_other_network(self):
+        for status in (200, 403, 404, 502):
+            with self.subTest(status=status), \
+                 patch.object(accept, "get_status", return_value=status) as probe, \
+                 patch.object(accept.time, "sleep") as sleeping, \
+                 self.assertRaisesRegex(accept.SmokeFailure, "unauth-8798-status"):
+                accept.wait_for_central_ready(attempts=25)
+            self.assertEqual(probe.call_count, 1)
+            sleeping.assert_not_called()
+        with patch.object(accept, "get_status", side_effect=URLError("unrelated")), \
+             patch.object(accept.time, "sleep") as sleeping, \
+             self.assertRaisesRegex(accept.SmokeFailure, "central-listener-transport"):
+            accept.wait_for_central_ready(attempts=25)
+        sleeping.assert_not_called()
+
+    def test_smoke_diagnostic_identifies_auth_only_without_secrets(self):
+        with patch.object(accept, "units_healthy", return_value=True), \
+             patch.object(accept, "get_status", return_value=401), \
+             patch.object(accept, "get_json", side_effect=HTTPError(
+                 accept.CENTRAL + "/healthz", 401, "denied", {}, None
+             )), \
+             self.assertRaisesRegex(accept.SmokeFailure, "^auth-8798-failed$"):
+            accept.check_smoke("H" * 64, "E" * 64)
+
+    def test_smoke_diagnostic_safely_distinguishes_old_port_status(self):
+        with patch.object(accept, "units_healthy", return_value=True), \
+             patch.object(accept, "get_status", side_effect=[401, 404]), \
+             self.assertRaisesRegex(accept.SmokeFailure, "^unauth-8797-status$"):
+            accept.check_smoke("H" * 64, "E" * 64)
 
 
 if __name__ == "__main__":
