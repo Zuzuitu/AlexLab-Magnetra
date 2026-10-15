@@ -2,7 +2,7 @@
 """Read-only local EZTV gateway acceptance check.
 
 Does not print or persist credentials, IMDb IDs, release names, magnet links,
-hashes or response bodies. One recent-source GET and one gateway search GET.
+hashes or response bodies. One bounded recent-source GET, up to four source-filter lookups and at most one authenticated gateway-filter GET.
 No torrents are downloaded or magnets sent to Flud.
 """
 from __future__ import annotations
@@ -16,7 +16,11 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 CONFIG = pathlib.Path("/etc/magnetra-eztv/gateway.env")
-RECENT = "https://eztvx.to/api/get-torrents?limit=2&page=1"
+RECENT = "https://eztvx.to/api/get-torrents?limit=5&page=1"
+SOURCE_FILTER = "https://eztvx.to/api/get-torrents?imdb_id="
+MAX_CANDIDATES = 4
+SOURCE_UA = ("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+             "(KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36")
 LOCAL_HEALTH = "http://127.0.0.1:8797/healthz"
 LOCAL_SEARCH = "http://127.0.0.1:8797/v1/torrents?imdb_id="
 MAX_BYTES = 1_000_000
@@ -80,6 +84,39 @@ def choose_known_positive(recent):
     return None
 
 
+def source_candidates(recent):
+    """Deduplicated real recent IDs with source-owned valid magnet records."""
+    rows = recent.get("torrents") if isinstance(recent, dict) else None
+    if not isinstance(rows, list):
+        return []
+    candidates = []
+    for entry in rows[:5]:
+        if not isinstance(entry, dict):
+            continue
+        imdb = IMDB.fullmatch(str(entry.get("imdb_id", "")))
+        magnet = entry.get("magnet_url")
+        if not imdb or not isinstance(magnet, str) or not MAGNET.match(magnet):
+            continue
+        value = str(int(imdb.group(1)))
+        if value not in candidates:
+            candidates.append(value)
+        if len(candidates) >= MAX_CANDIDATES:
+            break
+    return candidates
+
+
+def find_source_positive(candidates, get=get_json):
+    """One direct official API GET per candidate; never fallback to unrelated shows."""
+    headers = {"Accept": "application/json", "User-Agent": SOURCE_UA,
+               "Accept-Encoding": "identity"}
+    for ordinal, imdb in enumerate(candidates[:MAX_CANDIDATES], 1):
+        result = get(SOURCE_FILTER + imdb + "&limit=100&page=1", headers)
+        rows, valid = inspect_filtered(result, imdb)
+        if valid > 0:
+            return (imdb, ordinal, rows, valid)
+    return None
+
+
 def inspect_filtered(data, target):
     actual = IMDB.fullmatch(str(data.get("imdb_id", "")))
     rows = data.get("torrents")
@@ -109,19 +146,29 @@ def main():
         print("EZTV local authenticated health: PASS")
 
         stage = "recent-source"
-        recent = get_json(RECENT, {"Accept": "application/json", "User-Agent":
-            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
-            "Accept-Encoding": "identity"})
-        target = choose_known_positive(recent)
-        if not target:
-            raise ValueError("No recent release with a valid IMDb and magnet")
+        recent = get_json(RECENT, {"Accept": "application/json",
+                                "User-Agent": SOURCE_UA, "Accept-Encoding": "identity"})
+        candidates = source_candidates(recent)
+        print("EZTV recent valid IMDb candidates:", len(candidates))
+        if not candidates:
+            print("UNVERIFIED: no valid recent IMDb candidates; no gateway request sent")
+            return 2
+        stage = "source-filter"
+        positive = find_source_positive(candidates)
+        if not positive:
+            print("UNVERIFIED: source returned no positive filtered candidates; no gateway request sent")
+            return 2
+        target, ordinal, direct_rows, direct_valid = positive
+        print("EZTV direct source-positive sample:", ordinal)
+        print("EZTV direct matching magnet count:", direct_valid)
+
         stage = "local-filtered"
         result = get_json(LOCAL_SEARCH + target, auth)
         rows, valid = inspect_filtered(result, target)
-        print("EZTV filtered source rows:", rows)
-        print("EZTV rows with matching IMDb and valid magnet:", valid)
+        print("EZTV gateway filtered rows:", rows)
+        print("EZTV gateway matching magnet count:", valid)
         if valid < 1:
-            raise ValueError("No genuine filtered magnet found")
+            raise ValueError("Gateway did not return a positive filtered source response")
         print("PASS: genuine EZTV magnet metadata reached isolated local gateway")
         return 0
     except HTTPError as error:
