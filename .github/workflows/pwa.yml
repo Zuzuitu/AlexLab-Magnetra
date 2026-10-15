@@ -25,7 +25,7 @@ jobs:
       - name: Test Rock64 BTDigg gateway (loopback only, no external requests)
         run: python3 -m unittest discover -s rock64 -p 'test_*.py' -v
       - name: Validate Rock64 gateways Python syntax and guarded installers
-        run: python3 -m py_compile rock64/btdigg_gateway.py rock64/check-btdigg.py rock64/eztv_gateway.py rock64/check-eztv-gateway.py rock64/probe-more-indexers.py rock64/diagnose-eztv-filter.py rock64/probe-indexer-followup.py rock64/probe-redirect-candidates.py && bash -n rock64/install-btdigg.sh rock64/update-btdigg.sh rock64/install-eztv.sh rock64/install-eztv-tunnel.sh
+        run: python3 -m py_compile rock64/btdigg_gateway.py rock64/check-btdigg.py rock64/eztv_gateway.py rock64/check-eztv-gateway.py rock64/probe-more-indexers.py rock64/diagnose-eztv-filter.py rock64/probe-indexer-followup.py rock64/probe-redirect-candidates.py && bash -n rock64/install-btdigg.sh rock64/update-btdigg.sh rock64/install-eztv.sh rock64/check-shared-tunnel.sh
       - name: Validate provider selectors in real Cloudflare workerd runtime
         run: |
           npx --yes wrangler@4.45.4 dev --config worker/test/wrangler-selector.jsonc --port 8789 > "$RUNNER_TEMP/magnetra-selectors.log" 2>&1 &

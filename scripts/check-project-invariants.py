@@ -741,7 +741,8 @@ def check_eztv_residential_gateway(config: dict) -> None:
         return
     expected = {
         "upstream_api": "https://eztvx.to/api/get-torrents",
-        "proposed_tunnel_origin": "https://eztv-rock64.alexlab.media",
+        "legacy_inactive_worker_origin": "https://eztv-rock64.alexlab.media",
+        "dedicated_cloudflare_tunnel_deprecated": True,
         "worker_secret_name": "EZTV_GATEWAY_TOKEN",
         "rock64_secret_name": "MAGNETRA_EZTV_TOKEN",
         "loopback_listener": "127.0.0.1:8797",
@@ -762,7 +763,6 @@ def check_eztv_residential_gateway(config: dict) -> None:
         "rock64/eztv_gateway.py",
         "rock64/test_eztv_gateway.py",
         "rock64/magnetra-eztv.service",
-        "rock64/magnetra-eztv-tunnel.service",
         "rock64/install-eztv.sh",
         "rock64/README_EZTV.md",
     ]
@@ -793,6 +793,39 @@ def check_eztv_residential_gateway(config: dict) -> None:
         fail("canonical project state must include EZTV residential gateway decision")
 
 
+
+def check_shared_magnetra_gateway(config: dict) -> None:
+    """Owner requires reuse of the existing Tunnel, not one per indexer."""
+    gw = nested(config, "shared_magnetra_gateway")
+    expected = {
+        "reuse_existing_btdigg_tunnel": True,
+        "per_indexer_new_tunnel_forbidden": True,
+        "proposed_gateway_origin": "https://magnetra-rock64.alexlab.media",
+        "proposed_loopback_listener": "127.0.0.1:8798",
+        "gateway_deployed": False,
+        "legacy_btdigg_route_must_remain_unchanged": True,
+        "authenticated_provider_allowlist_required": True,
+        "global_worker_compatibility_changes_forbidden": True,
+        "requires_physical_and_dash_verification": True,
+        "requires_separate_activation_approval": True,
+    }
+    for key, expected_value in expected.items():
+        require_equal(gw.get(key) if isinstance(gw, dict) else None,
+                      expected_value, "shared_magnetra_gateway." + key)
+    for old in ("rock64/install-eztv-tunnel.sh",
+                "rock64/magnetra-eztv-tunnel.service",
+                "rock64/test_eztv_tunnel_install.py"):
+        if (ROOT / old).exists():
+            fail("obsolete per-indexer EZTV tunnel artifact must be removed: " + old)
+    for required in ("docs/SHARED_MAGNETRA_GATEWAY.md",
+                     "rock64/check-shared-tunnel.sh",
+                     "rock64/test_shared_tunnel_preflight.py"):
+        require_file(ROOT / required)
+    docs = (ROOT / "docs/SHARED_MAGNETRA_GATEWAY.md")
+    if docs.is_file() and "ONE existing Cloudflare Tunnel" not in docs.read_text(encoding="utf8"):
+        fail("shared gateway architecture docs must prohibit per-indexer tunnels")
+
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
@@ -811,6 +844,7 @@ def main() -> int:
         check_web_parity_and_companion(config)
         check_btdigg_residential_gateway(config)
         check_eztv_residential_gateway(config)
+        check_shared_magnetra_gateway(config)
 
     if ERRORS:
         print("Project invariant check FAILED:", file=sys.stderr)

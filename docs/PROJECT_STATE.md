@@ -771,3 +771,12 @@ same-zone 1042 workaround or global compatibility flag changes and
 PWA deployment remain a **separate future approval gate**. No new
 Cloudflare Tunnel/DNS/secret/real Rock64 service creation has been
 proven from this chat yet.
+
+
+## 2026-10-15 — correction from owner: NEVER create a Cloudflare Tunnel per indexer
+
+Owner explicitly rejected continuing the dedicated EZTV Tunnel as an independent connector and specified **one shared solution for the remaining failing indexers**. This supersedes the previous owner GO for one EZTV-specific tunnel. **Do NOT execute the old PR #48 EZTV installer or create a new EZTV Tunnel/DNS record**. The GitHub-only installer and optional EZTV tunnel systemd template/test are removed in a new guarded PR; this change does NOT stop/delete/restart any physical Rock64 service or alter its existing tunnel. The proven authenticated EZTV local gateway at 127.0.0.1:8797 stays untouched (100/100 same-IMDb real magnet metadata); BTDigg 8796 stays untouched.
+
+Architecture: reuse the **existing BTDigg Cloudflare Tunnel connector** and its current BTDigg published application unchanged; after verifying Dashboard management mode and physical service state, plan ONE additional published hostname magnetra-rock64.alexlab.media pointing to ONE future authenticated loopback dispatcher on 127.0.0.1:8798. Dispatcher can serve EZTV (via current 8797) and additional providers only after verification; no tunnel/DNS change per provider. No dispatcher is deployed yet. A new read-only rock64/check-shared-tunnel.sh preflight checks service states, listener counts and unauth protected health HTTP codes without leaking credentials. Cloudflare supports many hostnames to local services on one tunnel. Same-zone Worker fetch error 1042 needs isolated staging check; do not globally add compatibility flags that affect existing Flud/BTDigg. Sources with residential Rock64 HTTP 403 remain blocked regardless of a shared tunnel, requiring independent source validation, no misattributed fallback. Source-specific proxies/egress are not authorized or installed. Current legacy optional EZTV Worker host and invariant are inactive proposals that require migration in a future gated PR before any Worker secret/deploy.
+
+See docs/SHARED_MAGNETRA_GATEWAY.md. No new Tunnel, route, DNS, Worker Secret, PWA deploy, VPN/global network configuration, or paid service is authorized by this correction without staged verification.
