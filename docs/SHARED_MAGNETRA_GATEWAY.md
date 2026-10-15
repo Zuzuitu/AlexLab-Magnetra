@@ -208,3 +208,10 @@ no-auth 401 and staged Worker→Tunnel 1042 check. Never modify
 global `global_fetch_strictly_public`/network compatibility to
 work around same-zone 1042. No Worker Secret or PWA production
 deploy before isolated end-to-end proof and separate consent.
+
+
+## 2026-10-16 — guarded install and genuine acceptance added to GitHub source
+
+The new `rock64/install-magnetra-gateway.sh` implements a FIRST-install-only, explicit-root-opt-in path for 8798. It guards root-owned EZTV token reuse, current healthy 8796/8797, 8798 port collision, destination collisions and loaded unit conflicts. It creates ONLY dedicated new central paths/unit, generates a separate token, and rolls back those newly created paths if startup/health validation fails. It does not manage Cloudflare, rotate any old token, restart any existing service or deploy the PWA.
+
+The new `rock64/check-magnetra-gateway.py` has `--smoke` for local no-upstream 401/200 and service-state checks; its default run makes bounded requests to a source-owned EZTV recent/filtered endpoint and checks exact genuine-magnet identity from source through 8797 and 8798. Source failures or no positive sample are not successes. Offline fixtures validate identity/count mismatch handling without actual provider calls. No IDs/magnets/titles/tokens printed. Install is **NOT automatically executed by CI or merging**. Do not add the second Published application before explicit authorization and a positive real Rock64 acceptance.
