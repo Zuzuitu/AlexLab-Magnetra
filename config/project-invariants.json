@@ -163,7 +163,7 @@
   },
   "eztv_residential_gateway": {
     "upstream_api": "https://eztvx.to/api/get-torrents",
-    "worker_secret_name": "EZTV_GATEWAY_TOKEN",
+    "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
     "rock64_secret_name": "MAGNETRA_EZTV_TOKEN",
     "loopback_listener": "127.0.0.1:8797",
     "allowed_provider": "eztvx",
@@ -187,6 +187,14 @@
     "authenticated_provider_allowlist_required": true,
     "global_worker_compatibility_changes_forbidden": true,
     "requires_physical_and_dash_verification": true,
-    "requires_separate_activation_approval": true
+    "requires_separate_activation_approval": true,
+    "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
+    "allowed_provider_paths": [
+      "/v1/eztvx/torrents"
+    ],
+    "worker_activated": false,
+    "dispatcher_code_staged": true,
+    "new_tunnel_installed": false,
+    "new_dns_route_created": false
   }
 }
