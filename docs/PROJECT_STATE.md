@@ -659,3 +659,40 @@ proof of parsed results; do not activate any additional gateway until source
 rows and deferred magnet resolution are verified. No new tunnel/service,
 secret, NordVPN, DNS, firewall, global route, paid service or production
 deploy is authorized. See `rock64/README_MULTI_INDEXER_EGRESS.md`.
+
+## 2026-10-15 — residential 11-provider and EZTV limit comparison (owner terminal)
+
+The owner ran the pinned 2026-10-15 diagnostics against physical Rock64:
+`torrentz` network/transport error in ~0.07 s; `uindex`, `1337x`,
+`bt4g`, `extdotto`, `torrentdatabase`, `torrentdownloads`,
+`tokyotoshokan` all returned real HTTP 403; `oxtorrent`,
+`torrent9`, `bitsearch` returned HTTP 301 **with automatic
+redirects deliberately disabled**. This is not proof any of the 301
+redirect destinations contain genuine torrent rows; 403 sources cannot
+be fixed by a gateway with the *same residential egress* without
+additional source-side evidence.
+
+EZTV source-to-gateway comparison for one genuine recent IMDb candidate:
+the unfiltered recent source endpoint was HTTP 200 with a magnet
+candidate, but direct filtered `limit=2`, direct filtered `limit=100`
+and independently authenticated loopback `limit=100` all produced
+**HTTP 200, correct IMDb echo, declared_torrents_count=0, missing
+torrents array and 0 verified magnets**. This rules out the hypothesized
+limit-100-only mismatch **for that candidate in this test**. An earlier
+positive exact-IMDb lookup remains valid evidence for a different time/
+sample; do not erase it or claim the API is permanently broken. The
+EZTV private gateway at `127.0.0.1:8797` and BTDigg gateway remain
+active. EZTV tunnel/Worker Secret and production are **NOT active**.
+
+A narrowly scoped, additional *read-only* diagnostic PR stages
+`rock64/probe-indexer-followup.py`: only the original Torrentz,
+OxTorrent, Torrent9 and BitSearch fixed URLs are queried once, safely
+reports DNS/TLS/connectivity *categories* and canonical redirect
+**hostname only** without following the destination. The same script
+samples at most four distinct genuine IMDb IDs from five official recent
+EZTV releases and checks a fixed `limit=100` filtered search once
+per ID; all output is only counts, no IDs, titles, hashes or magnets.
+This differentiates API filter inconsistency from sampling a recent
+release not indexed by the filter. Do not broaden proxies, change the
+46-indexer catalog or historic audit, bypass 403 protections, run VPN,
+change Rock64 network/services, pay for infrastructure or deploy.
