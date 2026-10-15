@@ -743,7 +743,7 @@ def check_eztv_residential_gateway(config: dict) -> None:
         "upstream_api": "https://eztvx.to/api/get-torrents",
         "legacy_inactive_worker_origin": "https://eztv-rock64.alexlab.media",
         "dedicated_cloudflare_tunnel_deprecated": True,
-        "worker_secret_name": "EZTV_GATEWAY_TOKEN",
+        "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
         "rock64_secret_name": "MAGNETRA_EZTV_TOKEN",
         "loopback_listener": "127.0.0.1:8797",
         "allowed_provider": "eztvx",
@@ -776,10 +776,13 @@ def check_eztv_residential_gateway(config: dict) -> None:
     for phrase in ('id==="eztvx"&&eztvFetcher', 'rock64EZTVFetcher(env)'):
         if phrase not in worker:
             fail("EZTV gateway missing source-scoped Worker integration: " + phrase)
-    for phrase in ("EZTV_GATEWAY_TOKEN", "https://eztv-rock64.alexlab.media",
+    for phrase in ("MAGNETRA_GATEWAY_TOKEN", "https://magnetra-rock64.alexlab.media",
+                   "/v1/eztvx/torrents",
                    "https://eztvx.to/api/get-torrents", "redirect:\"manual\""):
         if phrase not in proxy:
             fail("EZTV Rock64 Worker allowlist/auth is missing: " + phrase)
+    if "https://eztv-rock64.alexlab.media" in proxy or "env?.EZTV_GATEWAY_TOKEN" in proxy:
+        fail("obsolete per-indexer EZTV Worker route or token must not be activated")
     for phrase in ("127.0.0.1", "https://eztvx.to/api/get-torrents",
                    "MAGNETRA_EZTV_TOKEN", "hmac.compare_digest",
                    "NoRedirect", "ProxyHandler({})"):
@@ -803,6 +806,12 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "proposed_gateway_origin": "https://magnetra-rock64.alexlab.media",
         "proposed_loopback_listener": "127.0.0.1:8798",
         "gateway_deployed": False,
+        "worker_activated": False,
+        "dispatcher_code_staged": True,
+        "new_tunnel_installed": False,
+        "new_dns_route_created": False,
+        "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
+        "allowed_provider_paths": ["/v1/eztvx/torrents"],
         "legacy_btdigg_route_must_remain_unchanged": True,
         "authenticated_provider_allowlist_required": True,
         "global_worker_compatibility_changes_forbidden": True,
@@ -821,6 +830,20 @@ def check_shared_magnetra_gateway(config: dict) -> None:
                      "rock64/check-shared-tunnel.sh",
                      "rock64/test_shared_tunnel_preflight.py"):
         require_file(ROOT / required)
+
+    for required in ("rock64/magnetra_gateway.py", "rock64/magnetra-gateway.service",
+                     "rock64/test_magnetra_gateway.py", "worker/src/eztv-rock64.mjs",
+                     "worker/test/eztv-rock64.test.mjs"):
+        require_file(ROOT / required)
+    code = ROOT / "rock64/magnetra_gateway.py"
+    if code.is_file():
+        hub_source = code.read_text(encoding="utf8")
+        for fragment in ('BIND = "127.0.0.1"', 'PORT = 8798',
+                         'ROUTES = frozenset({"/v1/eztvx/torrents"})',
+                         'ProxyHandler({})', 'NoRedirect',
+                         'MAGNETRA_GATEWAY_TOKEN', 'MAGNETRA_EZTV_TOKEN'):
+            if fragment not in hub_source:
+                fail("shared dispatcher security contract missing: " + fragment)
     docs = (ROOT / "docs/SHARED_MAGNETRA_GATEWAY.md")
     if docs.is_file() and "ONE existing Cloudflare Tunnel" not in docs.read_text(encoding="utf8"):
         fail("shared gateway architecture docs must prohibit per-indexer tunnels")
