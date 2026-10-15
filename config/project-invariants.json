@@ -195,6 +195,9 @@
     "worker_activated": false,
     "dispatcher_code_staged": true,
     "new_tunnel_installed": false,
-    "new_dns_route_created": false
+    "new_dns_route_created": false,
+    "installer_code_staged": true,
+    "read_only_acceptance_code_staged": true,
+    "physical_8798_acceptance_passed": false
   }
 }
