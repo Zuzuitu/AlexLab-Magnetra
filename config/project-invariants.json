@@ -163,7 +163,6 @@
   },
   "eztv_residential_gateway": {
     "upstream_api": "https://eztvx.to/api/get-torrents",
-    "proposed_tunnel_origin": "https://eztv-rock64.alexlab.media",
     "worker_secret_name": "EZTV_GATEWAY_TOKEN",
     "rock64_secret_name": "MAGNETRA_EZTV_TOKEN",
     "loopback_listener": "127.0.0.1:8797",
@@ -174,6 +173,20 @@
     "open_proxy_forbidden": true,
     "no_cross_origin_redirects": true,
     "independent_of_btdigg_and_other_services": true,
-    "activation_requires_owner_approval": true
+    "activation_requires_owner_approval": true,
+    "legacy_inactive_worker_origin": "https://eztv-rock64.alexlab.media",
+    "dedicated_cloudflare_tunnel_deprecated": true
+  },
+  "shared_magnetra_gateway": {
+    "reuse_existing_btdigg_tunnel": true,
+    "per_indexer_new_tunnel_forbidden": true,
+    "proposed_gateway_origin": "https://magnetra-rock64.alexlab.media",
+    "proposed_loopback_listener": "127.0.0.1:8798",
+    "gateway_deployed": false,
+    "legacy_btdigg_route_must_remain_unchanged": true,
+    "authenticated_provider_allowlist_required": true,
+    "global_worker_compatibility_changes_forbidden": true,
+    "requires_physical_and_dash_verification": true,
+    "requires_separate_activation_approval": true
   }
 }
