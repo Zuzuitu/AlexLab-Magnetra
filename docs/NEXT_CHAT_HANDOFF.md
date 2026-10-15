@@ -364,3 +364,37 @@ Healthy, that ordering is also safe; do not assume UI supports it.
 **CRITICAL owner correction:** "nu mai faceam tunnel pt fiecare in parte ... solutie pt toate restul". This supersedes the formerly approved new EZTV-only Cloudflare Tunnel plan. Do **not** follow PR #48 instructions, do **not** execute install-eztv-tunnel.sh or create an EZTV-specific cloudflared unit/token/hostname. Superseding PR removes unused installer/template/test from GitHub only, with no physical changes. The existing local 127.0.0.1:8797 EZTV gateway is proven with direct=100 and authenticated local=100 genuine same-IMDb magnets and must be preserved. Existing BTDigg 8796 and its BTDigg Tunnel must not be stopped or rerouted.
 
 New target documented in docs/SHARED_MAGNETRA_GATEWAY.md: one existing BTDigg Tunnel connector + new one-time Published application magnetra-rock64.alexlab.media pointing to a future fixed-route authenticated Magnetra dispatcher on 127.0.0.1:8798. The original BTDigg hostname remains pointed at 8796. Subsequent provider fixes become dispatcher registrations, NO per-provider Cloudflare Tunnel/route. First owner step: run read-only rock64/check-shared-tunnel.sh from merged pinned commit, and confirm existing BTDigg Tunnel management mode in Cloudflare Dashboard (not token). Then stage central dispatcher and source-specific genuine HTML/magnet tests via PR/CI, with no physical install/production deploy before approval. Seven sources return HTTP 403 even from Rock64; extra Tunnel will NOT fix them. OxTorrent/Torrent9 new-host HTML tables not yet verified as torrent search rows/magnets, BitSearch HTTP 520, Torrentz transport error. PWA still preserves 46 IDs. Worker-to-Tunnel same-zone error 1042 is potential; never globally loosen Worker outbound compatibility or existing Flud/BTDigg paths. No new Tunnel/DNS/secret/host service/proxy/production deploy performed by this step.
+
+
+## 2026-10-15 — user confirms central 8798 gateway + existing BTDigg Tunnel (no new tunnels)
+
+The owner explicitly agreed to use the **existing** BTDigg Tunnel,
+preserving its current hostname->8796 route, then later add **one**
+Published application `magnetra-rock64.alexlab.media` ->
+`127.0.0.1:8798`. Verify real tunnel's Cloudflare Dashboard
+mode/config, physical Rock64 port/service states, and Worker same-zone
+1042 before activation. No service/DNS changes yet.
+
+The staged implementation branch adds:
+`rock64/magnetra_gateway.py` and separate optional
+`rock64/magnetra-gateway.service` template + localhost-only
+tests, with exactly one authenticated provider route
+`/v1/eztvx/torrents?imdb_id=NNN`; it forwards to the
+existing loopback EZTV 8797 using its independently private
+`MAGNETRA_EZTV_TOKEN`. Hub uses a **new, different**
+`MAGNETRA_GATEWAY_TOKEN`, 8798 loopback only, no open proxy,
+no arbitrary provider IDs, no logging identities/magnets/tokens,
+no cache/retry/redirect, 1MB response limit and strict IMDb
+validation. Worker optional EZTV adapter stages the **central**
+origin and new hub secret, never the abandoned EZTV-only hostname;
+no PWA release or Cloudflare Worker Secret provisioned.
+
+**First user terminal action** after PR merge: obtain pinned
+`rock64/check-shared-tunnel.sh` (not root-required), run on physical
+Rock64 and share only high-level states/listener counts/unauth
+health codes. Separately verify in Cloudflare Dashboard existing
+BTDigg Tunnel's management mode and ability to add Published
+application, without clicking save or changing route. Do not run
+old EZTV-only tunnel installer from PR #48. No new hub installer
+yet; develop after physical preflight. The 46 original providers
+and unchanged BTDigg/Flud/Plex/NexaPanel/CalciDatum are protected.

@@ -108,3 +108,52 @@ the original BTDigg tunnel connector or local services.
 Source Cloudflare docs:
 https://developers.cloudflare.com/tunnel/concepts/routing/
 https://developers.cloudflare.com/workers/observability/errors/
+
+
+## 2026-10-15 — STAGED implementation; NOT installed or publicly routed
+
+With the owner's explicit confirmation to **reuse the existing tunnel and
+preserve its BTDigg route**, new isolated code is staged under:
+`rock64/magnetra_gateway.py` (new optional 127.0.0.1:8798 dispatcher),
+`rock64/magnetra-gateway.service` (optional standalone systemd template,
+NOT installed), `rock64/test_magnetra_gateway.py` (offline/fake and
+ephemeral-localhost-only unit tests). **No installer was executed**; no
+root token, DNS record, tunnel route or new daemon exists as a result
+of repository changes.
+
+The new dispatcher initially supports **ONE exact provider-specific**
+authenticated GET endpoint:
+`GET /v1/eztvx/torrents?imdb_id=<5-12 digits>`. It checks its own
+private `MAGNETRA_GATEWAY_TOKEN` first; on positive validation it
+makes an authenticated direct *loopback-only* GET to the existing
+`127.0.0.1:8797/v1/torrents?imdb_id=...` with the separate
+`MAGNETRA_EZTV_TOKEN`. These two secrets must differ. All tokens stay
+on server processes, never in Git, PWA client assets, query strings or
+logs. Unlike a URL proxy, arbitrary URLs, extra parameters, other
+paths or providers are rejected. The response is JSON with the
+original IMDb echo, matching IMDb rows and genuine magnet syntax
+verified, size-capped at 1MB and no retry/cache; source 403/429/504
+are preserved without fabricated fallback. Upstream EZTV's existing
+per-query rate limiting and RAM-only cache are left alone.
+Port 8796/Btdigg is **not referenced by the dispatcher** and its
+Cloudflare route is untouched.
+
+The Cloudflare Worker optional EZTV adapter
+`worker/src/eztv-rock64.mjs` is *staged* to call
+`https://magnetra-rock64.alexlab.media/v1/eztvx/torrents` only when
+new server-side Worker Secret `MAGNETRA_GATEWAY_TOKEN` is configured
+**after** a distinct activation approval. The retired
+`EZTV_GATEWAY_TOKEN` does NOT enable the old EZTV-only hostname.
+No actual PWA deployment accompanies a PR merge.
+
+Next actual owner milestone is still **read-only**
+`rock64/check-shared-tunnel.sh` on physical Rock64 and a private
+Cloudflare Dashboard check that the existing BTDigg tunnel is
+remotely managed and allows a new Published application, without
+changing its existing hostname/route. The physical hub installation
+requires **separate opt-in** after this preflight; then an isolated
+same-IMDb 100/100 genuine-magnet loopback acceptance check; only then
+add ONE additional hostname route to 8798 using the *existing*
+tunnel connector, test unauthenticated health HTTP 401 and isolated
+Worker-to-Tunnel connectivity/same-zone 1042. Only after all these
+gates may owner authorize Worker secret and production deploy.
