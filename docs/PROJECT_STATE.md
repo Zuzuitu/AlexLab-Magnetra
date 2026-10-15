@@ -737,3 +737,37 @@ origin policy**. Preserve BTDigg, Flud and all 46 indexers.
 Additional safe, fixed-host canonical redirect probes, each without following redirects: `www.oxtorrent.co` HTTP 200 with 3 table rows / 0 observed magnet anchors (`LAYOUT_HINT_ONLY`); `www7.torrent9.to` HTTP 200 with 4 table rows / 0 observed magnet anchors (`LAYOUT_HINT_ONLY`); `bitsearch.eu` HTTP 520 (`HTTP_ERROR`). **HTML table rows are NOT validated torrent results**, and no deferred magnet on details pages is yet verified. No origin catalog change is authorized. `torrentz2.nz` previously yielded pre-HTTP TRANSPORT_FAILURE, and seven other sources still got 403 even on Rock64.
 
 **Next action is an explicitly owner-approved independent Cloudflare Tunnel**, proposed fixed hostname `eztv-rock64.alexlab.media` routed to local `127.0.0.1:8797`, using only the isolated `magnetra-eztv-tunnel.service` (template currently not installed). Official Cloudflare Tunnel run docs say `TUNNEL_TOKEN_FILE` / `--token-file` is available in cloudflared **2025.4.0+** for remotely managed tunnels; installed Rock64 version/flag support must be read-only checked before enabling. The existing binary path observed on this machine is `/usr/local/bin/cloudflared`. Never run `cloudflared service install` (could replace global unit), never paste token in chat/repo, never expose the new origin without a bearer secret. Tunnel creation, route/DNS change, protected credential placement, Worker secret `EZTV_GATEWAY_TOKEN`, deploy and potential Worker-to-Tunnel same-zone 1042 testing each remain **NOT DONE / need explicit owner permission**, with independent rollback and no global compatibility flags changed. `index.alexlab.media` production has **not** been deployed from this PR, and no new indexer gateway was installed. Preserve BTDigg, Flud/Plex/NexaPanel/CalciDatum and the 46 providers.
+
+
+## 2026-10-15 — owner approved dedicated EZTV Cloudflare Tunnel and DNS ONLY
+
+The owner answered **“Da”** explicitly to the proposal to set up
+a **new, independent** Cloudflare Tunnel with public hostname
+`eztv-rock64.alexlab.media`, connected only to
+`http://127.0.0.1:8797`, including its DNS route, **WITHOUT** yet
+activating Magnetra production PWA. No payment, account upgrade,
+shared/global cloudflared changes, Worker secret or production release
+was approved.
+
+The assistant has GitHub access but **no direct Cloudflare account
+management connector or SSH execution into physical Rock64**.
+Accordingly, a guarded optional dedicated
+`rock64/install-eztv-tunnel.sh` is staged through a PR; the owner
+must create the tunnel and Published application route in their
+Cloudflare Dashboard, retain the sensitive tunnel token privately
+and physically execute the installer with the new token typed into
+a hidden terminal prompt. Use the existing independent
+`rock64/magnetra-eztv-tunnel.service` template with
+`LoadCredential` and `TUNNEL_TOKEN_FILE`, supported with cloudflared
+2025.4.0+, and local `/usr/local/bin/cloudflared` version must be
+verified before use. Stop on older binary, existing token or unit
+collision. **Do not run `cloudflared service install`** because it may
+replace a shared service. DNS CNAME is created as part of the
+Cloudflare Published application route; check for hostname conflicts.
+After activation demand independent service active, Cloudflare tunnel
+Healthy and unauthenticated public `/healthz` HTTP 401,
+while BTDigg remains active. Production Worker Secret,
+same-zone 1042 workaround or global compatibility flag changes and
+PWA deployment remain a **separate future approval gate**. No new
+Cloudflare Tunnel/DNS/secret/real Rock64 service creation has been
+proven from this chat yet.
