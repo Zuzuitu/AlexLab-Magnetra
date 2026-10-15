@@ -157,3 +157,54 @@ add ONE additional hostname route to 8798 using the *existing*
 tunnel connector, test unauthenticated health HTTP 401 and isolated
 Worker-to-Tunnel connectivity/same-zone 1042. Only after all these
 gates may owner authorize Worker secret and production deploy.
+
+
+## 2026-10-16 — real physical preflight & Dashboard: NEXT STEP IS 8798 INSTALLER PR
+
+Owner completed read-only physical preflight from main
+`7129adfaa076c7cd2dcc2650913332a3de6f019e`:
+`magnetra-btdigg.service=active`,
+`magnetra-btdigg-tunnel.service=active`,
+`magnetra-eztv.service=active`,
+`magnetra-eztv-tunnel.service=inactive`;
+one TCP listener each on `8796` and `8797`, both return
+unauthenticated HTTP `401`. There is **no** listener on `8798`
+(and no installed new hub has been demonstrated).
+The physical check did not mutate host services and revealed no tokens.
+
+Cloudflare screenshots of the existing
+`magnetra-btdigg-rock64` tunnel show **1 active replica**,
+**1 Published application**, the unchanged
+`btdigg-rock64.alexlab.media` → `http://127.0.0.1:8796`,
+and the `Add route` action on the SAME tunnel. The connector
+type is `cloudflared`; `Remotely managed` is not explicitly
+labeled in the screenshots. There is no new route or DNS record;
+`Rotate token` must NOT be used. This confirms the necessary
+current tunnel/route state; do not ask owner to recreate a tunnel.
+
+The owner confirmed ONE new future hostname/route
+`magnetra-rock64.alexlab.media` →
+`http://127.0.0.1:8798` to be added *only after* local hub
+acceptance is positive and after separate approval. **Do not click
+Add route yet.** Existing BTDigg route, process, credentials and
+cloudflared global services remain unchanged.
+
+PR #50 code for `rock64/magnetra_gateway.py` and the isolated
+`rock64/magnetra-gateway.service` template is in main, tested
+offline (76 Node / 55 Python plus Android Debug/Staging).
+The 8798 hub has NOT been installed physically; next coder step
+is a separately reviewed guarded root-opt-in installation and
+local authenticated same-IMDb EZTV acceptance checker.
+Only `eztvx` is currently an accepted hub provider route.
+Original localhost 8797 was previously proven to return 100/100
+genuine matching magnet entries for same IMDb as official EZTV.
+Do not claim that 8798 already passed a real-world test.
+
+After owner-approved 8798 physical install, the acceptance sequence
+is local authenticated health, same-source-positive 8797→8798 real
+magnet-count equality and 401 on unauthorized health, BTDigg
+regression, then one new Published application route, public
+no-auth 401 and staged Worker→Tunnel 1042 check. Never modify
+global `global_fetch_strictly_public`/network compatibility to
+work around same-zone 1042. No Worker Secret or PWA production
+deploy before isolated end-to-end proof and separate consent.
