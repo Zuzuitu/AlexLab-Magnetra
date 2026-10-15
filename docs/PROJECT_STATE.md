@@ -965,3 +965,14 @@ shared cloudflared units, the existing BTDigg tunnel + its hostname,
 environment, private IMDb IDs, magnet URLs, hashes or downloaded
 torrent data. GitHub changes via scoped PR and green CI, no implied
 production release.
+
+
+## 2026-10-16 — central 8798 installer and acceptance STAGED; physical activation pending
+
+After verifying main at `05239e212f75638f93ce3987efbea445ef00f6f6`, the owner-requested next implementation is isolated to a new review branch/PR. New source files: `rock64/install-magnetra-gateway.sh` and `rock64/check-magnetra-gateway.py`, plus offline regression tests in `rock64/test_magnetra_install.py`. The established `rock64/magnetra_gateway.py` and `rock64/magnetra-gateway.service` remain the actual central dispatcher and template, without modification of the existing BTDigg, EZTV, tunnel or PWA.
+
+The opt-in first-install script refuses pre-existing destination directories/unit, symlinks, a loaded service or occupied 8798 port. It verifies pre-existing BTDigg, BTDigg tunnel and EZTV units, pre-existing unauthenticated 401 on 8796 and 8797, validates the root-owned local EZTV credential WITHOUT displaying it, validates the isolated systemd unit, and runs offline unit tests before writes. Only after these checks does it create `/opt/magnetra-gateway`, `/etc/magnetra-gateway` and `magnetra-gateway.service`; it generates a separate central token with secure randomness, reuses the existing token file read-only, enables only the new unit, runs an authenticated/unauthenticated 8798 smoke test and performs dedicated-path rollback on failure. CPUQuota=20%, MemoryMax=128M and systemd sandboxing remain.
+
+The separate read-only acceptance checker (after explicit physical install approval) checks existing service health, new 8798 authentication and genuine EZTV source metadata, then compares the **exact magnet multiset and counts for the same real IMDb** through original EZTV API, current authenticated 8797 and new authenticated 8798. It prints only PASS/FAIL, stages, and aggregate counts; no search ID, title, hash, magnet, response body or token. It does not download torrents or alter system state. It treats missing positive sources as UNVERIFIED, and does not invent successes. Installer runs `--smoke` only; real-source acceptance must be run explicitly afterward.
+
+**Activation gates remain unchanged:** review + CI + PR integration, separate owner agreement to install on Rock64, successful physical read-only acceptance, separate agreement for ONE additional hostname on the existing `magnetra-btdigg-rock64` tunnel, isolated Worker-to-Tunnel/1042 verification, and finally explicitly approved Worker secret and protected `[deploy-pwa]` release. `gateway_deployed=false`, `worker_activated=false` and `new_dns_route_created=false` remain valid. The historical 13/12/21 source audit does not change.
