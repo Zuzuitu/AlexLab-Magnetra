@@ -186,7 +186,11 @@ or Flud tunnel. Add a **Published application** route under Routes:
   route; do not replace an unrelated DNS record.
 
 Cloudflare creates the tunneled DNS CNAME when you add a Published
-application route through the Dashboard. Do not manually create a
+application route through the Dashboard. **If Cloudflare requires the
+connector to become Healthy before the Routes step, first install/start
+the dedicated tunnel on Rock64 using its new token (below), click
+Continue in Dashboard, and only then add this Published application route.**
+Do not execute the Dashboard's suggested global service installer. Do not manually create a
 second DNS record unless the Dashboard shows an actionable error.
 
 **Do not run** the Dashboard's `cloudflared service install <TOKEN>`
@@ -196,7 +200,9 @@ never paste it into ChatGPT, GitHub or shell history.
 
 ### Dedicated Rock64 install (user physically runs after above)
 
-Obtain `rock64/install-eztv-tunnel.sh` and
+After creating the new tunnel and obtaining its private token (the
+Published application route can follow after the connector is Healthy),
+obtain `rock64/install-eztv-tunnel.sh` and
 `rock64/magnetra-eztv-tunnel.service` from **the same merged, pinned
 GitHub commit**, in the same temporary folder. Execute
 `sudo bash install-eztv-tunnel.sh` from that folder, interactively.
