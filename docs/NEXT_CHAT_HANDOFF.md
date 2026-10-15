@@ -351,3 +351,9 @@ run manually, verify Cloudflare Tunnel Healthy and HTTPS
 unauthenticated `/healthz` HTTP 401; do not claim completion based
 on code alone. Optional later Worker/1042/prod integration needs
 explicit further approval. Read `rock64/README_EZTV.md`.
+
+Cloudflare official Dashboard workflow: first create tunnel and obtain
+its private token; run new separate Rock64 connector installer; after
+connector becomes Healthy click Continue and add Published application
+route + automatic CNAME. If Dashboard permits route before connector
+Healthy, that ordering is also safe; do not assume UI supports it.
