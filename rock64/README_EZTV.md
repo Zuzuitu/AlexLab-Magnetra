@@ -156,3 +156,99 @@ entering Worker Secret `EZTV_GATEWAY_TOKEN` and owner-approved
 `[deploy-pwa]` production deployment, and retain independent rollback.
 Source reference for token-file requirements:
 `https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/run-parameters/`.
+
+
+## 2026-10-15 — approved scope: NEW tunnel and DNS only, not production PWA
+
+Owner explicitly approved creating the **separate** Cloudflare Tunnel plus
+`eztv-rock64.alexlab.media` DNS route, not a Cloudflare Worker production
+release, paid services, existing gateway changes or any other Rock64
+component. Local authenticated source-to-gateway proof is 100 original
+matching magnets direct and 100 matching magnets via 127.0.0.1:8797
+for the same real IMDb. No more repeated EZTV sampling is necessary.
+
+### Cloudflare Dashboard (account-owner action)
+
+No ChatGPT Cloudflare management integration/SSH credentials are present;
+do not claim remote creation or service activation. With the account
+that owns the `alexlab.media` zone, open
+[Cloudflare Dashboard](https://dash.cloudflare.com/) >
+**Networking > Tunnels > Create Tunnel**. Choose a **new remotely
+managed** tunnel named `Magnetra-EZTV-Rock64`, not an existing BTDigg
+or Flud tunnel. Add a **Published application** route under Routes:
+
+- Hostname: `eztv-rock64.alexlab.media` (subdomain `eztv-rock64`
+  under the existing `alexlab.media` zone).
+- Service URL: `http://127.0.0.1:8797`, protocol HTTP.
+- No Access policies for this trial; the origin itself authenticates
+  all requests including health, and rejects unauthenticated requests.
+- Check for **existing conflicting DNS records** before adding the
+  route; do not replace an unrelated DNS record.
+
+Cloudflare creates the tunneled DNS CNAME when you add a Published
+application route through the Dashboard. **If Cloudflare requires the
+connector to become Healthy before the Routes step, first install/start
+the dedicated tunnel on Rock64 using its new token (below), click
+Continue in Dashboard, and only then add this Published application route.**
+Do not execute the Dashboard's suggested global service installer. Do not manually create a
+second DNS record unless the Dashboard shows an actionable error.
+
+**Do not run** the Dashboard's `cloudflared service install <TOKEN>`
+command; it can conflict with other globally managed cloudflared
+services on Rock64. The remotely managed token is a sensitive secret;
+never paste it into ChatGPT, GitHub or shell history.
+
+### Dedicated Rock64 install (user physically runs after above)
+
+After creating the new tunnel and obtaining its private token (the
+Published application route can follow after the connector is Healthy),
+obtain `rock64/install-eztv-tunnel.sh` and
+`rock64/magnetra-eztv-tunnel.service` from **the same merged, pinned
+GitHub commit**, in the same temporary folder. Execute
+`sudo bash install-eztv-tunnel.sh` from that folder, interactively.
+The optional installer:
+
+- checks root privilege, installed `/usr/local/bin/cloudflared`
+  `>=2025.4.0`, explicit `--token-file` help support, original
+  EZTV and BTDigg service activity, local 8797 protected 401;
+- refuses replacing any existing token or unit and checks the
+  exact dedicated systemd template;
+- prompts for the new tunnel token **without terminal echo** using
+  Python's getpass, stores it only in root-only
+  `/etc/magnetra-eztv/tunnel-token` (mode 0600);
+- installs/enables/starts **only** the optional
+  `magnetra-eztv-tunnel.service` with `LoadCredential` isolated from
+  other cloudflared instances, without editing DNS, gateways,
+  global VPN/Tailscale/routes/firewall or other projects.
+
+If token-file or version checks fail, **stop**; do not update the
+shared global cloudflared binary automatically. Unit startup only
+indicates the local process runs; verify that the newly created
+tunnel is **Healthy** in the Cloudflare Dashboard.
+
+### Public boundary verification before any Worker config
+
+From the Rock64 or another network, without credentials:
+```bash
+curl --max-time 10 -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+  https://eztv-rock64.alexlab.media/healthz
+```
+Expected HTTP **401** from the *origin*, proving the protected
+health route is reachable through HTTPS Tunnel. A public 200 without
+Authorization is **not** the intended security posture; investigate
+before progressing. 502/530/1033/other errors are *not* success.
+Never include the gateway token in public chat or command history.
+
+The optional Worker EZTV gateway code already exists but is
+disabled without a separate Worker Secret `EZTV_GATEWAY_TOKEN`.
+**Do not configure that secret or deploy** the PWA under this
+approval. Later isolated Worker-to-Tunnel proof may encounter
+same-zone Worker error 1042. Do NOT modify
+`global_fetch_strictly_public` or compatibility flags globally, since
+other projects rely on the existing fetch/network behavior.
+Protect the rollback scope: disable only `magnetra-eztv-tunnel.service`
+if required; do not touch BTDigg/Flud or existing tunnels.
+
+Docs: https://developers.cloudflare.com/tunnel/get-started/ ;
+https://developers.cloudflare.com/tunnel/reference/tunnel-tokens/ ;
+https://developers.cloudflare.com/tunnel/configuration/ .

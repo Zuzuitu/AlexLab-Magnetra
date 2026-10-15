@@ -319,3 +319,41 @@ Owner ran latest read-only scripts from `35d1b47e406eaf0e4e9deda5d313eae21ca8bdb
 Original off-origin 301 target checks from residential Rock64: OxTorrent `www.oxtorrent.co` HTTP 200 / only 3 generic HTML table rows / 0 magnet anchors; Torrent9 `www7.torrent9.to` HTTP 200 / only 4 generic table rows / 0 magnet anchors; BitSearch `bitsearch.eu` HTTP 520. Nothing is verified as a genuine searchable torrent result, and no provider origins or parsers should yet be silently modified. Torrentz transport failed, seven others 403 even on Rock64.
 
 Next practical milestone: request **explicit owner permission to create a NEW Cloudflare-managed tunnel and DNS route** for `eztv-rock64.alexlab.media` to local `http://127.0.0.1:8797`, then separately activate only `magnetra-eztv-tunnel.service` with private tunnel token stored outside GitHub and chat. Existing `/usr/local/bin/cloudflared` must be checked for version 2025.4+ / token-file support per official docs. `rock64/magnetra-eztv-tunnel.service` is a standalone template that uses `LoadCredential=tunnel-token` and `TUNNEL_TOKEN_FILE=%d/tunnel-token`; do not use globally destructive `cloudflared service install`. Monitor Worker-to-Tunnel same-zone 1042 with an isolated test and **never enable global fetch compatibility flags** affecting unrelated projects without explicit approval. Worker `EZTV_GATEWAY_TOKEN` and a protected `[deploy-pwa]` release only after tunnel proof and separate consent; no live tunnel, DNS or Worker secret is known to exist yet. No paid/cloudflare upgrade authorization, no VPN/global routing changes.
+
+
+## 2026-10-15 — explicit owner GO for independent EZTV Tunnel/DNS, PWA deployment held
+
+Owner replied **Da** to creating a NEW Cloudflare Tunnel plus
+`eztv-rock64.alexlab.media` DNS route pointing only to
+`127.0.0.1:8797`. Scope strictly excludes production PWA deploy,
+Worker Secret provisioning, paid upgrades, global `cloudflared`
+service install, shared routes, existing BTDigg, Flud, Plex,
+NexaPanel and CalciDatum. The earlier local same-IMDb test PASSED
+with 100/100 genuine magnet metadata via authenticated 8797;
+BTDigg gateway is also active.
+
+There is no Cloudflare connector or Rock64 SSH in this chat, so
+actual account/host changes are not done. A newly staged
+`rock64/install-eztv-tunnel.sh` is root-opt-in and prompts
+invisibly for only the new dedicated tunnel token, stores it mode
+0600 at `/etc/magnetra-eztv/tunnel-token`, refuses overwrites,
+checks `/usr/local/bin/cloudflared` version 2025.4.0+,
+`--token-file` support, EZTV/BTDigg active and local health 401,
+and installs **only** `magnetra-eztv-tunnel.service` from the
+existing isolated template. Owner uses Cloudflare Dashboard
+Networking > Tunnels > Create Tunnel, name
+`Magnetra-EZTV-Rock64`, published application hostname
+`eztv-rock64.alexlab.media`, origin
+`http://127.0.0.1:8797`, automatic CNAME. Do NOT run
+Dashboard `cloudflared service install TOKEN` or paste tokens
+into chat/GitHub. Obtain both files from same pinned merged commit,
+run manually, verify Cloudflare Tunnel Healthy and HTTPS
+unauthenticated `/healthz` HTTP 401; do not claim completion based
+on code alone. Optional later Worker/1042/prod integration needs
+explicit further approval. Read `rock64/README_EZTV.md`.
+
+Cloudflare official Dashboard workflow: first create tunnel and obtain
+its private token; run new separate Rock64 connector installer; after
+connector becomes Healthy click Continue and add Published application
+route + automatic CNAME. If Dashboard permits route before connector
+Healthy, that ordering is also safe; do not assume UI supports it.
