@@ -817,3 +817,151 @@ Worker secret, staging same-zone 1042 test, paid infrastructure,
 network/VPN changes, and PWA production deploy are **NOT performed**.
 Run the merged read-only `rock64/check-shared-tunnel.sh` next and
 verify Dashboard management mode before any physical installation.
+
+
+## 2026-10-16 — OWNER ROCK64 + EXISTING CLOUDFLARE DASHBOARD PROOF (CURRENT CHECKPOINT)
+
+The user provided **real read-only output** from
+`rock64/check-shared-tunnel.sh` pinned to merged
+`7129adfaa076c7cd2dcc2650913332a3de6f019e`:
+
+```text
+magnetra-btdigg.service: active
+magnetra-btdigg-tunnel.service: active
+magnetra-eztv.service: active
+magnetra-eztv-tunnel.service: inactive
+port_8796_listener_count: 1
+port_8797_listener_count: 1
+port_8798_listener_count: 0
+port_8796_health_http: 401
+port_8797_health_http: 401
+```
+
+**Interpretation:** the existing BTDigg backend, existing BTDigg
+Cloudflare Tunnel connector and existing EZTV backend are active.
+Local `8796` and `8797` are both listening and require auth.
+The planned central dispatcher `8798` has **no listener** (not
+installed/activated). The superseded `magnetra-eztv-tunnel.service`
+was reported **inactive**, not proven absent: do not enable it or
+claim it was removed from the physical host. No credentials, headers,
+magnet URLs or private IMDb IDs were included. This is a read-only
+preflight, not a public Worker-to-gateway acceptance test.
+
+**Cloudflare Dashboard screenshots supplied by owner:** The existing
+tunnel detail is `magnetra-btdigg-rock64`, connector Type
+`cloudflared`, with exactly **1 active replica** (hostname shown as
+`rock64`) and **1 Published application route**, namely
+`btdigg-rock64.alexlab.media` →
+`http://127.0.0.1:8796`. The tunnel's **Overview** route diagram
+shows an `Add route` action leading to the same existing connector;
+the `Routes` tab displays the one BTDigg route. A `Rotate token`
+control is present. **Neither `Add route` nor `Rotate token`
+has been clicked**; no second route or DNS change is documented.
+
+This confirms the exact desired single-tunnel configuration and that
+the Dashboard exposes management for additional Published application
+routes. Screenshots **do not literally display the tunnel management
+mode label** `Remotely managed` vs `Locally managed`, so do not
+claim that setting was separately proven. `Type: cloudflared` is
+the connector type, not the management-mode field. If a management-mode
+specific check is needed before activation, obtain it read-only in
+Dashboard. Preserve the existing BTDigg route without reordering,
+editing, deleting or restarting anything.
+
+**Definitive architecture, superseding all earlier per-provider
+tunnel plans:** reuse this same existing connector and keep the
+existing `btdigg-rock64.alexlab.media → 8796` route completely
+unchanged. Install a single isolated/authenticated central dispatcher
+`127.0.0.1:8798` later, then create only ONE additional Published
+application route on the **same tunnel**:
+`magnetra-rock64.alexlab.media → http://127.0.0.1:8798`.
+This extra route is **not yet created** and must not precede local
+positive functional acceptance. No extra tunnel, cloudflared
+process, provider-specific DNS route, global network change or
+paid service. New provider paths can subsequently be registered
+within the allowlisted 8798 gateway without new Cloudflare routes.
+
+**GitHub current main before this checkpoint:** PR #50 merged at
+`7129adfaa076c7cd2dcc2650913332a3de6f019e`;
+`rock64/magnetra_gateway.py` and
+`rock64/magnetra-gateway.service` are staged, NOT installed
+physically. The current code exposes only authenticated
+`GET /v1/eztvx/torrents?imdb_id=<5–12 digits>`, forwards to the
+already authenticated, proven localhost `8797` EZTV endpoint,
+uses a distinct `MAGNETRA_GATEWAY_TOKEN` (not the existing
+`MAGNETRA_EZTV_TOKEN`), rejects all arbitrary URLs/other provider
+paths, imposes response/time/concurrency limits and preserves genuine
+source/IMDb/magnet validation. Worker optional EZTV route has been
+staged to fixed `https://magnetra-rock64.alexlab.media` with
+server-side `MAGNETRA_GATEWAY_TOKEN` gating. The retired
+`EZTV_GATEWAY_TOKEN` and EZTV-specific tunnel plan are **NOT
+AUTHORIZED**. Tests for PR #50 passed: 76 Node, 55 Python, Android
+Debug and Staging. No PWA deploy was made by merging.
+
+**Previously verified EZTV physical source-to-8797 proof:** same
+genuine IMDb sample had 100 matching magnetic metadata rows directly
+from official EZTV API and 100 matching magnet-bearing rows through
+authenticated 8797 gateway. **This does not yet prove 8798**. All
+original 46 indexer identities remain. Other recoveries are separate:
+OxTorrent observed off-origin redirect to `www.oxtorrent.co`
+(HTTP 200 but only 3 generic rows, 0 magnets confirmed);
+Torrent9 to `www7.torrent9.to` (HTTP 200, 4 generic rows,
+0 magnets confirmed); BitSearch `bitsearch.eu` HTTP 520;
+Torrentz pre-HTTP transport failure, exact cause unknown;
+UIndex, 1337x, BT4G, Ext, TorrentDatabase, TorrentDownloads,
+TokyoToshokan returned HTTP 403 **even from residential Rock64**.
+Do not claim the shared gateway alone repairs blocked sources,
+fabricate results, change source attribution, follow unapproved
+off-origin redirects, or circumvent protections. Historical 46-provider
+production audit on 2026-10-13 was **13 results, 12 empty/unverified,
+21 errors**; it is not a live health statement.
+
+**Next engineering / owner workflow, in exact order:**
+
+1. Treat the Rock64 preflight and screenshots as sufficient for
+   gateway design; optionally confirm the explicit Cloudflare management
+   mode read-only, but do **not** touch any route yet.
+2. Create an independently guarded, root-opt-in installer and an
+   authenticated read-only local **8798 acceptance checker** in a new
+   branch/PR. Installer may touch ONLY
+   `/opt/magnetra-gateway`, `/etc/magnetra-gateway` and
+   `magnetra-gateway.service`, must refuse overwrites, symlinks,
+   port collisions or changing existing units; reuse existing EZTV
+   credential privately, generate different 8798 token root-only,
+   bound CPU/RAM/threads and no persistent disk cache. All tests and
+   4 main PR CI workflows required. Ask separate explicit owner
+   permission **before owner runs installer**, since that affects the
+   physical Rock64; no remote SSH access from ChatGPT.
+3. After owner-approved 8798 install, prove authenticated local
+   `/healthz`, exact same source-positive IMDb/magnet metadata via
+   `8797` and `8798`, invalid/missing authorization HTTP 401,
+   and unchanged BTDigg 8796.
+4. Only after local 8798 PASS and separate approval, in the same
+   existing Cloudflare Tunnel use `Add route` once to create
+   `magnetra-rock64.alexlab.media → http://127.0.0.1:8798`,
+   with existing BTDigg hostname/route untouched. Check public
+   unauthenticated `/healthz` gives 401 from gateway, inspect DNS
+   conflict and tunnel health. **No secrets in chat/logs**.
+5. Validate isolated **Worker → shared Tunnel** reachability in
+   staging, explicitly checking for Cloudflare same-zone **1042**.
+   Do not change global compatibility flags (notably
+   `global_fetch_strictly_public`) or BTDigg/Flud behavior. If
+   necessary design a narrowly scoped egress Worker/service binding,
+   **not a second Cloudflare Tunnel**, subject to review.
+6. Only after real end-to-end success and explicit owner approval,
+   configure server-side Worker Secret `MAGNETRA_GATEWAY_TOKEN`,
+   deploy using guarded `[deploy-pwa]`, test real EZTV results
+   and zero/403/error semantics, recheck BTDigg and Flud, and
+   maintain rollback confined to the NEW hostname route/8798.
+7. Continue source-by-source evidence-led recovery for the other
+   46-provider adapters: genuine original rows, deferred magnet
+   resolution and source-specific outbound limitations. The shared
+   dispatcher must NEVER become an open arbitrary URL proxy.
+
+**Must preserve throughout:** NexaPanel, CalciDatum, Plex, Flud/Flood
+Companion, Tailscale, NordVPN, Rock64 DNS/default route/firewall,
+shared cloudflared units, the existing BTDigg tunnel + its hostname,
+8796 and existing 8797 services. Never print/upload tokens, systemd
+environment, private IMDb IDs, magnet URLs, hashes or downloaded
+torrent data. GitHub changes via scoped PR and green CI, no implied
+production release.
