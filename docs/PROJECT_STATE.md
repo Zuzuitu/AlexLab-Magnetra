@@ -985,3 +985,20 @@ Owner executed the exact pinned main `73b916cdf811f777881a88ae17d9f6b5ae2280bb` 
 Code inspection identified a genuine **readiness race in the installer/checker design**: a `Type=simple` unit can become `active` before its loopback listener is bound, but the old smoke made a single immediate request. This is a plausible cause of the observed failure, **not a proven physical root cause**, since the historical smoke collapsed all errors into one message and no post-failure service journal was supplied.
 
 The recovery PR `fix/rock64-8798-readiness-diagnostics` adds bounded loopback-only readiness polling (connection-refused only; no retry on wrong HTTP, authentic source errors, or other transports), and safe stage-specific diagnostics for any subsequent failed health check, with regression tests. It does not change the 8798 dispatcher, systemd sandbox, existing units, tunnel, provider contracts or production routes. Await green CI and integration before retrying an owner-approved local install. No automatic root reinstall or new Cloudflare published hostname.
+
+
+## 2026-10-16 — PHYSICAL ROCK64 ACCEPTANCE PASS: 8798 INSTALLED, AUTHENTIC EZTV MAGNET PARITY 53/53
+
+**Latest operational checkpoint (supersedes the prior failed 8798 attempt for current state).** The owner ran the exact pinned `main` at `174d7e09c441f9430e14518b928f5efc4a0812e1` on the physical Rock64 and provided the terminal output. `scripts/check-project-invariants.py` PASSED. The isolated central installer preflight PASSED for existing authenticated 8796/8797 and free 8798 port; the installer-side 23 offline Python tests PASSED. The new `magnetra-gateway.service` was enabled and started, and its local smoke PASSED:
+
+- `127.0.0.1:8798/healthz`: authenticated HTTP 200, unauthenticated HTTP 401.
+- `127.0.0.1:8797/healthz`: authenticated HTTP 200, unauthenticated HTTP 401.
+- `127.0.0.1:8796/healthz`: unauthenticated HTTP 401.
+- `magnetra-btdigg.service`, `magnetra-btdigg-tunnel.service` and `magnetra-eztv.service` all remained active according to the checker.
+- Installer reported `PASS: new gateway 127.0.0.1:8798 installed; 8796/8797 retained.`
+
+**Real positive-source acceptance PASSED:** the read-only checker selected a recent genuine EZTV-supplied IMDb internally (not printed) and fetched filtered results through the same three stages. Original `eztvx.to` API: **53** matching genuine magnet rows; authenticated EZTV 8797: **53**; authenticated central 8798: **53**. The checker validated **exact magnet multiset identity**, not merely equal row counts: `PASS: exact genuine magnet multiset preserved through 8798 -> 8797`. No private IMDb, title, magnet, hash, token, or raw data was displayed.
+
+`shared_magnetra_gateway.gateway_deployed=true` and `physical_8798_acceptance_passed=true` now describe **local loopback service installation and real Rock64 acceptance only**. They do **NOT** indicate that the new public Cloudflare hostname/route or the Cloudflare Worker integration is active. `new_tunnel_installed=false`, `new_dns_route_created=false`, and `worker_activated=false` remain accurate. There is no evidence of a new published application route, Worker Secret or PWA deploy; none were performed as part of the SSH block. Keep the historic 46 indexer catalog and 13/12/21 audit unchanged.
+
+**NEXT EXPLICIT OWNER-APPROVAL GATE:** add exactly ONE additional Published application on the existing `magnetra-btdigg-rock64` Cloudflare Tunnel: `magnetra-rock64.alexlab.media` -> `http://127.0.0.1:8798`. Do not modify the pre-existing `btdigg-rock64.alexlab.media` -> `http://127.0.0.1:8796` mapping or rotate/restart its connector. After separate approval and execution, verify public HTTPS (unauthenticated `/healthz` => 401) and restricted authenticated access without disclosing the token. Only then stage the isolated Worker->Tunnel same-zone 1042 test. No global `global_fetch_strictly_public` change and no Worker Secret or `[deploy-pwa]` without later explicit approval.
