@@ -18,6 +18,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+# Python -I intentionally excludes the script directory. Import only the pinned
+# administrator-owned sibling module; do not load ambient user/site packages.
+import sys
+from pathlib import Path
+PINNED_ROOT = Path(__file__).resolve().parent
+if str(PINNED_ROOT) not in sys.path:
+    sys.path.insert(0, str(PINNED_ROOT))
 from magnetra_html_egress import HtmlEgress
 
 BIND = "127.0.0.1"
