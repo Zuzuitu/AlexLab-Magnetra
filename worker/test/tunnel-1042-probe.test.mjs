@@ -81,3 +81,18 @@ test("static probe has no confidential data, mutable origin, Worker prod route o
     assert.ok(!source.includes(forbidden), forbidden);
   }
 });
+
+
+test("Cloudflare Git Builds isolated root deploys only the temporary domain", async () => {
+  const {readFile} = await import("node:fs/promises");
+  const raw = await readFile(new URL("../probes/wrangler.jsonc", import.meta.url), "utf8");
+  const config = JSON.parse(raw);
+  assert.deepEqual(config, {
+    name: "magnetra-1042-probe",
+    main: "tunnel-1042-probe.mjs",
+    compatibility_date: "2026-10-01",
+    workers_dev: false,
+    observability: {enabled: false},
+    routes: [{pattern: "magnetra-probe.alexlab.media", custom_domain: true}]
+  });
+});
