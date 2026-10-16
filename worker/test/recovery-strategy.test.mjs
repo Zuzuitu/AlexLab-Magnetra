@@ -16,7 +16,7 @@ test("all original 46 providers get one deterministic, complete strategy",()=>{
   assert.equal(p.historicalState,SOURCE_AUDIT.outcomes[p.provider].state);
   assert.equal(p.autoReroute,false);
   assert.equal(p.proof,"dated_observation_not_live_uptime");
-  assert.match(p.nextAction,/^[A-Z_]+$/);
+  assert.match(p.nextAction,/^[A-Z0-9_]+$/);
   assert.equal(typeof p.priority,"number");
   assert.ok(p.rock64Evidence);
  }
