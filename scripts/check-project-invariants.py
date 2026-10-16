@@ -822,7 +822,10 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "worker_1042_live_authenticated_test_passed": False,
         "worker_1042_temporary_worker_cleanup_confirmed": True,
         "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
-        "allowed_provider_paths": ["/v1/eztvx/torrents"],
+        "allowed_provider_paths": ["/v1/eztvx/torrents", "/v1/oxtorrent/html", "/v1/torrent9/html"],
+        "html_8798_implementation_staged": True,
+        "html_8798_physical_update_confirmed": False,
+        "html_authenticated_worker_e2e_passed": False,
         "legacy_btdigg_route_must_remain_unchanged": True,
         "authenticated_provider_allowlist_required": True,
         "global_worker_compatibility_changes_forbidden": True,
@@ -901,11 +904,25 @@ def check_shared_magnetra_gateway(config: dict) -> None:
     if code.is_file():
         hub_source = code.read_text(encoding="utf8")
         for fragment in ('BIND = "127.0.0.1"', 'PORT = 8798',
-                         'ROUTES = frozenset({"/v1/eztvx/torrents"})',
+                         'ROUTES = frozenset({"/v1/eztvx/torrents", "/v1/oxtorrent/html", "/v1/torrent9/html"})',
                          'ProxyHandler({})', 'NoRedirect',
                          'MAGNETRA_GATEWAY_TOKEN', 'MAGNETRA_EZTV_TOKEN'):
             if fragment not in hub_source:
                 fail("shared dispatcher security contract missing: " + fragment)
+    # HTML recovery remains code-staged; existing 8798 service is not yet updated.
+    if gw.get("html_8798_implementation_staged") is True:
+        for filename in ("rock64/magnetra_html_egress.py",
+                         "rock64/test_html_egress.py",
+                         "rock64/upgrade-magnetra-gateway.sh",
+                         "worker/src/html-rock64.mjs",
+                         "worker/test/html-rock64.test.mjs"):
+            require_file(ROOT / filename)
+        worker = ROOT / "worker/src/index.mjs"
+        if worker.is_file():
+            content = worker.read_text(encoding="utf8")
+            for required in ("rock64HtmlFetcher", "resolveLegacy(provider,details,sourceFetch)"):
+                if required not in content:
+                    fail("html recovery Worker integration missing: " + required)
     docs = (ROOT / "docs/SHARED_MAGNETRA_GATEWAY.md")
     if docs.is_file() and "ONE existing Cloudflare Tunnel" not in docs.read_text(encoding="utf8"):
         fail("shared gateway architecture docs must prohibit per-indexer tunnels")
@@ -926,6 +943,8 @@ def check_all_provider_recovery(config: dict) -> None:
         "physical_403_no_benefit": ["1337x", "bt4g", "extdotto"],
         "physical_redirect_candidates": ["bitsearch", "oxtorrent", "torrent9"],
         "dated_audit_run": 38373699387,
+        "html_source_fix_staged": ["oxtorrent", "torrent9"],
+        "physical_search_to_detail_magnet_verified": ["oxtorrent", "torrent9"],
     }
     for name, value in expected.items():
         require_equal(plan.get(name) if isinstance(plan, dict) else None,
