@@ -60,7 +60,7 @@ class GatewayTests(unittest.TestCase):
     def test_allowlist_and_loopback_only(self):
         self.assertEqual(hub.BIND, "127.0.0.1")
         self.assertEqual(hub.PORT, 8798)
-        self.assertEqual(hub.ROUTES, frozenset({"/v1/eztvx/torrents"}))
+        self.assertEqual(hub.ROUTES, frozenset({"/v1/eztvx/torrents", "/v1/oxtorrent/html", "/v1/torrent9/html"}))
         self.assertEqual(hub.EZTV_UPSTREAM, "http://127.0.0.1:8797/v1/torrents")
         self.assertLessEqual(hub.MAX_THREADS, 8)
         self.assertLessEqual(hub.MAX_BYTES, 1_000_000)
@@ -208,6 +208,55 @@ class GatewayTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 t.join(timeout=3)
+
+
+    def test_html_routes_reject_unauthenticated_unknown_or_arbitrary_paths(self):
+        class Html:
+            def __init__(self):
+                self.calls = []
+            def fetch(self, provider, mode, value):
+                self.calls.append((provider, mode, value))
+                return 200, b"<html>original source</html>"
+        backend = Html()
+        server = hub.LimitedHTTPServer(("127.0.0.1", 0),
+              hub.handler_class(HUB_TOKEN, FixtureBackend(), backend))
+        t = threading.Thread(target=server.serve_forever, daemon=True)
+        t.start()
+        try:
+            def req(path, token=None):
+                client = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+                headers = {} if token is None else {"Authorization": "Bearer " + token}
+                client.request("GET", path, headers=headers)
+                response = client.getresponse()
+                result = (response.status, response.getheader("content-type"), response.read())
+                client.close()
+                return result
+            self.assertEqual(req("/v1/oxtorrent/html?mode=search&q=ubuntu")[0], 401)
+            self.assertEqual(req("/v1/oxtorrent/html?mode=search&q=ubuntu", "bad")[0], 401)
+            self.assertEqual(req("/v1/oxtorrent/html?mode=search&q=ubuntu", HUB_TOKEN),
+                             (200, "text/html; charset=utf-8", b"<html>original source</html>"))
+            self.assertEqual(req("/v1/torrent9/html?mode=detail&path=%2Ftorrent%2F3%2Fubuntu", HUB_TOKEN)[0], 200)
+            self.assertEqual(backend.calls, [
+                ("oxtorrent", "search", "ubuntu"),
+                ("torrent9", "detail", "/torrent/3/ubuntu")
+            ])
+            for path in [
+                "/v1/bitsearch/html?mode=search&q=ubuntu",
+                "/v1/oxtorrent/proxy?url=https://evil.invalid",
+            ]:
+                self.assertEqual(req(path, HUB_TOKEN)[0], 404)
+            for path in [
+                "/v1/oxtorrent/html?mode=search&q=ubuntu&url=https://evil.invalid",
+                "/v1/oxtorrent/html?mode=search&q=ubuntu&q=extra",
+                "/v1/oxtorrent/html?mode=detail&q=ubuntu",
+                "/v1/oxtorrent/html?mode=proxy&path=%2Ftorrent%2F3%2Fx",
+            ]:
+                self.assertEqual(req(path, HUB_TOKEN)[0], 400)
+            self.assertEqual(len(backend.calls), 2)
+        finally:
+            server.shutdown()
+            server.server_close()
+            t.join(timeout=3)
 
 
 if __name__ == "__main__":

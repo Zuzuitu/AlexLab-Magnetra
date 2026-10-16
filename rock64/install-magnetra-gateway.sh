@@ -12,6 +12,7 @@ done
 
 ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd -P)"
 SRC="$ROOT/rock64/magnetra_gateway.py"
+HTML_SRC="$ROOT/rock64/magnetra_html_egress.py"
 CHECK="$ROOT/rock64/check-magnetra-gateway.py"
 SERVICE="$ROOT/rock64/magnetra-gateway.service"
 DEST=/opt/magnetra-gateway
@@ -19,7 +20,7 @@ CFG=/etc/magnetra-gateway
 UNIT=/etc/systemd/system/magnetra-gateway.service
 EZTV_ENV=/etc/magnetra-eztv/gateway.env
 
-for path in "$SRC" "$CHECK" "$SERVICE"; do
+for path in "$SRC" "$HTML_SRC" "$CHECK" "$SERVICE"; do
   [[ -f "$path" && -s "$path" && ! -L "$path" ]] || die 'source checkout incomplete or symlinked'
 done
 for path in "$DEST" "$CFG" "$UNIT"; do
@@ -33,7 +34,7 @@ done
 
 # Read-only preflight: credentials, existing service health, whole-port collision.
 # Nothing is written until this entire Python preflight and offline test pass.
-python3 -B - "$SRC" "$CHECK" "$SERVICE" "$EZTV_ENV" <<'PY'
+python3 -B - "$SRC" "$HTML_SRC" "$CHECK" "$SERVICE" "$EZTV_ENV" <<'PY'
 import ast
 import http.client
 import os
@@ -43,8 +44,8 @@ import socket
 import stat
 import sys
 
-src, checker, service, env = map(pathlib.Path, sys.argv[1:])
-for path in (src, checker):
+src, html_src, checker, service, env = map(pathlib.Path, sys.argv[1:])
+for path in (src, html_src, checker):
     ast.parse(path.read_text(encoding="utf-8"), filename=path.name)
 unit = service.read_text(encoding="utf-8")
 required = (
@@ -129,6 +130,7 @@ CREATED_DEST=1
 mkdir -m 0700 -- "$CFG"
 CREATED_CFG=1
 install -m 0444 -- "$SRC" "$DEST/magnetra_gateway.py"
+install -m 0444 -- "$HTML_SRC" "$DEST/magnetra_html_egress.py"
 install -m 0444 -- "$CHECK" "$DEST/check-magnetra-gateway.py"
 python3 -B - "$CFG/gateway.env" "$EZTV_ENV" <<'PY'
 import os

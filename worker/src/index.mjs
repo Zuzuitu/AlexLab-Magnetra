@@ -7,6 +7,7 @@ import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
 import {rock64EZTVFetcher} from "./eztv-rock64.mjs";
+import {rock64HtmlFetcher} from "./html-rock64.mjs";
 
 const DEFAULT_IDS=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 // Exact endpoint allowlist: never forward to an arbitrary hostname or URL.
@@ -32,10 +33,12 @@ async function getSearch(url,env) {
  if(ids.some(id=>!hasAdapter(id)))return error("One or more selected providers are not ported yet.");
  // BTDigg and EZTV use independent opt-in private fixed-origin gateways;
  // the other 44 adapters and the Flud relay keep their existing transport.
- let btdiggFetcher,eztvFetcher;
+ let btdiggFetcher,eztvFetcher,htmlFetchers={};
  try{
   btdiggFetcher=ids.includes("btdigg")?rock64BTDiggFetcher(env):null;
   eztvFetcher=ids.includes("eztvx")?rock64EZTVFetcher(env):null;
+  for(const id of ["oxtorrent","torrent9"])
+   if(ids.includes(id))htmlFetchers[id]=rock64HtmlFetcher(id,env);
  }
  catch(e){return error(String(e?.message||e),503);}
  const results=[],errors=[],stats=[];
@@ -44,7 +47,7 @@ async function getSearch(url,env) {
    const batch=await Promise.all(ids.slice(i,i+3).map(async id=>{
      try {
        const sourceFetch=id==="btdigg"&&btdiggFetcher?btdiggFetcher:
-        id==="eztvx"&&eztvFetcher?eztvFetcher:fetch;
+        id==="eztvx"&&eztvFetcher?eztvFetcher:htmlFetchers[id]||fetch;
        const found=await searchProvider(id,q,category,sourceFetch);
        return {provider:id,results:found,count:found.length};
      } catch(e){
@@ -63,7 +66,7 @@ async function getSearch(url,env) {
  // Preserve source identities and identical hashes across providers for traceability.
  return json({query:q,category,results,stats,errors,total:results.length});
 }
-async function resolveMagnet(request){
+async function resolveMagnet(request,env){
  if(!checkSameOrigin(request))return error("Cross-origin submission not permitted.",403);
  let payload;
  try{payload=await safeBody(request,3500);}catch{return error("Invalid JSON request.");}
@@ -73,7 +76,8 @@ async function resolveMagnet(request){
  if(typeof details!=="string"||!validateLegacyDetail(provider,details))
    return error("Details URL is not in the provider allowlist.");
  try{
-   const result=await resolveLegacy(provider,details);
+   const sourceFetch=rock64HtmlFetcher(provider,env)||fetch;
+   const result=await resolveLegacy(provider,details,sourceFetch);
    return json({provider,magnet:result.magnet});
  }catch(e){
    return error("Provider could not resolve magnet: "+String(e?.message||e).slice(0,170),502);
@@ -128,7 +132,7 @@ export default {
    if(url.pathname==="/api/providers" && request.method==="GET")return json({providers:PROVIDERS.map(p=>({...p,lastAudit:auditFor(p.id),recovery:recoveryFor(p.id)})),audit:{observedAt:SOURCE_AUDIT.observedAt,query:SOURCE_AUDIT.query,workflowRunId:SOURCE_AUDIT.workflowRunId}});
    if(url.pathname==="/api/recovery-plan" && request.method==="GET")return json({summary:recoverySummary(),providers:recoveryPlan()});
    if(url.pathname==="/api/search" && request.method==="GET")return getSearch(url,env);
-   if(url.pathname==="/api/resolve" && request.method==="POST")return resolveMagnet(request);
+   if(url.pathname==="/api/resolve" && request.method==="POST")return resolveMagnet(request,env);
    if(url.pathname==="/api/companion/magnet" && request.method==="POST")return companion(request,"magnet");
    if(url.pathname==="/api/companion/status" && request.method==="POST")return companion(request,"status");
    if(url.pathname.startsWith("/api/"))return error("Not found.",404);

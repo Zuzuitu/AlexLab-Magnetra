@@ -167,7 +167,7 @@ export const LEGACY_SPECS=Object.freeze({
     "pathTemplate": "/forum/tracker.php"
   },
   "oxtorrent": {
-    "host": "https://oxtorrent.co",
+    "host": "https://www.oxtorrent.co",
     "rows": "table > tbody > tr",
     "name": "td:nth-child(1) a",
     "details": "td:nth-child(1) a",
@@ -217,7 +217,7 @@ export const LEGACY_SPECS=Object.freeze({
     "pathTemplate": "/search.php?terms=MAGNETRA_SEARCH_TOKEN&type=0&searchName=true"
   },
   "torrent9": {
-    "host": "https://www6.torrent9.to",
+    "host": "https://www7.torrent9.to",
     "rows": "table > tbody > tr",
     "name": "td:nth-child(1) a",
     "details": "td:nth-child(1) a",

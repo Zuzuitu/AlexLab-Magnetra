@@ -15,8 +15,8 @@ export const ROCK64_EVIDENCE=Object.freeze({
  bt4g:Object.freeze({kind:"blocked_from_both",detail:"rock64_http_403"}),
  extdotto:Object.freeze({kind:"blocked_from_both",detail:"rock64_http_403"}),
  bitsearch:Object.freeze({kind:"redirect_candidate",detail:"bitsearch.eu_http_520_20261016_no_verified_rows"}),
- oxtorrent:Object.freeze({kind:"redirect_candidate",detail:"www.oxtorrent.co_http_200_table_hint_only_20261016"}),
- torrent9:Object.freeze({kind:"redirect_candidate",detail:"www7.torrent9.to_http_200_table_hint_only_20261016"}),
+ oxtorrent:Object.freeze({kind:"search_detail_magnet_verified",detail:"www.oxtorrent.co_3_ubuntu_rows_1_real_detail_magnet_20261016"}),
+ torrent9:Object.freeze({kind:"search_detail_magnet_verified",detail:"www7.torrent9.to_3_ubuntu_rows_1_real_detail_magnet_20261016"}),
  torrentz:Object.freeze({kind:"transport_failure",detail:"torrentz2.nz_rock64"}),
 });
 
@@ -25,6 +25,7 @@ const POLICIES=Object.freeze({
  VERIFY_EMPTY_SAMPLE:Object.freeze({priority:65,nextAction:"REPEAT_RELEVANT_QUERY_BEFORE_DECLARING_FAILURE",gatewayEligible:false}),
  COMPARE_EGRESS:Object.freeze({priority:30,nextAction:"BOUNDED_READONLY_RESIDENTIAL_PROBE",gatewayEligible:false}),
  CHECK_REDIRECT_CANDIDATE:Object.freeze({priority:15,nextAction:"VERIFY_NEW_SOURCE_ORIGIN_AND_REAL_ROWS",gatewayEligible:false}),
+ HTML_GATEWAY_STAGED:Object.freeze({priority:10,nextAction:"VERIFY_PINNED_ROCK64_8798_UPGRADE_THEN_AUTHENTICATED_WORKER_E2E",gatewayEligible:false}),
  BLOCKED_BOTH_PATHS:Object.freeze({priority:80,nextAction:"DO_NOT_REROUTE_WITHOUT_NEW_SOURCE_EVIDENCE",gatewayEligible:false}),
  RATE_LIMITED:Object.freeze({priority:85,nextAction:"HONOR_RATE_LIMIT_NO_AUTORETRY",gatewayEligible:false}),
  UPSTREAM_FAILURE:Object.freeze({priority:90,nextAction:"VERIFY_SOURCE_UPSTREAM_STATUS",gatewayEligible:false}),
@@ -37,6 +38,7 @@ function policyFor(id,audit,evidence){
  if(id==="btdigg")return "EXISTING_GATEWAY";
  if(id==="eztvx")return "GATEWAY_READY_FOR_AUTH_TEST";
  if(evidence?.kind==="blocked_from_both")return "BLOCKED_BOTH_PATHS";
+ if(evidence?.kind==="search_detail_magnet_verified")return "HTML_GATEWAY_STAGED";
  if(evidence?.kind==="redirect_candidate")return "CHECK_REDIRECT_CANDIDATE";
  if(evidence?.kind==="transport_failure")return "LOCAL_TRANSPORT_FAILURE";
  if(audit?.state==="results")return "KEEP_OBSERVED_RESULTS";

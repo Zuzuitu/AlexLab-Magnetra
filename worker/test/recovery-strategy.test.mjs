@@ -42,7 +42,7 @@ test("real Rock64 403 blocks naive residential rerouting",()=>{
 });
 
 test("only historical redirects receive investigation, not auto-follow/host migration",()=>{
- for(const id of ["bitsearch","oxtorrent","torrent9"]){
+ for(const id of ["bitsearch"]){
   const item=recoveryFor(id);
   assert.equal(item.strategy,"CHECK_REDIRECT_CANDIDATE");
   assert.equal(item.gatewayEligible,false);
@@ -98,8 +98,9 @@ test("recovery endpoint is a static evidence plan, not a remote fetch or health 
 test("2026-10-16 Rock64 alternate-host results are not mistaken for recovered indexers",()=>{
  for(const id of ["oxtorrent","torrent9"]){
   const data=recoveryFor(id);
-  assert.equal(data.strategy,"CHECK_REDIRECT_CANDIDATE");
-  assert.match(data.rock64Detail,/http_200_table_hint_only_20261016$/);
+  assert.equal(data.strategy,"HTML_GATEWAY_STAGED");
+  assert.match(data.rock64Detail,/3_ubuntu_rows_1_real_detail_magnet_20261016$/);
+  assert.equal(data.rock64Evidence,"search_detail_magnet_verified");
   assert.equal(data.gatewayEligible,false);
   assert.equal(data.autoReroute,false);
  }

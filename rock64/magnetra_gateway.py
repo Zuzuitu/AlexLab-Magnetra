@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Future Magnetra ONE-tunnel dispatcher; NOT installed by this source file.
+"""Magnetra ONE-tunnel authenticated dispatcher, opt-in provider expansion.
 
 Only hardcoded provider paths; the first allowlisted backend is the original
 authenticated EZTV gateway on 127.0.0.1:8797. The BTDigg tunnel/8796 and
@@ -18,6 +18,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+# Python -I intentionally excludes the script directory. Import only the pinned
+# administrator-owned sibling module; do not load ambient user/site packages.
+import sys
+from pathlib import Path
+PINNED_ROOT = Path(__file__).resolve().parent
+if str(PINNED_ROOT) not in sys.path:
+    sys.path.insert(0, str(PINNED_ROOT))
+from magnetra_html_egress import HtmlEgress
 
 BIND = "127.0.0.1"
 PORT = 8798
@@ -32,7 +40,7 @@ MAGNET = re.compile(r"^magnet:\?xt=urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})(?:&|$)
 
 # Fixed route registry: adding an indexer means code review + real provider
 # search/detail evidence, never a client-specified URL or host.
-ROUTES = frozenset({"/v1/eztvx/torrents"})
+ROUTES = frozenset({"/v1/eztvx/torrents", "/v1/oxtorrent/html", "/v1/torrent9/html"})
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -112,7 +120,7 @@ class EZTVBackend:
             return 504, b""
 
 
-def handler_class(hub_token: str, eztv: EZTVBackend):
+def handler_class(hub_token: str, eztv: EZTVBackend, html=None):
     if not TOKEN.fullmatch(hub_token):
         raise ValueError("invalid central gateway credential")
 
@@ -123,9 +131,9 @@ def handler_class(hub_token: str, eztv: EZTVBackend):
         def log_message(self, fmt, *args):
             return  # no request URL, IMDb, tokens, response details in journald
 
-        def reply(self, code: int, body: bytes = b""):
+        def reply(self, code: int, body: bytes = b"", content_type="application/json"):
             self.send_response(code)
-            self.send_header("content-type", "application/json")
+            self.send_header("content-type", content_type)
             self.send_header("cache-control", "private, no-store")
             self.send_header("x-content-type-options", "nosniff")
             self.send_header("content-length", str(len(body)))
@@ -137,7 +145,7 @@ def handler_class(hub_token: str, eztv: EZTVBackend):
             if not hmac.compare_digest(self.headers.get("Authorization", ""),
                                        "Bearer " + hub_token):
                 return self.reply(401)
-            if len(self.path) > 180:
+            if len(self.path) > 350:
                 return self.reply(404)
             parts = urlsplit(self.path)
             if parts.fragment or parts.scheme or parts.netloc:
@@ -150,7 +158,22 @@ def handler_class(hub_token: str, eztv: EZTVBackend):
                 args = parse_qs(parts.query, strict_parsing=True, keep_blank_values=True)
             except ValueError:
                 return self.reply(400)
-            if set(args) != {"imdb_id"} or len(args["imdb_id"]) != 1:
+            if parts.path != "/v1/eztvx/torrents":
+                if html is None:
+                    return self.reply(503)
+                if set(args) not in ({"mode", "q"}, {"mode", "path"}):
+                    return self.reply(400)
+                if any(len(values) != 1 for values in args.values()):
+                    return self.reply(400)
+                mode = args["mode"][0]
+                key = "q" if mode == "search" else "path" if mode == "detail" else None
+                if key is None or set(args) != {"mode", key}:
+                    return self.reply(400)
+                provider = parts.path.split("/")[2]
+                status, body = html.fetch(provider, mode, args[key][0])
+                return self.reply(status, body if status == 200 else b"",
+                                  "text/html; charset=utf-8" if status == 200 else "application/json")
+            if len(self.path) > 180 or set(args) != {"imdb_id"} or len(args["imdb_id"]) != 1:
                 return self.reply(400)
             imdb = args["imdb_id"][0]
             if not IMDB.fullmatch(imdb):
@@ -200,7 +223,7 @@ def main():
     if hmac.compare_digest(hub_token, eztv_token):
         raise SystemExit("Central gateway token must differ from existing EZTV token")
     server = LimitedHTTPServer((BIND, PORT),
-                               handler_class(hub_token, EZTVBackend(eztv_token)))
+                               handler_class(hub_token, EZTVBackend(eztv_token), HtmlEgress()))
     try:
         server.serve_forever(poll_interval=0.5)
     finally:
