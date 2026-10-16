@@ -93,3 +93,17 @@ test("recovery endpoint is a static evidence plan, not a remote fetch or health 
  assert.equal(providers.length,46);
  assert.deepEqual(providers.map(p=>p.recovery),PROVIDERS.map(p=>recoveryFor(p.id)));
 });
+
+
+test("2026-10-16 Rock64 alternate-host results are not mistaken for recovered indexers",()=>{
+ for(const id of ["oxtorrent","torrent9"]){
+  const data=recoveryFor(id);
+  assert.equal(data.strategy,"CHECK_REDIRECT_CANDIDATE");
+  assert.match(data.rock64Detail,/http_200_table_hint_only_20261016$/);
+  assert.equal(data.gatewayEligible,false);
+  assert.equal(data.autoReroute,false);
+ }
+ const bitsearch=recoveryFor("bitsearch");
+ assert.match(bitsearch.rock64Detail,/http_520_20261016_no_verified_rows$/);
+ assert.equal(bitsearch.gatewayEligible,false);
+});
