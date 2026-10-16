@@ -814,6 +814,9 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "new_tunnel_installed": False,
         "new_dns_route_created": True,
         "public_unauth_https_401_verified": True,
+        "rock64_default_ipv4_dns_resolved": True,
+        "worker_1042_probe_code_staged": True,
+        "worker_1042_live_test_passed": False,
         "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
         "allowed_provider_paths": ["/v1/eztvx/torrents"],
         "legacy_btdigg_route_must_remain_unchanged": True,
@@ -825,6 +828,27 @@ def check_shared_magnetra_gateway(config: dict) -> None:
     for key, expected_value in expected.items():
         require_equal(gw.get(key) if isinstance(gw, dict) else None,
                       expected_value, "shared_magnetra_gateway." + key)
+    # A staged 1042 probe MUST remain isolated from the deployed Worker.
+    if gw.get("worker_1042_probe_code_staged") is True:
+        for filename in ("worker/probes/tunnel-1042-probe.mjs",
+                         "worker/probes/README.md",
+                         "worker/test/tunnel-1042-probe.test.mjs"):
+            require_file(ROOT / filename)
+        index = ROOT / "worker/src/index.mjs"
+        if index.is_file() and "tunnel-1042-probe" in index.read_text(encoding="utf8"):
+            fail("temporary 1042 probe must not be imported by production Worker")
+        probe = ROOT / "worker/probes/tunnel-1042-probe.mjs"
+        if probe.is_file():
+            src = probe.read_text(encoding="utf8")
+            for fragment in ("https://magnetra-rock64.alexlab.media/healthz",
+                             "PASS_UNAUTHENTICATED_401", "CLOUDFLARE_1042",
+                             "AbortSignal.timeout(8000)"):
+                if fragment not in src:
+                    fail("staged 1042 probe contract missing: " + fragment)
+            for forbidden in ("MAGNETRA_GATEWAY_TOKEN", "BTDIGG_GATEWAY_TOKEN",
+                              "global_fetch_strictly_public", "index.alexlab.media"):
+                if forbidden in src:
+                    fail("staged 1042 probe must not contain: " + forbidden)
     # Owner-authorized, verified shared route is separate from Worker activation.
     # Neither local nor public smoke proves Worker->Tunnel compatibility.
     if (gw.get("gateway_deployed") is True or
