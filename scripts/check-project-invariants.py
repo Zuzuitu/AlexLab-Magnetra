@@ -812,7 +812,8 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "worker_activated": False,
         "dispatcher_code_staged": True,
         "new_tunnel_installed": False,
-        "new_dns_route_created": False,
+        "new_dns_route_created": True,
+        "public_unauth_https_401_verified": True,
         "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
         "allowed_provider_paths": ["/v1/eztvx/torrents"],
         "legacy_btdigg_route_must_remain_unchanged": True,
@@ -824,16 +825,16 @@ def check_shared_magnetra_gateway(config: dict) -> None:
     for key, expected_value in expected.items():
         require_equal(gw.get(key) if isinstance(gw, dict) else None,
                       expected_value, "shared_magnetra_gateway." + key)
-    # Physical owner-provided acceptance is a LOCAL gateway state, not a
-    # permission to activate a public hostname, Worker secret or PWA deploy.
+    # Owner-authorized, verified shared route is separate from Worker activation.
+    # Neither local nor public smoke proves Worker->Tunnel compatibility.
     if (gw.get("gateway_deployed") is True or
             gw.get("physical_8798_acceptance_passed") is True):
         for needed in ("rock64/install-magnetra-gateway.sh",
                        "rock64/check-magnetra-gateway.py",
                        "rock64/test_magnetra_install.py"):
             require_file(ROOT / needed)
-        if gw.get("new_tunnel_installed") is not False or gw.get("new_dns_route_created") is not False or gw.get("worker_activated") is not False:
-            fail("local acceptance must not imply a new tunnel, DNS route or Worker activation")
+        if gw.get("new_tunnel_installed") is not False or gw.get("worker_activated") is not False:
+            fail("shared route acceptance must not imply a new tunnel or Worker activation")
     for old in ("rock64/install-eztv-tunnel.sh",
                 "rock64/magnetra-eztv-tunnel.service",
                 "rock64/test_eztv_tunnel_install.py"):
