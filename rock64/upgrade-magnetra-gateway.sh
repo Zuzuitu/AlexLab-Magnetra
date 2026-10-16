@@ -60,8 +60,15 @@ rollback(){
   install -m 0444 -- "$BACKUP/original.py" "$BASE/.rollback.py" || true
   mv -f -- "$BASE/.rollback.py" "$ACTIVE" || true
   rm -f -- "$HTML"
-  systemctl restart magnetra-gateway.service >/dev/null 2>&1 || true
-  printf 'STOP: central upgrade failed; original 8798 source restored. Check service status.\n' >&2
+  if systemctl restart magnetra-gateway.service >/dev/null 2>&1; then
+    if python3 -B "$ROOT/rock64/wait-magnetra-8798.py" --rollback; then
+      printf 'ROLLBACK_VERIFIED: original 8798 source restored and HTTP 401 accepted.\n' >&2
+    else
+      printf 'STOP: original source restored, but 8798 readiness UNVERIFIED. Inspect service status.\n' >&2
+    fi
+  else
+    printf 'STOP: rollback restart FAILED; original source restored but service requires inspection.\n' >&2
+  fi
  fi
  rm -rf --one-file-system -- "$BACKUP"
  exit "$rc"
@@ -74,17 +81,25 @@ install -m 0444 -- "$SOURCE" "$BASE/.gateway-new.py"
 mv -f -- "$BASE/.gateway-new.py" "$ACTIVE"
 systemctl restart magnetra-gateway.service
 systemctl is-active --quiet magnetra-gateway.service || stop 'central service restart failed'
+# Type=simple only confirms the process was launched, NOT that 8798 is listening.
+# Wait at most 12 seconds for unauthenticated GET /healthz -> 401 on localhost.
+# Only local socket connect refusals are retried; never upstream HTTP/429.
+python3 -B "$ROOT/rock64/wait-magnetra-8798.py" --post-restart ||
+  stop 'new 8798 listener did not become safely ready'
+# Existing independent BTDigg/EZTV services must still deny unauthenticated access.
 python3 -B - <<'PY'
 import http.client
-for port in (8796,8797,8798):
- c=http.client.HTTPConnection("127.0.0.1",port,timeout=3)
+for port in (8796, 8797):
+ c=http.client.HTTPConnection("127.0.0.1", port, timeout=3)
  try:
-  c.request("GET","/healthz")
+  c.request("GET", "/healthz")
   response=c.getresponse()
   response.read(512)
-  if response.status!=401:raise SystemExit(f"STOP: post-install auth changed on {port}")
- finally:c.close()
-print("POST_INSTALL_OK: unauthenticated health returns 401 for all three ports")
+  if response.status != 401:
+   raise SystemExit(f"STOP: independent gateway {port} unauthenticated health != 401")
+ finally:
+  c.close()
+print("POST_INSTALL_OK: BTDigg 8796, EZTV 8797 and central 8798 each require authentication")
 PY
 # A source-owned search + details magnet must work via the actual 8798 listener
 # before marking the upgrade complete; a failure triggers automatic rollback.
