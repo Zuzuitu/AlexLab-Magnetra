@@ -207,5 +207,29 @@
     "worker_1042_git_connected": false,
     "worker_1042_live_authenticated_test_passed": false,
     "worker_1042_temporary_worker_cleanup_confirmed": true
+  },
+  "provider_recovery_v1": {
+    "required_original_indexers": 46,
+    "planned_indexers": 46,
+    "read_only_plan": true,
+    "auto_reroute": false,
+    "worker_secret_activation": false,
+    "production_deployed": false,
+    "source_evidence_required": true,
+    "existing_verified_gateway_providers": [
+      "btdigg",
+      "eztvx"
+    ],
+    "physical_403_no_benefit": [
+      "1337x",
+      "bt4g",
+      "extdotto"
+    ],
+    "physical_redirect_candidates": [
+      "bitsearch",
+      "oxtorrent",
+      "torrent9"
+    ],
+    "dated_audit_run": 38373699387
   }
 }
