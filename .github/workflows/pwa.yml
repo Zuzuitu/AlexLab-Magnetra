@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check worker/src/index.mjs && node --check worker/src/eztv-official-api.mjs && node --check worker/src/eztv-rock64.mjs && node --check worker/src/btdigg-rock64.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/recovery-strategy.mjs && node --check worker/src/source-audit.mjs && node --check scripts/recovery-plan.mjs && node --check web/app.js && node --check web/sw.js
+        run: node --check worker/src/index.mjs && node --check worker/src/eztv-official-api.mjs && node --check worker/src/eztv-rock64.mjs && node --check worker/src/html-rock64.mjs && node --check worker/src/btdigg-rock64.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/recovery-strategy.mjs && node --check worker/src/source-audit.mjs && node --check scripts/recovery-plan.mjs && node --check web/app.js && node --check web/sw.js
       - name: Test provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
       - name: Verify offline 46-provider recovery strategy report
@@ -27,7 +27,7 @@ jobs:
       - name: Test Rock64 BTDigg gateway (loopback only, no external requests)
         run: python3 -m unittest discover -s rock64 -p 'test_*.py' -v
       - name: Validate Rock64 gateways Python syntax and guarded installers
-        run: python3 -m py_compile rock64/btdigg_gateway.py rock64/check-btdigg.py rock64/eztv_gateway.py rock64/check-eztv-gateway.py rock64/probe-more-indexers.py rock64/diagnose-eztv-filter.py rock64/probe-indexer-followup.py rock64/probe-redirect-candidates.py rock64/probe-result-details.py rock64/magnetra_gateway.py rock64/check-magnetra-gateway.py && bash -n rock64/install-btdigg.sh rock64/update-btdigg.sh rock64/install-eztv.sh rock64/check-shared-tunnel.sh rock64/install-magnetra-gateway.sh
+        run: python3 -m py_compile rock64/btdigg_gateway.py rock64/check-btdigg.py rock64/eztv_gateway.py rock64/check-eztv-gateway.py rock64/probe-more-indexers.py rock64/diagnose-eztv-filter.py rock64/probe-indexer-followup.py rock64/probe-redirect-candidates.py rock64/probe-result-details.py rock64/magnetra_html_egress.py rock64/magnetra_gateway.py rock64/check-magnetra-gateway.py && bash -n rock64/install-btdigg.sh rock64/update-btdigg.sh rock64/install-eztv.sh rock64/check-shared-tunnel.sh rock64/install-magnetra-gateway.sh rock64/upgrade-magnetra-gateway.sh
       - name: Validate provider selectors in real Cloudflare workerd runtime
         run: |
           npx --yes wrangler@4.45.4 dev --config worker/test/wrangler-selector.jsonc --port 8789 > "$RUNNER_TEMP/magnetra-selectors.log" 2>&1 &
