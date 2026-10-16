@@ -204,8 +204,8 @@
     "worker_1042_probe_code_staged": true,
     "worker_1042_live_test_passed": true,
     "worker_1042_git_build_config_staged": true,
-    "worker_1042_git_connected": true,
+    "worker_1042_git_connected": false,
     "worker_1042_live_authenticated_test_passed": false,
-    "worker_1042_temporary_worker_cleanup_confirmed": false
+    "worker_1042_temporary_worker_cleanup_confirmed": true
   }
 }
