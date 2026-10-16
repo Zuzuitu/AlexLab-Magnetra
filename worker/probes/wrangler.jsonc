@@ -1,0 +1,15 @@
+{
+  "name": "magnetra-1042-probe",
+  "main": "tunnel-1042-probe.mjs",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "observability": {
+    "enabled": false
+  },
+  "routes": [
+    {
+      "pattern": "magnetra-probe.alexlab.media",
+      "custom_domain": true
+    }
+  ]
+}

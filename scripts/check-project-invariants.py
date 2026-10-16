@@ -816,6 +816,7 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "public_unauth_https_401_verified": True,
         "rock64_default_ipv4_dns_resolved": True,
         "worker_1042_probe_code_staged": True,
+        "worker_1042_git_build_config_staged": True,
         "worker_1042_live_test_passed": False,
         "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
         "allowed_provider_paths": ["/v1/eztvx/torrents"],
@@ -830,6 +831,26 @@ def check_shared_magnetra_gateway(config: dict) -> None:
                       expected_value, "shared_magnetra_gateway." + key)
     # A staged 1042 probe MUST remain isolated from the deployed Worker.
     if gw.get("worker_1042_probe_code_staged") is True:
+        # The Git-linked temporary Worker must not deploy any production route.
+        temporary_config = ROOT / "worker/probes/wrangler.jsonc"
+        require_file(temporary_config)
+        if temporary_config.is_file():
+            try:
+                probe_config = json.loads(temporary_config.read_text(encoding="utf8"))
+            except (OSError, ValueError):
+                fail("temporary 1042 Worker config must be valid JSON")
+            else:
+                expected_config = {
+                    "name": "magnetra-1042-probe",
+                    "main": "tunnel-1042-probe.mjs",
+                    "compatibility_date": "2026-10-01",
+                    "workers_dev": False,
+                    "observability": {"enabled": False},
+                    "routes": [{"pattern": "magnetra-probe.alexlab.media",
+                                "custom_domain": True}],
+                }
+                if probe_config != expected_config:
+                    fail("temporary Worker must retain exactly one reviewed non-production domain")
         for filename in ("worker/probes/tunnel-1042-probe.mjs",
                          "worker/probes/README.md",
                          "worker/test/tunnel-1042-probe.test.mjs"):
