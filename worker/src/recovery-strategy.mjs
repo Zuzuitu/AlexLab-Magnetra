@@ -14,9 +14,9 @@ export const ROCK64_EVIDENCE=Object.freeze({
  "1337x":Object.freeze({kind:"blocked_from_both",detail:"rock64_http_403"}),
  bt4g:Object.freeze({kind:"blocked_from_both",detail:"rock64_http_403"}),
  extdotto:Object.freeze({kind:"blocked_from_both",detail:"rock64_http_403"}),
- bitsearch:Object.freeze({kind:"redirect_candidate",detail:"bitsearch.to_to_bitsearch.eu"}),
- oxtorrent:Object.freeze({kind:"redirect_candidate",detail:"oxtorrent.co_to_www.oxtorrent.co"}),
- torrent9:Object.freeze({kind:"redirect_candidate",detail:"www6.torrent9.to_to_www7.torrent9.to"}),
+ bitsearch:Object.freeze({kind:"redirect_candidate",detail:"bitsearch.eu_http_520_20261016_no_verified_rows"}),
+ oxtorrent:Object.freeze({kind:"redirect_candidate",detail:"www.oxtorrent.co_http_200_table_hint_only_20261016"}),
+ torrent9:Object.freeze({kind:"redirect_candidate",detail:"www7.torrent9.to_http_200_table_hint_only_20261016"}),
  torrentz:Object.freeze({kind:"transport_failure",detail:"torrentz2.nz_rock64"}),
 });
 
