@@ -106,6 +106,16 @@ class WaitTests(unittest.TestCase):
         self.assertEqual(len(attempts), 5)
         self.assertEqual(clock.time, 1.0)
 
+    def test_guarded_installer_checks_listener_not_only_systemctl(self):
+        installer = FILE.with_name("upgrade-magnetra-gateway.sh").read_text(encoding="utf8")
+        self.assertIn('wait-magnetra-8798.py" --post-restart', installer)
+        self.assertIn('wait-magnetra-8798.py" --rollback', installer)
+        self.assertIn("POST_INSTALL_OK:", installer)
+        self.assertIn('check-magnetra-html.py"', installer)
+        self.assertIn('trap rollback EXIT', installer)
+        self.assertNotIn('systemctl restart magnetra-btdigg.service', installer)
+        self.assertNotIn('systemctl restart magnetra-eztv.service', installer)
+
     def test_nonexistent_wrong_args_fail_closed(self):
         self.assertEqual(mod.main(["--retries-unbounded"]), 2)
         self.assertEqual(mod.main([]), 2)
