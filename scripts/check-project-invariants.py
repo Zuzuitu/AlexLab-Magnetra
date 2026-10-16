@@ -816,6 +816,7 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "public_unauth_https_401_verified": True,
         "rock64_default_ipv4_dns_resolved": True,
         "worker_1042_probe_code_staged": True,
+        "worker_1042_git_build_config_staged": True,
         "worker_1042_live_test_passed": False,
         "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
         "allowed_provider_paths": ["/v1/eztvx/torrents"],
