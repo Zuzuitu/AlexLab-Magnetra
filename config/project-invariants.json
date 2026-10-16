@@ -211,7 +211,9 @@
     "worker_1042_temporary_worker_cleanup_confirmed": true,
     "html_8798_implementation_staged": true,
     "html_8798_physical_update_confirmed": false,
-    "html_authenticated_worker_e2e_passed": false
+    "html_authenticated_worker_e2e_passed": false,
+    "html_8798_startup_readiness_patch_staged": true,
+    "html_8798_owner_rollback_verified": true
   },
   "provider_recovery_v1": {
     "required_original_indexers": 46,

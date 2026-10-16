@@ -826,6 +826,8 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "html_8798_implementation_staged": True,
         "html_8798_physical_update_confirmed": False,
         "html_authenticated_worker_e2e_passed": False,
+        "html_8798_startup_readiness_patch_staged": True,
+        "html_8798_owner_rollback_verified": True,
         "legacy_btdigg_route_must_remain_unchanged": True,
         "authenticated_provider_allowlist_required": True,
         "global_worker_compatibility_changes_forbidden": True,
@@ -923,6 +925,18 @@ def check_shared_magnetra_gateway(config: dict) -> None:
             for required in ("rock64HtmlFetcher", "resolveLegacy(provider,details,sourceFetch)"):
                 if required not in content:
                     fail("html recovery Worker integration missing: " + required)
+    if gw.get("html_8798_startup_readiness_patch_staged") is True:
+        for filename in ("rock64/wait-magnetra-8798.py",
+                         "rock64/test_wait_magnetra_8798.py"):
+            require_file(ROOT / filename)
+        path = ROOT / "rock64/upgrade-magnetra-gateway.sh"
+        if path.is_file():
+            data = path.read_text(encoding="utf8")
+            for expected_call in ('wait-magnetra-8798.py" --post-restart',
+                                  'wait-magnetra-8798.py" --rollback',
+                                  'check-magnetra-html.py"'):
+                if expected_call not in data:
+                    fail("8798 readiness/rollback contract missing: " + expected_call)
     docs = (ROOT / "docs/SHARED_MAGNETRA_GATEWAY.md")
     if docs.is_file() and "ONE existing Cloudflare Tunnel" not in docs.read_text(encoding="utf8"):
         fail("shared gateway architecture docs must prohibit per-indexer tunnels")
