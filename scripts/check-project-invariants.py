@@ -911,6 +911,46 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         fail("shared gateway architecture docs must prohibit per-indexer tunnels")
 
 
+def check_all_provider_recovery(config: dict) -> None:
+    """The common recovery plan never silently activates an untested source."""
+    plan = nested(config, "provider_recovery_v1")
+    expected = {
+        "required_original_indexers": 46,
+        "planned_indexers": 46,
+        "read_only_plan": True,
+        "auto_reroute": False,
+        "worker_secret_activation": False,
+        "production_deployed": False,
+        "source_evidence_required": True,
+        "existing_verified_gateway_providers": ["btdigg", "eztvx"],
+        "physical_403_no_benefit": ["1337x", "bt4g", "extdotto"],
+        "physical_redirect_candidates": ["bitsearch", "oxtorrent", "torrent9"],
+        "dated_audit_run": 38373699387,
+    }
+    for name, value in expected.items():
+        require_equal(plan.get(name) if isinstance(plan, dict) else None,
+                      value, "provider_recovery_v1." + name)
+    for filename in ("worker/src/recovery-strategy.mjs",
+                     "worker/test/recovery-strategy.test.mjs",
+                     "scripts/recovery-plan.mjs"):
+        require_file(ROOT / filename)
+    source = ROOT / "worker/src/recovery-strategy.mjs"
+    if source.is_file():
+        data = source.read_text(encoding="utf8")
+        for required in ('gatewayEligible:false', 'autoReroute:false',
+                         'historicalObservedAt:SOURCE_AUDIT.observedAt',
+                         'requiresRealSourceProof:true'):
+            if required not in data:
+                fail("common recovery safety contract missing: " + required)
+    for filename in ("worker/src/index.mjs",):
+        f = ROOT / filename
+        if f.is_file():
+            contents = f.read_text(encoding="utf8")
+            for required in ('"/api/recovery-plan"', 'recoveryFor(p.id)'):
+                if required not in contents:
+                    fail("common 46-provider API contract missing: " + required)
+
+
 def main() -> int:
     for required in (CONFIG_PATH, STATE_PATH, AGENTS_PATH, ANDROID_GRADLE):
         require_file(required)
@@ -929,6 +969,7 @@ def main() -> int:
         check_web_parity_and_companion(config)
         check_btdigg_residential_gateway(config)
         check_eztv_residential_gateway(config)
+        check_all_provider_recovery(config)
         check_shared_magnetra_gateway(config)
 
     if ERRORS:
