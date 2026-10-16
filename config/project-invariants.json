@@ -190,7 +190,9 @@
     "requires_separate_activation_approval": true,
     "worker_secret_name": "MAGNETRA_GATEWAY_TOKEN",
     "allowed_provider_paths": [
-      "/v1/eztvx/torrents"
+      "/v1/eztvx/torrents",
+      "/v1/oxtorrent/html",
+      "/v1/torrent9/html"
     ],
     "worker_activated": false,
     "dispatcher_code_staged": true,
@@ -206,7 +208,10 @@
     "worker_1042_git_build_config_staged": true,
     "worker_1042_git_connected": false,
     "worker_1042_live_authenticated_test_passed": false,
-    "worker_1042_temporary_worker_cleanup_confirmed": true
+    "worker_1042_temporary_worker_cleanup_confirmed": true,
+    "html_8798_implementation_staged": true,
+    "html_8798_physical_update_confirmed": false,
+    "html_authenticated_worker_e2e_passed": false
   },
   "provider_recovery_v1": {
     "required_original_indexers": 46,
@@ -230,6 +235,14 @@
       "oxtorrent",
       "torrent9"
     ],
-    "dated_audit_run": 38373699387
+    "dated_audit_run": 38373699387,
+    "html_source_fix_staged": [
+      "oxtorrent",
+      "torrent9"
+    ],
+    "physical_search_to_detail_magnet_verified": [
+      "oxtorrent",
+      "torrent9"
+    ]
   }
 }
