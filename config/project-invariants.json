@@ -210,10 +210,15 @@
     "worker_1042_live_authenticated_test_passed": false,
     "worker_1042_temporary_worker_cleanup_confirmed": true,
     "html_8798_implementation_staged": true,
-    "html_8798_physical_update_confirmed": false,
+    "html_8798_physical_update_confirmed": true,
     "html_authenticated_worker_e2e_passed": false,
     "html_8798_startup_readiness_patch_staged": true,
-    "html_8798_owner_rollback_verified": true
+    "html_8798_owner_rollback_verified": true,
+    "html_8798_real_source_acceptance_passed": true,
+    "html_8798_physical_acceptance_providers": [
+      "oxtorrent",
+      "torrent9"
+    ]
   },
   "provider_recovery_v1": {
     "required_original_indexers": 46,
