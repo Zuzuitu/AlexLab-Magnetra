@@ -83,3 +83,30 @@ After the ONE real same-zone `/probe` test, disconnect Git Builds in
 **Settings → Builds → Disconnect** and remove temporary Worker/domain
 via the Dashboard, checking that the existing BTDigg and Magnetra routes,
 production `index.alexlab.media` and all 46 indexers remain untouched.
+
+
+## 2026-10-16 — Temporary Git Builds actually connected on iPhone; first build pending
+
+The owner supplied Cloudflare Dashboard screenshots confirming that the **existing
+temporary Worker** `magnetra-1042-probe` is now Git-connected to
+`Zuzuitu/AlexLab-Magnetra`, production branch `main`, Root directory
+`worker/probes`, deploy command `npx wrangler deploy` and no build command
+or build environment variables/secrets. Its Settings → Builds page explicitly
+says **"You can now push a commit to your Git repository to start your first
+build."** Its preview builds were disabled before connecting. This records
+the first-connection checkpoint, NOT a successful deployment or 1042 result.
+
+This small **probe-directory** checkpoint change, after protected PR review,
+successful CI, and merge to `main`, is the owner-authorized first Git push
+for Cloudflare Builds to observe. Inspect the resulting Cloudflare Build status
+and logs; success must be confirmed, never inferred from the GitHub merge.
+An existing selected build API token had display name
+`calcidatum-build-token`: the label alone does not prove permission scope;
+DO NOT rotate or broaden existing project credentials without checking an
+actual failed build. In all cases do not change the protected production
+Worker, its authentication secret, the shared tunnel, or the 46 providers.
+
+Once the **temporary** Build succeeds and the temporary Custom Domain exists,
+a single request to `https://magnetra-probe.alexlab.media/probe` should
+report the redacted probe outcome. Disconnect Builds and delete ONLY the
+temporary Worker / temporary Custom Domain after the test.
