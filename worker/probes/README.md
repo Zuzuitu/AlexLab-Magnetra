@@ -47,3 +47,39 @@ Do NOT:
 The probe source and its tests may be merged into GitHub as **inactive
 diagnostic code**. A separate, explicit owner authorization is mandatory
 before creating or deploying any Cloudflare Worker/Custom Domain.
+
+
+## iPhone / Safari workaround: Cloudflare native Git connection (no code paste)
+
+Owner created `magnetra-1042-probe` through Cloudflare Dashboard, but its
+Monaco editor on iOS cannot read the clipboard ("Unable to read from the
+browser's clipboard"). Do not require the owner to manually type/paste this
+script, and do not attach the PRODUCTION Magnetra Worker to this source.
+
+This directory now includes a strictly scoped `wrangler.jsonc`:
+- Worker name: `magnetra-1042-probe` (matches TEMPORARY existing Worker).
+- Entry point: `tunnel-1042-probe.mjs`, fixed unauth `/healthz` probe.
+- Custom domain: `magnetra-probe.alexlab.media`, only if not already used.
+- `workers_dev=false`, no asset bundle, secret, binding, cron, variable or
+  production route.
+
+After PR review and green CI merge, owner may open Cloudflare
+**Workers & Pages → magnetra-1042-probe → Settings → Builds → Connect**
+and explicitly authorize Cloudflare's Git integration on **only** GitHub
+`Zuzuitu/AlexLab-Magnetra`, branch `main`, root directory
+`worker/probes` (NOT `/` or `worker`). Choose deployment command
+`npx wrangler deploy` if required; the Wrangler config for that root
+determines the script name and single temporary custom domain.
+No manual editor/paste necessary. Check build logs and the resulting
+Custom Domain; Git connections may need one new push to trigger a build.
+Do not stage meaningless dummy production changes just to trigger builds.
+
+This is an account-scoped Git access action: the owner must approve any
+Cloudflare-GitHub authorization explicitly. On screen, halt if asked to
+select another Worker or repo, if Cloudflare requests paid-plan upgrade, or
+if `magnetra-probe.alexlab.media` is already occupied.
+
+After the ONE real same-zone `/probe` test, disconnect Git Builds in
+**Settings → Builds → Disconnect** and remove temporary Worker/domain
+via the Dashboard, checking that the existing BTDigg and Magnetra routes,
+production `index.alexlab.media` and all 46 indexers remain untouched.
