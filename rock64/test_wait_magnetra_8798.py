@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Fully offline deterministic readiness/race regression. No real socket or systemctl."""
+import contextlib
 import importlib.util
+import io
 import pathlib
 import sys
 import unittest
@@ -117,9 +119,13 @@ class WaitTests(unittest.TestCase):
         self.assertNotIn('systemctl restart magnetra-eztv.service', installer)
 
     def test_nonexistent_wrong_args_fail_closed(self):
-        self.assertEqual(mod.main(["--retries-unbounded"]), 2)
-        self.assertEqual(mod.main([]), 2)
-        self.assertEqual(mod.main(["--rollback", "--post-restart"]), 2)
+        # Deliberate negative cases must not look like live installer STOPs.
+        capture = io.StringIO()
+        with contextlib.redirect_stderr(capture):
+            self.assertEqual(mod.main(["--retries-unbounded"]), 2)
+            self.assertEqual(mod.main([]), 2)
+            self.assertEqual(mod.main(["--rollback", "--post-restart"]), 2)
+        self.assertEqual(capture.getvalue().count("STOP: expected"), 3)
 
 
 if __name__ == "__main__":
