@@ -19,9 +19,11 @@ jobs:
         with:
           node-version: "22"
       - name: Check JavaScript syntax
-        run: node --check worker/src/index.mjs && node --check worker/src/eztv-official-api.mjs && node --check worker/src/eztv-rock64.mjs && node --check worker/src/btdigg-rock64.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/source-audit.mjs && node --check web/app.js && node --check web/sw.js
+        run: node --check worker/src/index.mjs && node --check worker/src/eztv-official-api.mjs && node --check worker/src/eztv-rock64.mjs && node --check worker/src/btdigg-rock64.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/recovery-strategy.mjs && node --check worker/src/source-audit.mjs && node --check scripts/recovery-plan.mjs && node --check web/app.js && node --check web/sw.js
       - name: Test provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
+      - name: Verify offline 46-provider recovery strategy report
+        run: node scripts/recovery-plan.mjs --summary
       - name: Test Rock64 BTDigg gateway (loopback only, no external requests)
         run: python3 -m unittest discover -s rock64 -p 'test_*.py' -v
       - name: Validate Rock64 gateways Python syntax and guarded installers
