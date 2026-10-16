@@ -142,7 +142,10 @@ def html_get(url, opener):
                 return {"http": res.status, "state": "HTTP_ERROR"}, None
             if "text/html" not in (res.headers.get("content-type") or "").lower():
                 return {"http": 200, "state": "NON_HTML"}, None
-            if int(res.headers.get("content-length") or 0) > MAX_BYTES:
+            length = res.headers.get("content-length") or "0"
+            if not length.isdecimal():
+                return {"http": 200, "state": "INVALID_CONTENT_LENGTH"}, None
+            if int(length) > MAX_BYTES:
                 return {"http": 200, "state": "BODY_TOO_LARGE"}, None
             data = res.read(MAX_BYTES + 1)
             if len(data) > MAX_BYTES:
