@@ -86,6 +86,9 @@ for port in (8796,8797,8798):
  finally:c.close()
 print("POST_INSTALL_OK: unauthenticated health returns 401 for all three ports")
 PY
+# A source-owned search + details magnet must work via the actual 8798 listener
+# before marking the upgrade complete; a failure triggers automatic rollback.
+python3 -B "$ROOT/rock64/check-magnetra-html.py" || stop 'real 8798 source validation failed'
 DONE=1
 printf 'PASS: isolated 8798 code upgraded. EZTV/BTDigg/tunnel not changed.\n'
 printf 'No Cloudflare secret or protected PWA deployment was performed.\n'
