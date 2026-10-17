@@ -47,7 +47,8 @@
       ".github/workflows/release_build.yml",
       ".github/workflows/pwa.yml",
       ".github/workflows/deploy-pwa.yml",
-      ".github/workflows/production-smoke.yml"
+      ".github/workflows/production-smoke.yml",
+      ".github/workflows/stage-magnetra-worker.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -251,5 +252,18 @@
       "oxtorrent",
       "torrent9"
     ]
+  },
+  "cloudflare_worker_stage": {
+    "staged_secret_version_owner_reported": "ce808b27",
+    "active_production_version_owner_reported": "a9df4429",
+    "active_traffic_owner_reported_percent": 100,
+    "manual_version_upload_workflow": ".github/workflows/stage-magnetra-worker.yml",
+    "stage_workflow_has_no_deploy_command": true,
+    "stage_workflow_has_required_secret_name_checks": true,
+    "worker_code_version_uploaded": false,
+    "worker_code_version_activated": false,
+    "requires_binding_review_before_activation": true,
+    "rollout_rollback_version_owner_reported": "a9df4429",
+    "worker_to_tunnel_authenticated_e2e_confirmed": false
   }
 }
