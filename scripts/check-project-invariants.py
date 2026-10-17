@@ -237,9 +237,11 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "manual_stage_workflow_run_number_owner_screenshot": 1,
         "manual_stage_workflow_branch_owner_screenshot": "main",
         "manual_stage_workflow_duration_seconds_owner_screenshot": 23,
-        "new_code_version_cloudflare_id_verified": False,
+        "new_code_version_cloudflare_id_verified": True,
+        "new_code_version_id_verified_from_actions": "249d6767-f4dc-4f4d-bbf7-f57bea2e5554",
+        "read_only_version_inspection_workflow": ".github/workflows/inspect-magnetra-cloudflare-version.yml",
         "new_code_version_required_bindings_verified": False,
-        "active_100_percent_after_stage_reverified": False,
+        "active_100_percent_after_stage_reverified": True,
         "staged_worker_authenticated_test_passed": False,
         "canary_rollout_approved": False,
         "production_worker_promotion_completed": False,
@@ -253,6 +255,20 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    inspector = ROOT / ".github/workflows/inspect-magnetra-cloudflare-version.yml"
+    require_file(inspector)
+    if inspector.is_file():
+        body = inspector.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "python3 scripts/check-project-invariants.py",
+                       "python3 scripts/inspect_cloudflare_version.py"):
+            if marker not in body:
+                fail("read-only version inspector missing: " + marker)
+        for forbidden in ("wrangler versions upload", "wrangler deploy",
+                          "wrangler versions deploy", "curl -X POST", "curl --request POST"):
+            if forbidden in body:
+                fail("read-only version inspector would mutate Cloudflare: " + forbidden)
+
     target = ROOT / ".github/workflows/stage-magnetra-worker.yml"
     require_file(target)
     if target.is_file():
