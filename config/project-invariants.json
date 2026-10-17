@@ -260,10 +260,20 @@
     "manual_version_upload_workflow": ".github/workflows/stage-magnetra-worker.yml",
     "stage_workflow_has_no_deploy_command": true,
     "stage_workflow_has_required_secret_name_checks": true,
-    "worker_code_version_uploaded": false,
+    "worker_code_version_uploaded": true,
     "worker_code_version_activated": false,
     "requires_binding_review_before_activation": true,
     "rollout_rollback_version_owner_reported": "a9df4429",
-    "worker_to_tunnel_authenticated_e2e_confirmed": false
+    "worker_to_tunnel_authenticated_e2e_confirmed": false,
+    "manual_stage_workflow_run_succeeded_owner_screenshot": true,
+    "manual_stage_workflow_run_number_owner_screenshot": 1,
+    "manual_stage_workflow_branch_owner_screenshot": "main",
+    "manual_stage_workflow_duration_seconds_owner_screenshot": 23,
+    "new_code_version_cloudflare_id_verified": false,
+    "new_code_version_required_bindings_verified": false,
+    "active_100_percent_after_stage_reverified": false,
+    "staged_worker_authenticated_test_passed": false,
+    "canary_rollout_approved": false,
+    "production_worker_promotion_completed": false
   }
 }
