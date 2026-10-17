@@ -271,12 +271,14 @@
     "manual_stage_workflow_branch_owner_screenshot": "main",
     "manual_stage_workflow_duration_seconds_owner_screenshot": 23,
     "new_code_version_cloudflare_id_verified": true,
-    "new_code_version_required_bindings_verified": false,
+    "new_code_version_required_bindings_verified": true,
     "active_100_percent_after_stage_reverified": true,
     "staged_worker_authenticated_test_passed": false,
     "canary_rollout_approved": false,
     "production_worker_promotion_completed": false,
     "new_code_version_id_verified_from_actions": "249d6767-f4dc-4f4d-bbf7-f57bea2e5554",
-    "read_only_version_inspection_workflow": ".github/workflows/inspect-magnetra-cloudflare-version.yml"
+    "read_only_version_inspection_workflow": ".github/workflows/inspect-magnetra-cloudflare-version.yml",
+    "read_only_version_audit_run": 39047958484,
+    "read_only_version_audit_result": "PASS"
   }
 }
