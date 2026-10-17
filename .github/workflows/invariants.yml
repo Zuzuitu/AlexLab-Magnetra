@@ -21,3 +21,6 @@ jobs:
 
       - name: Test Cloudflare version audit output never leaks secrets
         run: python3 -m unittest discover -s scripts -p 'test_cloudflare_version_audit.py'
+
+      - name: Test guarded Cloudflare zero-percent deployment without external calls
+        run: python3 -m unittest discover -s scripts -p 'test_zero_traffic_deployment.py'
