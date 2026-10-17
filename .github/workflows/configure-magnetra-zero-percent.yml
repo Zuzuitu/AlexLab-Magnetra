@@ -1,0 +1,63 @@
+# MANUAL ONLY, authorized 2026-10-17. DO NOT change the 100/0 split.
+# This workflow changes the active deployment RECORD even though normal traffic remains old 100%.
+name: Configure Magnetra 0 Percent E2E Slot (APPROVED)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_zero_percent:
+        description: "Approve only old 100% plus new 0% (no normal traffic shift)"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_OLD_100_NEW_0
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-zero-percent-deployment-approval
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    if: github.ref == 'refs/heads/main' && inputs.confirm_zero_percent == 'CONFIRM_OLD_100_NEW_0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Project invariants before ANY Cloudflare call
+        run: python3 scripts/check-project-invariants.py
+      - name: Contract tests for zero-only and bounded rollback
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_zero_traffic_deployment.py'
+          python3 -m unittest discover -s scripts -p 'test_cloudflare_version_audit.py'
+      - name: Set up Node 22 for pinned Wrangler
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Confirm correct Worker identity and deployment surface
+        run: |
+          python3 - <<'PY'
+          import json
+          c = json.load(open("worker/wrangler.jsonc"))
+          assert c["name"] == "alexlab-magnetra"
+          assert c["main"] == "src/index.mjs"
+          assert c["assets"]["binding"] == "ASSETS"
+          assert c["routes"] == [{"pattern": "index.alexlab.media", "custom_domain": True}]
+          print("CANONICAL_CONFIG_PASS: no Worker identity, domain or asset changes")
+          PY
+      - name: Apply ONLY 100% old and 0% candidate with API postflight
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_EXPLICIT_ZERO_PERCENT_APPROVAL: ${{ inputs.confirm_zero_percent }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_magnetra_zero_percent.py
