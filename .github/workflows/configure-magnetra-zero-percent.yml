@@ -23,10 +23,21 @@ concurrency:
 
 jobs:
   configure:
-    if: github.ref == 'refs/heads/main' && inputs.confirm_zero_percent == 'CONFIRM_OLD_100_NEW_0'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
+      - name: Explicit owner confirmation gate (before any Cloudflare calls)
+        shell: bash
+        env:
+          OWNER_CHOICE: ${{ inputs.confirm_zero_percent }}
+        run: |
+          set -euo pipefail
+          if [ "$OWNER_CHOICE" != 'CONFIRM_OLD_100_NEW_0' ]; then
+            echo '::error::Manual approval was not received. In Run workflow, set confirm_zero_percent to CONFIRM_OLD_100_NEW_0 (not CANCEL). No Cloudflare operation attempted.'
+            exit 2
+          fi
+          echo 'OWNER_APPROVAL_GATE_PASS: exact 100% old / 0% candidate authorized.'
       - name: Checkout reviewed main
         uses: actions/checkout@v7.0.1
         with:
