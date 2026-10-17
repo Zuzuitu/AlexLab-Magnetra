@@ -245,7 +245,11 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "read_only_version_audit_result": "PASS",
         "zero_percent_slot_owner_approved": True,
         "zero_percent_slot_owner_approval_date": "2026-10-17",
-        "zero_percent_slot_configured": False,
+        "zero_percent_slot_configured": True,
+        "zero_percent_slot_run": 39053562983,
+        "zero_percent_slot_verified_by_api": True,
+        "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
+        "candidate_e2e_diagnostic_executed": False,
         "zero_percent_deployment_workflow": ".github/workflows/configure-magnetra-zero-percent.yml",
         "zero_percent_target_traffic_percent": 0,
         "zero_percent_rollback_traffic_percent": 100,
@@ -264,6 +268,34 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    candidate_e2e_workflow = ROOT / ".github/workflows/test-magnetra-candidate-e2e.yml"
+    require_file(candidate_e2e_workflow)
+    if candidate_e2e_workflow.is_file():
+        e2e_wf = candidate_e2e_workflow.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "RUN_READONLY_E2E", "python3 scripts/check-project-invariants.py",
+                       "python3 scripts/check-magnetra-candidate-e2e.py",
+                       "Mandatory manual approval before any network request"):
+            if marker not in e2e_wf:
+                fail("Candidate E2E approval/diagnostic guard missing: " + marker)
+        for forbidden in ("push:", "schedule:", "wrangler deploy",
+                          "wrangler versions deploy", "curl --request POST",
+                          "npm run deploy", "[deploy-pwa]"):
+            if forbidden in e2e_wf:
+                fail("Candidate E2E workflow must remain manual, non-deploying: " + forbidden)
+    e2e_script = ROOT / "scripts/check-magnetra-candidate-e2e.py"
+    require_file(e2e_script)
+    if e2e_script.is_file():
+        e2e_txt = e2e_script.read_text(encoding="utf8")
+        for marker in ('Cloudflare-Workers-Version-Overrides', 'check_routing_fingerprint()',
+                       'check_resolve(provider, items)', 'check_deployment()',
+                       'MAGNETRA_E2E_READONLY_APPROVAL'):
+            if marker not in e2e_txt:
+                fail("Candidate E2E script missing safe gate: " + marker)
+        for forbidden in ('subprocess.run(', 'wrangler versions deploy', 'urllib.request.urlretrieve'):
+            if forbidden in e2e_txt:
+                fail("Candidate E2E script must not deploy or download torrent data: " + forbidden)
+
     zero_workflow = ROOT / ".github/workflows/configure-magnetra-zero-percent.yml"
     zero_script = ROOT / "scripts/deploy_magnetra_zero_percent.py"
     require_file(zero_workflow)

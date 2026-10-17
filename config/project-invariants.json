@@ -50,7 +50,8 @@
       ".github/workflows/production-smoke.yml",
       ".github/workflows/stage-magnetra-worker.yml",
       ".github/workflows/inspect-magnetra-cloudflare-version.yml",
-      ".github/workflows/configure-magnetra-zero-percent.yml"
+      ".github/workflows/configure-magnetra-zero-percent.yml",
+      ".github/workflows/test-magnetra-candidate-e2e.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -283,10 +284,14 @@
     "read_only_version_audit_result": "PASS",
     "zero_percent_slot_owner_approved": true,
     "zero_percent_slot_owner_approval_date": "2026-10-17",
-    "zero_percent_slot_configured": false,
+    "zero_percent_slot_configured": true,
     "zero_percent_deployment_workflow": ".github/workflows/configure-magnetra-zero-percent.yml",
     "zero_percent_target_traffic_percent": 0,
     "zero_percent_rollback_traffic_percent": 100,
-    "zero_percent_no_fractional_fallback": true
+    "zero_percent_no_fractional_fallback": true,
+    "zero_percent_slot_run": 39053562983,
+    "zero_percent_slot_verified_by_api": true,
+    "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
+    "candidate_e2e_diagnostic_executed": false
   }
 }

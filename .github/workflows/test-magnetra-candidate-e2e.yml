@@ -1,0 +1,56 @@
+# Manual-only live candidate E2E. Cloudflare GETs and approved PWA API requests ONLY.
+# No Worker upload/deploy, no DNS/tunnel/Rock64 administration, no .torrent download.
+name: Test Magnetra Candidate E2E (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_readonly_e2e:
+        description: "Run 1 bounded real search per provider + 2 magnet resolves, with version override"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_READONLY_E2E
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-candidate-e2e-manual
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Mandatory manual approval before any network request
+        shell: bash
+        env:
+          E2E_CHOICE: ${{ inputs.confirm_readonly_e2e }}
+        run: |
+          if [ "$E2E_CHOICE" != "RUN_READONLY_E2E" ]; then
+            echo "::error::No approval. Select RUN_READONLY_E2E (not CANCEL)."
+            exit 2
+          fi
+          echo "MANUAL_READONLY_E2E_GATE: PASS"
+      - name: Checkout reviewed main only
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline tests for safe version attribution and magnet handling
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_candidate_e2e.py'
+      - name: Version-selected authenticated E2E via current Cloudflare Worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_E2E_READONLY_APPROVAL: ${{ inputs.confirm_readonly_e2e }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check-magnetra-candidate-e2e.py
