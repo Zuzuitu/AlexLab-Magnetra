@@ -18,3 +18,6 @@ jobs:
 
       - name: Compile invariant checker
         run: python3 -m py_compile scripts/check-project-invariants.py
+
+      - name: Test Cloudflare version audit output never leaks secrets
+        run: python3 -m unittest discover -s scripts -p 'test_cloudflare_version_audit.py'
