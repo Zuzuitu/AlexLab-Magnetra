@@ -222,6 +222,51 @@ def check_android_baseline(config: dict) -> None:
             fail(f"required Android build variant is missing: {variant}")
 
 
+def check_manual_magnetra_worker_staging(config: dict) -> None:
+    """Guard the version-only manual Cloudflare stage, not a production deploy."""
+    stage = nested(config, "cloudflare_worker_stage")
+    expected = {
+        "staged_secret_version_owner_reported": "ce808b27",
+        "active_production_version_owner_reported": "a9df4429",
+        "active_traffic_owner_reported_percent": 100,
+        "manual_version_upload_workflow": ".github/workflows/stage-magnetra-worker.yml",
+        "stage_workflow_has_no_deploy_command": True,
+        "stage_workflow_has_required_secret_name_checks": True,
+        "worker_code_version_uploaded": False,
+        "worker_code_version_activated": False,
+        "requires_binding_review_before_activation": True,
+        "rollout_rollback_version_owner_reported": "a9df4429",
+        "worker_to_tunnel_authenticated_e2e_confirmed": False,
+    }
+    if not isinstance(stage, dict):
+        fail("Cloudflare staged Worker state is missing.")
+        return
+    for key, value in expected.items():
+        require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    target = ROOT / ".github/workflows/stage-magnetra-worker.yml"
+    require_file(target)
+    if target.is_file():
+        txt = target.read_text(encoding="utf8")
+        required = (
+            "workflow_dispatch:",
+            "github.ref == 'refs/heads/main'",
+            "python3 scripts/check-project-invariants.py",
+            "wrangler@4.102.0 versions upload",
+            "--keep-vars",
+            "'BTDIGG_GATEWAY_TOKEN','MAGNETRA_GATEWAY_TOKEN'",
+            "--dry-run",
+            "zero production traffic",
+        )
+        for token in required:
+            if token not in txt:
+                fail("manual Cloudflare staging safety guard missing: " + token)
+        forbidden = ("wrangler versions deploy", "wrangler secret put",
+                     "wrangler@4.102.0 deploy --config worker/.wrangler-stage-only.jsonc --yes")
+        for token in forbidden:
+            if token in txt:
+                fail("manual Cloudflare stage would activate traffic or credentials: " + token)
+
+
 def check_workflow_guards(config: dict) -> None:
     command = nested(config, "delivery", "invariant_check_command")
     workflows = nested(config, "delivery", "guarded_workflows") or []
@@ -997,6 +1042,7 @@ def main() -> int:
         check_required_memory_files(config)
         check_architecture_roots(config)
         check_android_baseline(config)
+        check_manual_magnetra_worker_staging(config)
         check_workflow_guards(config)
         check_crons(config)
         check_forbidden_files(config)
