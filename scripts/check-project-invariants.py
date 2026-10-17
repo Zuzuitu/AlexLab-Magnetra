@@ -243,6 +243,13 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "new_code_version_required_bindings_verified": True,
         "read_only_version_audit_run": 39047958484,
         "read_only_version_audit_result": "PASS",
+        "zero_percent_slot_owner_approved": True,
+        "zero_percent_slot_owner_approval_date": "2026-10-17",
+        "zero_percent_slot_configured": False,
+        "zero_percent_deployment_workflow": ".github/workflows/configure-magnetra-zero-percent.yml",
+        "zero_percent_target_traffic_percent": 0,
+        "zero_percent_rollback_traffic_percent": 100,
+        "zero_percent_no_fractional_fallback": True,
         "active_100_percent_after_stage_reverified": True,
         "staged_worker_authenticated_test_passed": False,
         "canary_rollout_approved": False,
@@ -257,6 +264,31 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    zero_workflow = ROOT / ".github/workflows/configure-magnetra-zero-percent.yml"
+    zero_script = ROOT / "scripts/deploy_magnetra_zero_percent.py"
+    require_file(zero_workflow)
+    require_file(zero_script)
+    if zero_workflow.is_file():
+        body = zero_workflow.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "CONFIRM_OLD_100_NEW_0",
+                       "python3 scripts/check-project-invariants.py",
+                       "python3 scripts/deploy_magnetra_zero_percent.py"):
+            if marker not in body:
+                fail("zero-percent manual gate missing: " + marker)
+        for forbidden in ("push:", "schedule:", "wrangler deploy",
+                          "[deploy-pwa]"):
+            if forbidden in body:
+                fail("zero-percent manual workflow has unsafe automatic/deploy marker: " + forbidden)
+    if zero_script.is_file():
+        script = zero_script.read_text(encoding="utf8")
+        for marker in ('VERSION + "@0%"', 'old + "@100%"',
+                       '_recover(old)', '"CLOUDFLARE_API_TOKEN"'):
+            if marker not in script:
+                fail("zero-percent guarded script missing: " + marker)
+        if '@0.01%' in script or '@1%' in script:
+            fail("zero-percent slot must NEVER substitute positive traffic")
+
     inspector = ROOT / ".github/workflows/inspect-magnetra-cloudflare-version.yml"
     require_file(inspector)
     if inspector.is_file():
