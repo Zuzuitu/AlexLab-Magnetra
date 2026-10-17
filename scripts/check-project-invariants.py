@@ -276,6 +276,14 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                        "python3 scripts/deploy_magnetra_zero_percent.py"):
             if marker not in body:
                 fail("zero-percent manual gate missing: " + marker)
+        auth_step = body.find("Explicit owner confirmation gate (before any Cloudflare calls)")
+        execution_step = body.find("python3 scripts/deploy_magnetra_zero_percent.py")
+        if auth_step < 0 or execution_step < 0 or auth_step >= execution_step:
+            fail("zero-percent manual approval validation must run before Cloudflare requests")
+        if "if: github.ref == 'refs/heads/main' && inputs.confirm_zero_percent" in body:
+            fail("zero-percent invalid approval must FAIL clearly, not silently SKIP")
+        if "OWNER_CHOICE: ${{ inputs.confirm_zero_percent }}" not in body:
+            fail("zero-percent manual approval must use the explicit workflow input")
         for forbidden in ("push:", "schedule:", "wrangler deploy",
                           "[deploy-pwa]"):
             if forbidden in body:
