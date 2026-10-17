@@ -1,0 +1,77 @@
+# Manual ONLY: creates a Cloudflare Worker VERSION, never an active deployment.
+# This is a deliberate stage gate before any production traffic or secret use.
+name: Stage Magnetra Worker (NO DEPLOY)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-worker-stage-manual
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed main only
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check project invariants BEFORE any Wrangler command
+        run: python3 scripts/check-project-invariants.py
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify 46-provider Worker contracts
+        run: node --test worker/test/*.test.mjs
+      - name: Build isolated, ephemeral staged Worker config (secret NAMES only)
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const path='worker/wrangler.jsonc';
+          const config=JSON.parse(readFileSync(path,'utf8'));
+          if(config.name!=='alexlab-magnetra' ||
+             config.main!=='src/index.mjs' ||
+             config.routes?.length!==1 ||
+             config.routes[0]?.pattern!=='index.alexlab.media' ||
+             config.routes[0]?.custom_domain!==true ||
+             config.assets?.directory!=='../web' ||
+             config.assets?.binding!=='ASSETS')
+            throw Error('STOP: canonical Worker origin/assets changed. No upload.');
+          // Supported by Wrangler >=4.102.0. This is an upload-time name
+          // validation, NOT a plaintext secret or runtime binding override.
+          config.secrets={required:['BTDIGG_GATEWAY_TOKEN','MAGNETRA_GATEWAY_TOKEN']};
+          writeFileSync('worker/.wrangler-stage-only.jsonc',
+                        JSON.stringify(config,null,2)+'\n',{mode:0o600});
+          console.log('Stage config validated: original source, 46-provider assets, both secret names.');
+          NODE
+      - name: Validate Worker bundle only (NO upload)
+        run: npx --yes wrangler@4.102.0 deploy --config worker/.wrangler-stage-only.jsonc --dry-run
+      - name: Require GitHub-stored Cloudflare API credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+            echo "STOP: missing existing GitHub Cloudflare API credentials, no version uploaded."
+            exit 1
+          }
+      - name: Upload new Worker VERSION only (zero production traffic)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4.102.0 versions upload \
+            --config worker/.wrangler-stage-only.jsonc \
+            --keep-vars \
+            --message "Magnetra 46-provider stage: EZTV/OxTorrent/Torrent9 8798, no traffic"
+      - name: Preserve explicit human deployment gate
+        run: |
+          echo "VERSION UPLOAD ONLY: No Deploy, no percentage shift."
+          echo "Verify staged version has BOTH secret bindings in Cloudflare first."
+          echo "Do NOT deploy ce808b27 (secret-only old code), or any unverified version."
