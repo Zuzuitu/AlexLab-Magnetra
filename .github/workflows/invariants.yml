@@ -24,3 +24,6 @@ jobs:
 
       - name: Test guarded Cloudflare zero-percent deployment without external calls
         run: python3 -m unittest discover -s scripts -p 'test_zero_traffic_deployment.py'
+
+      - name: Test candidate E2E fingerprint and sanitization offline
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_candidate_e2e.py'
