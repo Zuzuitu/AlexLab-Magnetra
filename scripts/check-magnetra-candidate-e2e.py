@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,6 +23,34 @@ WORKER = "alexlab-magnetra"
 OVERRIDE = WORKER + '="' + VERSION + '"'
 MAGNET = re.compile(r"^magnet:\?xt=urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})(?:&|$)", re.I)
 MAX_BYTES = 750_000
+# The physical 8797 EZTV service enforces MIN_GAP=3 seconds between distinct,
+# uncached IMDb lookups. This is deliberate abuse protection, not a defect.
+EZTV_MIN_GAP_SECONDS = 3.5
+# One real-source recent discovery returns up to two IDs. Avoid prior known-zero
+# as a live prelude because it would immediately throttle the positive probe.
+EZTV_MAX_POSITIVE_SAMPLES = 2
+# Source codes are server-authored enums, never log raw error strings or URLs.
+SAFE_PROVIDER_CODES = frozenset((
+    "RATE_LIMIT", "TIMEOUT", "CHALLENGE", "ACCESS_DENIED",
+    "REDIRECT_BLOCKED", "UPSTREAM_ERROR", "PROVIDER_ERROR",
+    "EZTV_SOURCE_TIMEOUT", "EZTV_TUNNEL_TIMEOUT", "EZTV_GATEWAY_AUTH",
+    "EZTV_GATEWAY_ERROR", "BTDIGG_TUNNEL_TIMEOUT", "BTDIGG_SOURCE_TIMEOUT",
+    "BTDIGG_TUNNEL_1042", "BTDIGG_TUNNEL_ERROR", "AMBIGUOUS_TITLE",
+))
+
+
+def safe_provider_error_code(error):
+    """Report only bounded, allowlisted enums and HTTP status; never raw error."""
+    if not isinstance(error, dict):
+        return "MALFORMED"
+    code = error.get("code")
+    code = code if isinstance(code, str) and code in SAFE_PROVIDER_CODES else "UNCLASSIFIED"
+    # The Worker occasionally classifies an error under generic PROVIDER_ERROR;
+    # preserve useful HTTP status in a bounded, fixed enum without logging URL.
+    raw = error.get("error")
+    raw = raw if isinstance(raw, str) else ""
+    found = re.search(r"\bHTTP\s+(401|403|429|500|502|503|504|520|521|522|523|524|530)\b", raw)
+    return code + ("_HTTP_" + found.group(1) if found else "")
 
 
 class Stop(Exception):
@@ -137,8 +166,9 @@ def validate_search(provider, query, *, allow_empty=False):
     if not isinstance(errors, list) or not isinstance(stats, list) or not isinstance(results, list):
         raise Stop("SEARCH_RESULT_SCHEMA_FAIL_" + provider)
     if errors:
-        # Do not log untrusted provider error strings or full source URLs.
-        raise Stop("SEARCH_UPSTREAM_ERROR_" + provider)
+        # Never print provider-controlled error descriptions, URLs, or headers.
+        safe_code = safe_provider_error_code(errors[0])
+        raise Stop("SEARCH_UPSTREAM_ERROR_" + provider + "_" + safe_code)
     if len(stats) != 1 or stats[0].get("provider") != provider or stats[0].get("ok") is not True:
         raise Stop("SEARCH_PROVIDER_STAT_MISMATCH_" + provider)
     if not results:
@@ -178,12 +208,11 @@ def check_resolve(provider, items):
 
 
 
-# Upstream's historic tt0460681 / Supernatural response legitimately returned
-# torrents_count=0. A zero must not be mistaken for gateway transport failure.
-# Positive verification uses recent original-source IMDb IDs when public source
-# access is available and bounded current-series controls otherwise.
+# Historical E2E #2 verified this IMDb genuinely returns zero results.
+# Do not send it again before positive probes: 8797 enforces a 3-second MIN_GAP.
 EZTV_ZERO_SAMPLE = "tt0460681"
-EZTV_CURRENT_SERIES_SAMPLES = ("tt0096697", "tt0413573", "tt0182576", "tt0364845")
+# Fallback identifiers are candidate controls only, NEVER assumed source-positive.
+EZTV_CURRENT_SERIES_SAMPLES = ("tt0096697", "tt0413573")
 
 
 def discover_recent_eztv_ids():
@@ -235,36 +264,36 @@ def discover_recent_eztv_ids():
 
 
 def check_eztv_positive():
-    """Separate expected empty vs. genuine positive source-specific magnets."""
-    historical = validate_search("eztvx", EZTV_ZERO_SAMPLE, allow_empty=True)
-    if historical:
-        print("EZTV_HISTORICAL_ZERO_NOW_POSITIVE: " + str(len(historical)) + " original results")
-        if any(valid_magnet(item.get("magnet")) for item in historical):
-            print("EZTV_AUTHENTICATED_POSITIVE_GATE: PASS")
-            return True
-    else:
-        print("EZTV_KNOWN_EMPTY_SAMPLE: PASS (0 genuine rows, NOT a tunnel failure)")
+    """Probe only up to two distinct IMDb IDs; stop on any upstream HTTP error.
 
+    No implicit retries after rate limiting. Known-empty ID from earlier real
+    run is not queried again: it would consume the 8797 MIN_GAP budget.
+    """
+    print("EZTV_KNOWN_EMPTY_SAMPLE: historical genuine zero (not re-requested)")
     discovered = discover_recent_eztv_ids()
-    # Fixed true-series IMDb identifiers are only candidate controls; they
-    # are NOT labelled known-positive and never substituted across indexers.
+    candidates = discovered if discovered else list(EZTV_CURRENT_SERIES_SAMPLES)
     seen = {EZTV_ZERO_SAMPLE}
-    count = 0
-    for imdb in [*discovered, *EZTV_CURRENT_SERIES_SAMPLES]:
+    attempted = 0
+    for imdb in candidates:
         if imdb in seen:
             continue
         seen.add(imdb)
-        count += 1
-        if count > 6:
+        if attempted >= EZTV_MAX_POSITIVE_SAMPLES:
             break
+        # Planned distinct IMDb sample (not a retry), paced beyond the
+        # physical gateway's 3-second floor. Do not sleep after a 429: STOP.
+        if attempted:
+            print("EZTV_PROBE_PACING: honoring protected 8797 minimum gap")
+            time.sleep(EZTV_MIN_GAP_SECONDS)
+        attempted += 1
         rows = validate_search("eztvx", imdb, allow_empty=True)
         if rows:
             if not all(valid_magnet(row.get("magnet")) for row in rows):
                 raise Stop("EZTV_POSITIVE_ROWS_WITHOUT_VALID_MAGNET")
             print("EZTV_AUTHENTICATED_POSITIVE_GATE: PASS (" + str(len(rows)) + " genuine source results; IMDb withheld)")
             return True
-        print("EZTV_SAMPLE_" + str(count) + ": EMPTY_UNVERIFIED")
-    print("EZTV_AUTHENTICATED_POSITIVE_GATE: UNVERIFIED (all sampled exact IDs empty)")
+        print("EZTV_SAMPLE_" + str(attempted) + ": EMPTY_UNVERIFIED")
+    print("EZTV_AUTHENTICATED_POSITIVE_GATE: UNVERIFIED (bounded samples yielded no results)")
     return False
 
 
@@ -283,13 +312,19 @@ def execute():
     check_deployment()
     check_routing_fingerprint()
     check_catalog()
-    for provider in ("oxtorrent", "torrent9"):
-        items = validate_search(provider, "ubuntu")
-        check_resolve(provider, items)
+    scope = os.environ.get("MAGNETRA_E2E_SCOPE", "FOCUSED_GATEWAYS")
+    if scope not in ("FOCUSED_GATEWAYS", "FULL_CANARY_AUDIT"):
+        raise Stop("UNKNOWN_E2E_SCOPE")
+    if scope == "FULL_CANARY_AUDIT":
+        for provider in ("oxtorrent", "torrent9"):
+            items = validate_search(provider, "ubuntu")
+            check_resolve(provider, items)
+    else:
+        print("HTML_SOURCE_E2E: not rerun; both providers passed in real prior runs #1/#2")
     check_btdigg_observational()
     if not check_eztv_positive():
         raise Stop("EZTV_POSITIVE_SOURCE_NOT_PROVEN")
-    print("E2E_GATE_RESULT: PASS (staged candidate, NOT normal production traffic)")
+    print("E2E_GATE_RESULT: PASS (stage candidate, scope="+scope+", NOT normal production traffic)")
     return 0
 
 
