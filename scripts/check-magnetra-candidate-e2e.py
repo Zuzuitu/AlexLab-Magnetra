@@ -50,7 +50,15 @@ def safe_provider_error_code(error):
     raw = error.get("error")
     raw = raw if isinstance(raw, str) else ""
     found = re.search(r"\bHTTP\s+(401|403|429|500|502|503|504|520|521|522|523|524|530)\b", raw)
-    return code + ("_HTTP_" + found.group(1) if found else "")
+    if found:
+        return code + "_HTTP_" + found.group(1)
+    if re.search(r"authoriz(?:ation|ed).*fail|invalid (?:bearer|token|credential)", raw, re.I):
+        return code + "_AUTH_REJECTED"
+    if re.search(r"shape unexpected|malformed JSON|non-JSON|invalid JSON", raw, re.I):
+        return code + "_RESPONSE_SCHEMA"
+    if re.search(r"gateway transport failed|tunnel transport failed", raw, re.I):
+        return code + "_TRANSPORT"
+    return code
 
 
 class Stop(Exception):
