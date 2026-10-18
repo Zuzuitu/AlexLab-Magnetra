@@ -6,13 +6,21 @@ on:
   workflow_dispatch:
     inputs:
       confirm_readonly_e2e:
-        description: "Run 1 bounded real search per provider + 2 magnet resolves, with version override"
+        description: "Approve a bounded, no-deploy version override diagnostic"
         required: true
         type: choice
         options:
           - CANCEL
           - RUN_READONLY_E2E
         default: CANCEL
+      test_scope:
+        description: "Choose focused EZTV + BTDigg check, or optionally repeat all live HTML tests"
+        required: true
+        type: choice
+        options:
+          - FOCUSED_GATEWAYS
+          - FULL_CANARY_AUDIT
+        default: FOCUSED_GATEWAYS
 
 permissions:
   contents: read
@@ -51,6 +59,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MAGNETRA_E2E_READONLY_APPROVAL: ${{ inputs.confirm_readonly_e2e }}
+          MAGNETRA_E2E_SCOPE: ${{ inputs.test_scope }}
         run: |
           set -euo pipefail
           python3 scripts/check-magnetra-candidate-e2e.py
