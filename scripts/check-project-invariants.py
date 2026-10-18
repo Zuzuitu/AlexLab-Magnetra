@@ -265,6 +265,12 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "candidate_eztv_last_success_run": 39119359606,
         "candidate_btdigg_positive_e2e_verified": False,
         "candidate_btdigg_source_timeout_http_504_observed": True,
+        "btdigg_differential_workflow": ".github/workflows/diagnose-btdigg-differential.yml",
+        "btdigg_differential_executed": False,
+        "btdigg_differential_outcome": "PENDING_OWNER_MANUAL_RUN",
+        "btdigg_differential_old_first_no_retry": True,
+        "btdigg_gateway_code_changed": False,
+        "btdigg_source_timeout_fix_verified": False,
         "candidate_btdigg_last_diagnostic_run": 39119359606,
         "candidate_e2e_verified_provider_ids": ["eztvx", "oxtorrent", "torrent9"],
         "candidate_all_46_providers_e2e_verified": False,
@@ -288,6 +294,35 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    btdigg_workflow = ROOT / ".github/workflows/diagnose-btdigg-differential.yml"
+    require_file(btdigg_workflow)
+    if btdigg_workflow.is_file():
+        body = btdigg_workflow.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "COMPARE_OLD_THEN_CANDIDATE",
+                       "Explicit BTDigg diagnostic approval before network use",
+                       "python3 scripts/check-project-invariants.py",
+                       "python3 scripts/diagnose-btdigg-production-vs-candidate.py"):
+            if marker not in body:
+                fail("BTDigg read-only diagnostic must be manual with gate: " + marker)
+        for forbidden in ("push:", "schedule:", "wrangler versions deploy",
+                          "wrangler deploy", "[deploy-pwa]", "curl --request POST"):
+            if forbidden in body:
+                fail("BTDigg diagnostic must never auto-deploy or post: " + forbidden)
+    btdigg_script = ROOT / "scripts/diagnose-btdigg-production-vs-candidate.py"
+    require_file(btdigg_script)
+    if btdigg_script.is_file():
+        source = btdigg_script.read_text(encoding="utf8")
+        for marker in ('COMPARE_OLD_THEN_CANDIDATE', 'e2e.check_deployment()',
+                       'e2e.check_routing_fingerprint()', 'check_one_version(candidate=False)',
+                       'if old_status != "PASS":', 'check_one_version(candidate=True)'):
+            if marker not in source:
+                fail("BTDigg diagnostic missing fail-closed source gating: " + marker)
+        for forbidden in ("subprocess.run(", "urllib.request.urlretrieve",
+                          "wrangler versions deploy", "time.sleep("):
+            if forbidden in source:
+                fail("BTDigg diagnostic must not mutate or retry source requests: " + forbidden)
+
     candidate_e2e_workflow = ROOT / ".github/workflows/test-magnetra-candidate-e2e.yml"
     require_file(candidate_e2e_workflow)
     if candidate_e2e_workflow.is_file():
