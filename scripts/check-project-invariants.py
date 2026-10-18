@@ -284,7 +284,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "btdigg_mobile_same_search_query_confirmed": None,
         "btdigg_mobile_persistent_reliability_proven": False,
         "btdigg_timeout_physical_root_cause_identified": False,
-        "btdigg_next_diagnostic": "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING",
+        "btdigg_next_diagnostic": "DNS/TCP/TLS/TTFB",
         "btdigg_next_diagnostic_executed": False,
         "btdigg_next_diagnostic_requires_owner_approval": True,
         "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-18.md",
