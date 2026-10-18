@@ -267,7 +267,7 @@
     "worker_code_version_activated": false,
     "requires_binding_review_before_activation": true,
     "rollout_rollback_version_owner_reported": "a9df4429",
-    "worker_to_tunnel_authenticated_e2e_confirmed": false,
+    "worker_to_tunnel_authenticated_e2e_confirmed": true,
     "manual_stage_workflow_run_succeeded_owner_screenshot": true,
     "manual_stage_workflow_run_number_owner_screenshot": 1,
     "manual_stage_workflow_branch_owner_screenshot": "main",
@@ -275,7 +275,7 @@
     "new_code_version_cloudflare_id_verified": true,
     "new_code_version_required_bindings_verified": true,
     "active_100_percent_after_stage_reverified": true,
-    "staged_worker_authenticated_test_passed": false,
+    "staged_worker_authenticated_test_passed": true,
     "canary_rollout_approved": false,
     "production_worker_promotion_completed": false,
     "new_code_version_id_verified_from_actions": "249d6767-f4dc-4f4d-bbf7-f57bea2e5554",
@@ -293,20 +293,32 @@
     "zero_percent_slot_verified_by_api": true,
     "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
     "candidate_e2e_diagnostic_executed": true,
-    "candidate_e2e_diagnostic_last_run": 39117038271,
-    "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_SOURCE_ERROR_BTDIGG_SOURCE_ERROR",
+    "candidate_e2e_diagnostic_last_run": 39119359606,
+    "candidate_e2e_diagnostic_last_result": "SUCCESS_FOCUSED_EZTV29_BTDIGG_SOURCE_TIMEOUT_HTTP_504",
     "candidate_e2e_override_attribution_verified": true,
     "candidate_e2e_html_search_and_magnet_passed": [
       "oxtorrent",
       "torrent9"
     ],
-    "candidate_eztv_positive_e2e_verified": false,
-    "candidate_btdigg_e2e_observed": false,
+    "candidate_eztv_positive_e2e_verified": true,
+    "candidate_btdigg_e2e_observed": true,
     "candidate_eztv_recent_original_source_positive_samples_discovered": 2,
     "candidate_btdigg_upstream_error_observed": true,
     "candidate_eztv_upstream_error_observed": true,
     "eztv_rate_limit_minimum_gap_seconds": 3,
     "eztv_rate_limit_as_root_cause_confirmed": false,
-    "candidate_e2e_focused_gateway_mode_staged": true
+    "candidate_e2e_focused_gateway_mode_staged": true,
+    "candidate_eztv_positive_e2e_result_count": 29,
+    "candidate_eztv_last_success_run": 39119359606,
+    "candidate_btdigg_positive_e2e_verified": false,
+    "candidate_btdigg_source_timeout_http_504_observed": true,
+    "candidate_btdigg_last_diagnostic_run": 39119359606,
+    "candidate_e2e_verified_provider_ids": [
+      "eztvx",
+      "oxtorrent",
+      "torrent9"
+    ],
+    "candidate_all_46_providers_e2e_verified": false,
+    "eztv_min_gap_mitigation_success_observed": true
   }
 }
