@@ -312,6 +312,16 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    prompt_file = ROOT / stage.get("current_master_prompt", "")
+    require_file(prompt_file)
+    if prompt_file.is_file():
+        prompt_text = prompt_file.read_text(encoding="utf8")
+        for marker in ("BTDIGG_SOURCE_TIMEOUT", "12 secunde", "după ~1 minut",
+                       "MAGNETRA_GATEWAY_TOKEN", "46", "PR #77",
+                       "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING"):
+            if marker not in prompt_text:
+                fail("Current complete handoff prompt lacks critical evidence: " + marker)
+
     btdigg_workflow = ROOT / ".github/workflows/diagnose-btdigg-differential.yml"
     require_file(btdigg_workflow)
     if btdigg_workflow.is_file():
