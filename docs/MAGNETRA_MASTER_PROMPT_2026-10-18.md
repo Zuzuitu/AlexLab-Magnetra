@@ -95,6 +95,7 @@ Toate rezultatele de mai jos sunt din **cereri public API reale**, cu atribuirea
    Diagnostic: BTDIGG_SOURCE_TIMEOUT
    ```
 2. A așteptat **aproximativ un minut** și a căutat din nou, apoi **a primit rezultate reale în interfața PWA**, fără modificarea serviciului, secretului, tunelului sau a versiunii Cloudflare.
+   - Formulare exactă de checkpoint: **după ~1 minut** a doua căutare efectuată de utilizator a returnat rezultate reale.
 3. **NU se știe dacă a repetat exact același termen sau alt termen**, pentru că întrebarea i-a fost adresată, dar nu a primit încă răspuns. Nu atribui reușita cache-ului, rate-limitului sau unui mecanism specific fără dovadă.
 4. Aceasta este dovadă directă că **problema de disponibilitate este intermitentă** și că UX de pe iPhone poate funcționa, dar **nu este o remediere permanentă**. Nu o confunda cu execuția `PASS_BOTH` a testului API.
 5. `BTDIGG_SOURCE_TIMEOUT` reprezintă un **HTTP 504 din serviciul Rock64 8796 / răspuns al cererii originale `btdig.com`**, NU `BTDIGG_TUNNEL_TIMEOUT` de 16 s. Codul Python poate converti în 504 atât timeoutul upstream cât și unele erori `URLError/OSError` ori excepții generale: **cauza fizică exactă, DNS vs TCP vs TLS vs server TTFB/body, NU e încă demonstrată.**
@@ -103,6 +104,8 @@ Toate rezultatele de mai jos sunt din **cereri public API reale**, cu atribuirea
 **Nu declara că BTDigg este reparat definitiv.** Stare corectă: **FUNCȚIONAL TESTAT pe old și candidate + FUNCȚIONAL PE iPHONE LA A DOUA ÎNCERCARE + TIMEOUT INTERMITENT NEELUCIDAT**.
 
 ## 7. URMĂTORUL PAS EXACT pentru noul chat: diagnostic read-only al latenței
+
+**Etapa canonică P0: `READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING`.**
 
 Obiectivul imediat este să stabilim care etapă consumă cele aproximativ 12 secunde în `127.0.0.1:8796 -> https://btdig.com/search` și să pregătim un fix de fiabilitate, **doar dacă există o cauză probată**.
 
