@@ -124,7 +124,7 @@ def valid_magnet(value):
             and bool(MAGNET.search(value)))
 
 
-def validate_search(provider, query):
+def validate_search(provider, query, *, allow_empty=False):
     path = "/api/search?" + urllib.parse.urlencode({
         "q": query, "providers": provider, "category": "all"
     })
@@ -142,6 +142,8 @@ def validate_search(provider, query):
     if len(stats) != 1 or stats[0].get("provider") != provider or stats[0].get("ok") is not True:
         raise Stop("SEARCH_PROVIDER_STAT_MISMATCH_" + provider)
     if not results:
+        if allow_empty:
+            return []
         raise Stop("SEARCH_EMPTY_UNVERIFIED_" + provider)
     for item in results:
         if not isinstance(item, dict) or item.get("provider") != provider or not item.get("name"):
@@ -175,6 +177,97 @@ def check_resolve(provider, items):
     print("DEFERRED_MAGNET_PASS_" + provider + ": original-provider detail resolved; magnet BTIH valid (value withheld)")
 
 
+
+# Upstream's historic tt0460681 / Supernatural response legitimately returned
+# torrents_count=0. A zero must not be mistaken for gateway transport failure.
+# Positive verification uses recent original-source IMDb IDs when public source
+# access is available and bounded current-series controls otherwise.
+EZTV_ZERO_SAMPLE = "tt0460681"
+EZTV_CURRENT_SERIES_SAMPLES = ("tt0096697", "tt0413573", "tt0182576", "tt0364845")
+
+
+def discover_recent_eztv_ids():
+    """One GET of genuine official recent EZTV rows; no result contents logged."""
+    url = "https://eztvx.to/api/get-torrents?limit=12&page=1"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "AlexLab-Magnetra-PositiveSample/1.0",
+        "Accept": "application/json",
+    }, method="GET")
+    try:
+        with urllib.request.build_opener(NoRedirect).open(req, timeout=9) as response:
+            if response.status != 200 or "application/json" not in response.headers.get("content-type", ""):
+                print("EZTV_RECENT_DISCOVERY: UNVERIFIED_CONTENT_TYPE_OR_STATUS")
+                return []
+            body = response.read(750_001)
+        if len(body) > 750_000:
+            print("EZTV_RECENT_DISCOVERY: RESPONSE_TOO_LARGE")
+            return []
+        parsed = json.loads(body)
+    except urllib.error.HTTPError as err:
+        # HTTP 403 is historically known for cloud egress; it is not proof
+        # that Rock64 origin is blocked.
+        print("EZTV_RECENT_DISCOVERY: UPSTREAM_HTTP_" + str(err.code))
+        return []
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, UnicodeDecodeError):
+        print("EZTV_RECENT_DISCOVERY: SOURCE_UNVERIFIED")
+        return []
+    rows = parsed.get("torrents") if isinstance(parsed, dict) else None
+    if not isinstance(rows, list):
+        print("EZTV_RECENT_DISCOVERY: NO_ROWS")
+        return []
+    candidates = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        number = str(row.get("imdb_id", "")).removeprefix("tt")
+        if not re.fullmatch(r"[0-9]{5,12}", number) or int(number) == 0:
+            continue
+        magnet = row.get("magnet_url")
+        if not valid_magnet(magnet):
+            continue
+        imdb = "tt" + number
+        if imdb not in candidates and imdb != EZTV_ZERO_SAMPLE:
+            candidates.append(imdb)
+            if len(candidates) == 2:
+                break
+    print("EZTV_RECENT_DISCOVERY: " + str(len(candidates)) + " original IMDb IDs with valid source magnets (identities withheld)")
+    return candidates
+
+
+def check_eztv_positive():
+    """Separate expected empty vs. genuine positive source-specific magnets."""
+    historical = validate_search("eztvx", EZTV_ZERO_SAMPLE, allow_empty=True)
+    if historical:
+        print("EZTV_HISTORICAL_ZERO_NOW_POSITIVE: " + str(len(historical)) + " original results")
+        if any(valid_magnet(item.get("magnet")) for item in historical):
+            print("EZTV_AUTHENTICATED_POSITIVE_GATE: PASS")
+            return True
+    else:
+        print("EZTV_KNOWN_EMPTY_SAMPLE: PASS (0 genuine rows, NOT a tunnel failure)")
+
+    discovered = discover_recent_eztv_ids()
+    # Fixed true-series IMDb identifiers are only candidate controls; they
+    # are NOT labelled known-positive and never substituted across indexers.
+    seen = {EZTV_ZERO_SAMPLE}
+    count = 0
+    for imdb in [*discovered, *EZTV_CURRENT_SERIES_SAMPLES]:
+        if imdb in seen:
+            continue
+        seen.add(imdb)
+        count += 1
+        if count > 6:
+            break
+        rows = validate_search("eztvx", imdb, allow_empty=True)
+        if rows:
+            if not all(valid_magnet(row.get("magnet")) for row in rows):
+                raise Stop("EZTV_POSITIVE_ROWS_WITHOUT_VALID_MAGNET")
+            print("EZTV_AUTHENTICATED_POSITIVE_GATE: PASS (" + str(len(rows)) + " genuine source results; IMDb withheld)")
+            return True
+        print("EZTV_SAMPLE_" + str(count) + ": EMPTY_UNVERIFIED")
+    print("EZTV_AUTHENTICATED_POSITIVE_GATE: UNVERIFIED (all sampled exact IDs empty)")
+    return False
+
+
 def check_btdigg_observational():
     # A single BTDigg request, with no retry: results/error do not imply historical uptime.
     try:
@@ -193,8 +286,9 @@ def execute():
     for provider in ("oxtorrent", "torrent9"):
         items = validate_search(provider, "ubuntu")
         check_resolve(provider, items)
-    validate_search("eztvx", "tt0460681")
     check_btdigg_observational()
+    if not check_eztv_positive():
+        raise Stop("EZTV_POSITIVE_SOURCE_NOT_PROVEN")
     print("E2E_GATE_RESULT: PASS (staged candidate, NOT normal production traffic)")
     return 0
 
