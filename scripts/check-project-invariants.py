@@ -276,6 +276,19 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "btdigg_differential_old_first_no_retry": True,
         "btdigg_gateway_code_changed": False,
         "btdigg_source_timeout_fix_verified": False,
+        "btdigg_mobile_observation_date": "2026-10-18",
+        "btdigg_mobile_first_search_error_code": "BTDIGG_SOURCE_TIMEOUT",
+        "btdigg_mobile_first_search_timeout_approx_seconds": 12,
+        "btdigg_mobile_second_search_after_approx_seconds": 60,
+        "btdigg_mobile_second_search_real_results_observed": True,
+        "btdigg_mobile_same_search_query_confirmed": None,
+        "btdigg_mobile_persistent_reliability_proven": False,
+        "btdigg_timeout_physical_root_cause_identified": False,
+        "btdigg_next_diagnostic": "DNS/TCP/TLS/TTFB",
+        "btdigg_next_diagnostic_executed": False,
+        "btdigg_next_diagnostic_requires_owner_approval": True,
+        "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-18.md",
+
         "candidate_btdigg_last_diagnostic_run": 39134428856,
         "candidate_e2e_verified_provider_ids": ["btdigg", "eztvx", "oxtorrent", "torrent9"],
         "candidate_all_46_providers_e2e_verified": False,
@@ -299,6 +312,16 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    prompt_file = ROOT / stage.get("current_master_prompt", "")
+    require_file(prompt_file)
+    if prompt_file.is_file():
+        prompt_text = prompt_file.read_text(encoding="utf8")
+        for marker in ("BTDIGG_SOURCE_TIMEOUT", "12 secunde", "aproximativ un minut",
+                       "MAGNETRA_GATEWAY_TOKEN", "46", "PR #77",
+                       "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING"):
+            if marker not in prompt_text:
+                fail("Current complete handoff prompt lacks critical evidence: " + marker)
+
     btdigg_workflow = ROOT / ".github/workflows/diagnose-btdigg-differential.yml"
     require_file(btdigg_workflow)
     if btdigg_workflow.is_file():

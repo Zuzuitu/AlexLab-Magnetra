@@ -1,5 +1,8 @@
 # Magnetra: ONE existing Cloudflare Tunnel for all recoverable providers
 
+> **Actualizare verificată 18.10.2026 (supersede starea "staged proposal" istorică de mai jos):** există efectiv gateway-ul central Rock64 `127.0.0.1:8798`, accesibil prin `https://magnetra-rock64.alexlab.media` pe **tunelul existent**, cu handlerul EZTV `8797` și sursele OxTorrent/Torrent9. E2E autentificate din versiunea Cloudflare candidată (0% trafic obișnuit) au dovedit **EZTV 29 rezultate**, OxTorrent 3 rezultate + magnet și Torrent9 3 rezultate + magnet. BTDigg păstrează separat `127.0.0.1:8796` + `https://btdigg-rock64.alexlab.media`, cu 10 rezultate BTIH originale testate pe versiunea Worker veche și candidată; rămâne însă un timeout intermitent de ~12s observat pe iPhone, urmat de succes după ~1 minut. Niciun nou tunel/provider, niciun canary/producție pentru codul candidat nu este autorizat. Detalii: [master prompt 18.10](MAGNETRA_MASTER_PROMPT_2026-10-18.md), [checkpoint canonic](PROJECT_STATE.md). Restul planului reprezintă faze/dovezi istorice la data lor.
+
+
 2026-10-15: owner explicitly rejects per-indexer tunnels. **CANCEL the
 separate EZTV Cloudflare tunnel setup instructions and installer from PR #48.**
 Keep existing EZTV gateway on Rock64. This plan supersedes previous EZTV
