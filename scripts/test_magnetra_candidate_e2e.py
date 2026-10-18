@@ -78,22 +78,59 @@ class CandidateE2ETests(unittest.TestCase):
             with self.assertRaisesRegex(m.Stop, "SEARCH_EMPTY_UNVERIFIED_eztvx"):
                 m.validate_search("eztvx", m.EZTV_ZERO_SAMPLE)
 
-    def test_eztv_positive_selected_after_historical_empty(self):
+    def test_eztv_positive_does_not_query_known_empty_before_positive(self):
         rows = [{"provider": "eztvx", "name": "Genuine metadata",
                  "magnet": "magnet:?xt=urn:btih:" + "d" * 40}]
-        def search(provider, imdb, *, allow_empty=False):
-            self.assertEqual(provider, "eztvx")
-            return [] if imdb == m.EZTV_ZERO_SAMPLE else rows
-        with patch.object(m, "validate_search", side_effect=search) as searched:
+        with patch.object(m, "validate_search", return_value=rows) as searched:
             with patch.object(m, "discover_recent_eztv_ids", return_value=["tt01234567"]):
-                self.assertTrue(m.check_eztv_positive())
-                self.assertEqual(searched.call_count, 2)
+                with patch.object(m.time, "sleep") as sleeper:
+                    self.assertTrue(m.check_eztv_positive())
+                self.assertEqual(searched.call_count, 1)
                 self.assertEqual(searched.call_args.args[1], "tt01234567")
+                sleeper.assert_not_called()
+
+    def test_eztv_distinct_empty_then_positive_samples_are_paced(self):
+        rows = [{"provider": "eztvx", "name": "Genuine metadata",
+                 "magnet": "magnet:?xt=urn:btih:" + "d" * 40}]
+        with patch.object(m, "validate_search", side_effect=[[], rows]) as searched:
+            with patch.object(m, "discover_recent_eztv_ids", return_value=["tt01234567", "tt09876543"]):
+                with patch.object(m.time, "sleep") as sleeper:
+                    self.assertTrue(m.check_eztv_positive())
+                self.assertEqual(searched.call_count, 2)
+                sleeper.assert_called_once_with(m.EZTV_MIN_GAP_SECONDS)
+                self.assertGreaterEqual(m.EZTV_MIN_GAP_SECONDS, 3.0)
+
+    def test_eztv_no_retry_after_rate_limit(self):
+        with patch.object(m, "validate_search", side_effect=m.Stop("SEARCH_UPSTREAM_ERROR_eztvx_RATE_LIMIT")) as searched:
+            with patch.object(m, "discover_recent_eztv_ids", return_value=["tt01234567", "tt09876543"]):
+                with patch.object(m.time, "sleep") as sleeper:
+                    with self.assertRaisesRegex(m.Stop, "RATE_LIMIT"):
+                        m.check_eztv_positive()
+                    self.assertEqual(searched.call_count, 1)
+                    sleeper.assert_not_called()
+
+    def test_error_code_sanitizes_provider_strings(self):
+        self.assertEqual(m.safe_provider_error_code({
+            "code": "RATE_LIMIT",
+            "error": "EZTV source/gateway HTTP 429. SECRET_PLEASE_DONT_LOG",
+            "openUrl": "https://secret.example/hidden",
+        }), "RATE_LIMIT_HTTP_429")
+        self.assertEqual(m.safe_provider_error_code({
+            "code": "attacker-controlled-secret-string", "error": "internal text",
+        }), "UNCLASSIFIED")
+        payload = {"results": [], "stats": [{"provider": "eztvx", "count": 0, "ok": False}],
+                   "errors": [{"code": "RATE_LIMIT",
+                               "error": "EZTV source/gateway HTTP 429 secret=test"}]}
+        with patch.object(m, "request_api", return_value=(200, payload)):
+            with self.assertRaisesRegex(m.Stop, "^SEARCH_UPSTREAM_ERROR_eztvx_RATE_LIMIT_HTTP_429$"):
+                m.validate_search("eztvx", "tt01234567", allow_empty=True)
 
     def test_eztv_current_series_are_controls_not_fabricated_results(self):
         with patch.object(m, "validate_search", return_value=[]):
             with patch.object(m, "discover_recent_eztv_ids", return_value=[]):
-                self.assertFalse(m.check_eztv_positive())
+                with patch.object(m.time, "sleep") as sleeper:
+                    self.assertFalse(m.check_eztv_positive())
+                    sleeper.assert_called_once_with(m.EZTV_MIN_GAP_SECONDS)
 
     def test_eztv_source_rows_must_have_magnets(self):
         with patch.object(m, "validate_search", return_value=[
@@ -104,8 +141,36 @@ class CandidateE2ETests(unittest.TestCase):
                     m.check_eztv_positive()
 
     def test_eztv_sample_size_bounded(self):
-        self.assertLessEqual(len(m.EZTV_CURRENT_SERIES_SAMPLES), 4)
+        self.assertLessEqual(len(m.EZTV_CURRENT_SERIES_SAMPLES), 2)
+        self.assertEqual(m.EZTV_MAX_POSITIVE_SAMPLES, 2)
         self.assertNotIn(m.EZTV_ZERO_SAMPLE, m.EZTV_CURRENT_SERIES_SAMPLES)
+
+    def test_focused_scope_does_not_rerun_older_html_sources(self):
+        with patch.dict(os.environ, {
+            "MAGNETRA_E2E_READONLY_APPROVAL": "RUN_READONLY_E2E",
+            "MAGNETRA_E2E_SCOPE": "FOCUSED_GATEWAYS",
+        }):
+            with patch.object(m, "check_deployment"), patch.object(m, "check_routing_fingerprint"), \
+                 patch.object(m, "check_catalog"), patch.object(m, "check_resolve") as resolver, \
+                 patch.object(m, "validate_search") as source_search, \
+                 patch.object(m, "check_btdigg_observational"), \
+                 patch.object(m, "check_eztv_positive", return_value=True):
+                self.assertEqual(m.execute(), 0)
+                resolver.assert_not_called()
+                source_search.assert_not_called()
+
+    def test_unknown_scope_fails_without_any_provider_call(self):
+        with patch.dict(os.environ, {
+            "MAGNETRA_E2E_READONLY_APPROVAL": "RUN_READONLY_E2E",
+            "MAGNETRA_E2E_SCOPE": "CUSTOM_UNSAFE",
+        }):
+            with patch.object(m, "check_deployment"), patch.object(m, "check_routing_fingerprint"), \
+                 patch.object(m, "check_catalog"), patch.object(m, "validate_search") as source_search, \
+                 patch.object(m, "check_btdigg_observational") as btdigg:
+                with self.assertRaisesRegex(m.Stop, "UNKNOWN_E2E_SCOPE"):
+                    m.execute()
+                source_search.assert_not_called()
+                btdigg.assert_not_called()
 
     def test_no_e2e_without_manual_approval(self):
         with patch.dict(os.environ, {"MAGNETRA_E2E_READONLY_APPROVAL": "CANCEL"}):
