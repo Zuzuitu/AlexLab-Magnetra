@@ -15,6 +15,7 @@ import hmac
 import json
 import os
 import re
+import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -70,9 +71,14 @@ class SearchProvider:
             },
             method="GET",
         )
+        started = time.monotonic()
+        opened = None
+        status = 504
+        failure = "none"
         try:
             # Explicitly stop redirects: not an open proxy, no off-origin hops.
             with build_opener(ProxyHandler({}), NoRedirect()).open(request, timeout=TIMEOUT_SECONDS) as res:
+                opened = time.monotonic()
                 if res.status != 200:
                     return res.status, b""
                 if int(res.headers.get("content-length") or 0) > SIZE_LIMIT:
@@ -87,10 +93,33 @@ class SearchProvider:
                     return 503, b""
                 return 200, raw
         except HTTPError as e:
-            # Do not retry 429 or challenges or hide their real status.
-            return (429 if e.code == 429 else 503), b""
-        except (OSError, URLError, TimeoutError):
+            failure = "http_upstream"
+            status = 429 if e.code == 429 else 503
+            return status, b""
+        except (TimeoutError, socket.timeout):
+            failure = "timeout"
             return 504, b""
+        except URLError as e:
+            reason = e.reason
+            failure = ("timeout" if isinstance(reason, TimeoutError)
+                       else "dns" if isinstance(reason, socket.gaierror)
+                       else "transport")
+            return 504, b""
+        except OSError as e:
+            failure = ("dns" if isinstance(e, socket.gaierror)
+                       else "transport")
+            return 504, b""
+        finally:
+            end = time.monotonic()
+            # Deliberately excludes query, URL, response HTML, token and exception text.
+            # urllib exposes open-to-headers and body-read phases, not DNS/TCP/TLS individually.
+            print(json.dumps({
+                "event": "btdigg_upstream_timing",
+                "total_ms": round((end - started) * 1000),
+                "open_ms": round((opened - started) * 1000) if opened else None,
+                "read_ms": round((end - opened) * 1000) if opened else None,
+                "failure": failure,
+            }), flush=True)
 
     def _prune(self, now):
         expired = [q for q, (_, timestamp) in self._cache.items()
