@@ -1,5 +1,8 @@
 # Magnetra — universal 46-indexer recovery plan, Phase 1
 
+> **Actualizare verificată 18.10.2026 (supersede etapele istorice de mai jos):** Cloudflare candidate `249d6767-f4dc-4f4d-bbf7-f57bea2e5554` este în deployment la **0% trafic**, vechea `a9df4429` la **100%**. E2E reale pozitive numai pentru **BTDigg** (10 rânduri autentice pe fiecare versiune), **EZTV** (29 magneturi autentice), **OxTorrent** și **Torrent9** (3 rezultate + magnet deferred fiecare). Catalogul are 46 ID-uri, NU 46 surse pozitive. BTDigg a raportat ulterior pe iPhone `BTDIGG_SOURCE_TIMEOUT` (~12s), apoi rezultate după ~1 minut, fără intervenție; disponibilitate **intermitentă, rădăcină neidentificată**. Următorul pas este măsurarea read-only DNS/TCP/TLS/TTFB/total pentru 8796, nu bulk recovery și nu deploy. Detaliile curente: [master prompt 18.10](MAGNETRA_MASTER_PROMPT_2026-10-18.md), [checkpoint canonic](PROJECT_STATE.md). Restul acestui document păstrează dovezile istorice / strategia inițială, nu statusul actual de deployment.
+
+
 This is **not** the EZTV-only roadmap. All 46 original Android/PWA
 indexers have a canonical, deterministic recovery decision even if the
 historical result is "empty". The same evidence classifier feeds the
