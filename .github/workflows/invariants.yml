@@ -27,3 +27,6 @@ jobs:
 
       - name: Test candidate E2E fingerprint and sanitization offline
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_candidate_e2e.py'
+
+      - name: Test BTDigg one-query production-first differential without network
+        run: python3 -m unittest discover -s scripts -p 'test_btdigg_differential.py'
