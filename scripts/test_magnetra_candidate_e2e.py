@@ -118,6 +118,18 @@ class CandidateE2ETests(unittest.TestCase):
         self.assertEqual(m.safe_provider_error_code({
             "code": "attacker-controlled-secret-string", "error": "internal text",
         }), "UNCLASSIFIED")
+        self.assertEqual(m.safe_provider_error_code({
+            "code": "PROVIDER_ERROR",
+            "error": "BTDigg Rock64 gateway authorization failed",
+        }), "PROVIDER_ERROR_AUTH_REJECTED")
+        self.assertEqual(m.safe_provider_error_code({
+            "code": "PROVIDER_ERROR",
+            "error": "EZTV API shape unexpected",
+        }), "PROVIDER_ERROR_RESPONSE_SCHEMA")
+        self.assertEqual(m.safe_provider_error_code({
+            "code": "BTDIGG_TUNNEL_ERROR",
+            "error": "BTDigg Rock64 gateway transport failed",
+        }), "BTDIGG_TUNNEL_ERROR_TRANSPORT")
         payload = {"results": [], "stats": [{"provider": "eztvx", "count": 0, "ok": False}],
                    "errors": [{"code": "RATE_LIMIT",
                                "error": "EZTV source/gateway HTTP 429 secret=test"}]}
