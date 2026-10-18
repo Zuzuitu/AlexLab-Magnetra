@@ -284,7 +284,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "btdigg_mobile_same_search_query_confirmed": None,
         "btdigg_mobile_persistent_reliability_proven": False,
         "btdigg_timeout_physical_root_cause_identified": False,
-        "btdigg_next_diagnostic": "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING",
+        "btdigg_next_diagnostic": "DNS/TCP/TLS/TTFB",
         "btdigg_next_diagnostic_executed": False,
         "btdigg_next_diagnostic_requires_owner_approval": True,
         "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-18.md",
@@ -316,7 +316,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
     require_file(prompt_file)
     if prompt_file.is_file():
         prompt_text = prompt_file.read_text(encoding="utf8")
-        for marker in ("BTDIGG_SOURCE_TIMEOUT", "12 secunde", "după ~1 minut",
+        for marker in ("BTDIGG_SOURCE_TIMEOUT", "12 secunde", "aproximativ un minut",
                        "MAGNETRA_GATEWAY_TOKEN", "46", "PR #77",
                        "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING"):
             if marker not in prompt_text:
