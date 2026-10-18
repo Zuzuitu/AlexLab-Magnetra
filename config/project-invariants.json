@@ -51,7 +51,8 @@
       ".github/workflows/stage-magnetra-worker.yml",
       ".github/workflows/inspect-magnetra-cloudflare-version.yml",
       ".github/workflows/configure-magnetra-zero-percent.yml",
-      ".github/workflows/test-magnetra-candidate-e2e.yml"
+      ".github/workflows/test-magnetra-candidate-e2e.yml",
+      ".github/workflows/diagnose-btdigg-differential.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -319,6 +320,12 @@
       "torrent9"
     ],
     "candidate_all_46_providers_e2e_verified": false,
-    "eztv_min_gap_mitigation_success_observed": true
+    "eztv_min_gap_mitigation_success_observed": true,
+    "btdigg_differential_workflow": ".github/workflows/diagnose-btdigg-differential.yml",
+    "btdigg_differential_executed": false,
+    "btdigg_differential_outcome": "PENDING_OWNER_MANUAL_RUN",
+    "btdigg_differential_old_first_no_retry": true,
+    "btdigg_gateway_code_changed": false,
+    "btdigg_source_timeout_fix_verified": false
   }
 }
