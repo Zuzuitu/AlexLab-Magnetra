@@ -250,8 +250,14 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "zero_percent_slot_verified_by_api": True,
         "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
         "candidate_e2e_diagnostic_executed": True,
-        "candidate_e2e_diagnostic_last_run": 39101511577,
-        "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_EMPTY",
+        "candidate_e2e_diagnostic_last_run": 39117038271,
+        "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_SOURCE_ERROR_BTDIGG_SOURCE_ERROR",
+        "candidate_eztv_recent_original_source_positive_samples_discovered": 2,
+        "candidate_btdigg_upstream_error_observed": True,
+        "candidate_eztv_upstream_error_observed": True,
+        "eztv_rate_limit_minimum_gap_seconds": 3,
+        "eztv_rate_limit_as_root_cause_confirmed": False,
+        "candidate_e2e_focused_gateway_mode_staged": True,
         "candidate_e2e_override_attribution_verified": True,
         "candidate_e2e_html_search_and_magnet_passed": ["oxtorrent", "torrent9"],
         "candidate_eztv_positive_e2e_verified": False,
@@ -281,7 +287,8 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
                        "RUN_READONLY_E2E", "python3 scripts/check-project-invariants.py",
                        "python3 scripts/check-magnetra-candidate-e2e.py",
-                       "Mandatory manual approval before any network request"):
+                       "Mandatory manual approval before any network request",
+                       "FOCUSED_GATEWAYS", "MAGNETRA_E2E_SCOPE"):
             if marker not in e2e_wf:
                 fail("Candidate E2E approval/diagnostic guard missing: " + marker)
         for forbidden in ("push:", "schedule:", "wrangler deploy",
@@ -299,7 +306,8 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                 fail("Candidate E2E must distinguish valid EZTV zero from positive data: " + marker)
         for marker in ('Cloudflare-Workers-Version-Overrides', 'check_routing_fingerprint()',
                        'check_resolve(provider, items)', 'check_deployment()',
-                       'MAGNETRA_E2E_READONLY_APPROVAL'):
+                       'MAGNETRA_E2E_READONLY_APPROVAL', 'EZTV_MIN_GAP_SECONDS',
+                       'safe_provider_error_code', 'EZTV_MAX_POSITIVE_SAMPLES'):
             if marker not in e2e_txt:
                 fail("Candidate E2E script missing safe gate: " + marker)
         for forbidden in ('subprocess.run(', 'wrangler versions deploy', 'urllib.request.urlretrieve'):
