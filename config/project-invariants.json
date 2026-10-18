@@ -293,14 +293,20 @@
     "zero_percent_slot_verified_by_api": true,
     "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
     "candidate_e2e_diagnostic_executed": true,
-    "candidate_e2e_diagnostic_last_run": 39101511577,
-    "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_EMPTY",
+    "candidate_e2e_diagnostic_last_run": 39117038271,
+    "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_SOURCE_ERROR_BTDIGG_SOURCE_ERROR",
     "candidate_e2e_override_attribution_verified": true,
     "candidate_e2e_html_search_and_magnet_passed": [
       "oxtorrent",
       "torrent9"
     ],
     "candidate_eztv_positive_e2e_verified": false,
-    "candidate_btdigg_e2e_observed": false
+    "candidate_btdigg_e2e_observed": false,
+    "candidate_eztv_recent_original_source_positive_samples_discovered": 2,
+    "candidate_btdigg_upstream_error_observed": true,
+    "candidate_eztv_upstream_error_observed": true,
+    "eztv_rate_limit_minimum_gap_seconds": 3,
+    "eztv_rate_limit_as_root_cause_confirmed": false,
+    "candidate_e2e_focused_gateway_mode_staged": true
   }
 }
