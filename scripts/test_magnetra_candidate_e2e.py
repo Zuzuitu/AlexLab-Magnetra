@@ -69,6 +69,44 @@ class CandidateE2ETests(unittest.TestCase):
                 "magnet": None
             }])
 
+    def test_eztv_known_zero_does_not_false_fail(self):
+        payload = {"results": [], "errors": [],
+                   "stats": [{"provider": "eztvx", "ok": True, "count": 0}]}
+        with patch.object(m, "request_api", return_value=(200, payload)):
+            self.assertEqual(
+                m.validate_search("eztvx", m.EZTV_ZERO_SAMPLE, allow_empty=True), [])
+            with self.assertRaisesRegex(m.Stop, "SEARCH_EMPTY_UNVERIFIED_eztvx"):
+                m.validate_search("eztvx", m.EZTV_ZERO_SAMPLE)
+
+    def test_eztv_positive_selected_after_historical_empty(self):
+        rows = [{"provider": "eztvx", "name": "Genuine metadata",
+                 "magnet": "magnet:?xt=urn:btih:" + "d" * 40}]
+        def search(provider, imdb, *, allow_empty=False):
+            self.assertEqual(provider, "eztvx")
+            return [] if imdb == m.EZTV_ZERO_SAMPLE else rows
+        with patch.object(m, "validate_search", side_effect=search) as searched:
+            with patch.object(m, "discover_recent_eztv_ids", return_value=["tt01234567"]):
+                self.assertTrue(m.check_eztv_positive())
+                self.assertEqual(searched.call_count, 2)
+                self.assertEqual(searched.call_args.args[1], "tt01234567")
+
+    def test_eztv_current_series_are_controls_not_fabricated_results(self):
+        with patch.object(m, "validate_search", return_value=[]):
+            with patch.object(m, "discover_recent_eztv_ids", return_value=[]):
+                self.assertFalse(m.check_eztv_positive())
+
+    def test_eztv_source_rows_must_have_magnets(self):
+        with patch.object(m, "validate_search", return_value=[
+            {"provider": "eztvx", "name": "Bad row", "magnet": None}
+        ]):
+            with patch.object(m, "discover_recent_eztv_ids", return_value=["tt01234567"]):
+                with self.assertRaisesRegex(m.Stop, "EZTV_POSITIVE_ROWS_WITHOUT_VALID_MAGNET"):
+                    m.check_eztv_positive()
+
+    def test_eztv_sample_size_bounded(self):
+        self.assertLessEqual(len(m.EZTV_CURRENT_SERIES_SAMPLES), 4)
+        self.assertNotIn(m.EZTV_ZERO_SAMPLE, m.EZTV_CURRENT_SERIES_SAMPLES)
+
     def test_no_e2e_without_manual_approval(self):
         with patch.dict(os.environ, {"MAGNETRA_E2E_READONLY_APPROVAL": "CANCEL"}):
             with patch.object(m, "check_deployment") as gate:
