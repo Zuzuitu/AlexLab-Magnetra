@@ -332,6 +332,18 @@
     "btdigg_differential_run": 39134428856,
     "btdigg_production_positive_e2e_verified": true,
     "btdigg_production_positive_result_count": 10,
-    "btdigg_intermittent_source_unavailability_observed": true
+    "btdigg_intermittent_source_unavailability_observed": true,
+    "btdigg_mobile_observation_date": "2026-10-18",
+    "btdigg_mobile_first_search_error_code": "BTDIGG_SOURCE_TIMEOUT",
+    "btdigg_mobile_first_search_timeout_approx_seconds": 12,
+    "btdigg_mobile_second_search_after_approx_seconds": 60,
+    "btdigg_mobile_second_search_real_results_observed": true,
+    "btdigg_mobile_same_search_query_confirmed": null,
+    "btdigg_mobile_persistent_reliability_proven": false,
+    "btdigg_timeout_physical_root_cause_identified": false,
+    "btdigg_next_diagnostic": "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING",
+    "btdigg_next_diagnostic_executed": false,
+    "btdigg_next_diagnostic_requires_owner_approval": true,
+    "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-18.md"
   }
 }
