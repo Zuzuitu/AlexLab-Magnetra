@@ -1,0 +1,56 @@
+# Read-only manual differential. NO gateway reset, Cloudflare mutation or repeats on 504/429.
+name: Diagnose BTDigg Old vs Candidate (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      approve_one_btdigg_diagnostic:
+        description: "Approve one BTDigg query on old; candidate only if old succeeds"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - COMPARE_OLD_THEN_CANDIDATE
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-btdigg-differential
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Explicit BTDigg diagnostic approval before network use
+        env:
+          OWNER_CHOICE: ${{ inputs.approve_one_btdigg_diagnostic }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$OWNER_CHOICE" != "COMPARE_OLD_THEN_CANDIDATE" ]; then
+            echo "::error::Select COMPARE_OLD_THEN_CANDIDATE, not CANCEL."
+            exit 2
+          fi
+          echo "BTDIGG_READONLY_APPROVAL: PASS"
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Protect project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Test fail-closed source-differential contracts without network
+        run: python3 -m unittest discover -s scripts -p 'test_btdigg_differential.py'
+      - name: BTDigg old production vs 0% candidate
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_BTDIGG_COMPARE_APPROVAL: ${{ inputs.approve_one_btdigg_diagnostic }}
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose-btdigg-production-vs-candidate.py
