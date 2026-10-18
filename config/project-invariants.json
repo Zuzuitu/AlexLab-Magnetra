@@ -332,6 +332,6 @@
     "btdigg_differential_run": 39134428856,
     "btdigg_production_positive_e2e_verified": true,
     "btdigg_production_positive_result_count": 10,
-    "btdigg_intermitttent_source_unavailability_observed": true
+    "btdigg_intermittent_source_unavailability_observed": true
   }
 }
