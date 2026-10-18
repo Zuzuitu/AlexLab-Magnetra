@@ -19,7 +19,7 @@ Scrie-mi în **română** cu explicații clare, fără pași manuali inutili. Da
 - PWA public: https://index.alexlab.media
 - Android upstream: https://github.com/prajwalch/TorrentSearch
 - Worker Cloudflare: `alexlab-magnetra`; codul Worker în `worker/`, PWA în `web/`, Android Kotlin în `app/`, servicii Rock64 în `rock64/`.
-- **Ultimul main verificat la sfârșitul sesiunii:** `46870fc82772974936a73fabf819e27f32a3c7a5`, după PR #77 merged (toate cele patru categorii PR CI PASS, toate joburile push verificat PASS, deploy PWA skipped).
+- **Ultimul main verificat înainte de PR-ul acestui nou checkpoint:** `46870fc82772974936a73fabf819e27f32a3c7a5`, după PR #77 merged (toate cele patru categorii PR CI PASS, toate joburile push verificat PASS, deploy PWA skipped).
 - Documente cu prioritate: `AGENTS.md`, `docs/PROJECT_STATE.md`, `config/project-invariants.json`, `docs/NEXT_CHAT_HANDOFF.md`, `docs/CHECKPOINT_2026-10-17_CLOUDFLARE_STAGE.md`, `docs/SHARED_MAGNETRA_GATEWAY.md`, `docs/PROVIDER_RECOVERY_PLAN.md`, acest document.
 - **Regulă:** codul actual + deploymentul real > checkpointul canonic > handoff > istoric din conversații. Reconciliază inconsecvențele înainte de implementare.
 
