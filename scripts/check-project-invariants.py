@@ -249,7 +249,13 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "zero_percent_slot_run": 39053562983,
         "zero_percent_slot_verified_by_api": True,
         "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
-        "candidate_e2e_diagnostic_executed": False,
+        "candidate_e2e_diagnostic_executed": True,
+        "candidate_e2e_diagnostic_last_run": 39101511577,
+        "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_EMPTY",
+        "candidate_e2e_override_attribution_verified": True,
+        "candidate_e2e_html_search_and_magnet_passed": ["oxtorrent", "torrent9"],
+        "candidate_eztv_positive_e2e_verified": False,
+        "candidate_btdigg_e2e_observed": False,
         "zero_percent_deployment_workflow": ".github/workflows/configure-magnetra-zero-percent.yml",
         "zero_percent_target_traffic_percent": 0,
         "zero_percent_rollback_traffic_percent": 100,
@@ -287,6 +293,10 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
     require_file(e2e_script)
     if e2e_script.is_file():
         e2e_txt = e2e_script.read_text(encoding="utf8")
+        for marker in ('EZTV_ZERO_SAMPLE', 'check_eztv_positive()', 'discover_recent_eztv_ids()',
+                       'check_btdigg_observational()'):
+            if marker not in e2e_txt:
+                fail("Candidate E2E must distinguish valid EZTV zero from positive data: " + marker)
         for marker in ('Cloudflare-Workers-Version-Overrides', 'check_routing_fingerprint()',
                        'check_resolve(provider, items)', 'check_deployment()',
                        'MAGNETRA_E2E_READONLY_APPROVAL'):
@@ -972,7 +982,7 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "html_8798_physical_update_confirmed": True,
         "html_8798_real_source_acceptance_passed": True,
         "html_8798_physical_acceptance_providers": ["oxtorrent", "torrent9"],
-        "html_authenticated_worker_e2e_passed": False,
+        "html_authenticated_worker_e2e_passed": True,
         "html_8798_startup_readiness_patch_staged": True,
         "html_8798_owner_rollback_verified": True,
         "legacy_btdigg_route_must_remain_unchanged": True,

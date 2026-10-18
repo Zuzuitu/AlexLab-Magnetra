@@ -215,7 +215,7 @@
     "worker_1042_temporary_worker_cleanup_confirmed": true,
     "html_8798_implementation_staged": true,
     "html_8798_physical_update_confirmed": true,
-    "html_authenticated_worker_e2e_passed": false,
+    "html_authenticated_worker_e2e_passed": true,
     "html_8798_startup_readiness_patch_staged": true,
     "html_8798_owner_rollback_verified": true,
     "html_8798_real_source_acceptance_passed": true,
@@ -292,6 +292,15 @@
     "zero_percent_slot_run": 39053562983,
     "zero_percent_slot_verified_by_api": true,
     "candidate_e2e_diagnostic_workflow": ".github/workflows/test-magnetra-candidate-e2e.yml",
-    "candidate_e2e_diagnostic_executed": false
+    "candidate_e2e_diagnostic_executed": true,
+    "candidate_e2e_diagnostic_last_run": 39101511577,
+    "candidate_e2e_diagnostic_last_result": "PARTIAL_EZTV_EMPTY",
+    "candidate_e2e_override_attribution_verified": true,
+    "candidate_e2e_html_search_and_magnet_passed": [
+      "oxtorrent",
+      "torrent9"
+    ],
+    "candidate_eztv_positive_e2e_verified": false,
+    "candidate_btdigg_e2e_observed": false
   }
 }
