@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Standard-library tests; no real requests to BTDigg and no Rock64 access."""
 import http.client
+import io
+import json
+import socket
 import importlib.util
 import pathlib
 import threading
 import unittest
+from contextlib import redirect_stdout
+from unittest.mock import patch
+from urllib.error import URLError
 from http.server import ThreadingHTTPServer
 from urllib.parse import quote
 
@@ -145,6 +151,28 @@ class GatewayTests(unittest.TestCase):
                                        clock=lambda: self.now[0])
         self.assertEqual(empty.search("ubuntu")[0], 200)
         self.assertFalse(empty._cache, "empty or challenge-like HTML cannot be cached")
+
+
+    def test_upstream_diagnostics_are_sanitized_and_classified(self):
+        class FailingOpener:
+            def open(self, request, timeout):
+                raise URLError(socket.gaierror(-2, "sensitive DNS detail"))
+
+        output = io.StringIO()
+        with patch.object(gateway, "build_opener", return_value=FailingOpener()):
+            with redirect_stdout(output):
+                status, body = gateway.SearchProvider.fetch("private search phrase")
+        self.assertEqual((status, body), (504, b""))
+        log = output.getvalue()
+        self.assertNotIn("private search phrase", log)
+        self.assertNotIn("sensitive DNS detail", log)
+        self.assertNotIn("btdig.com/search", log)
+        record = json.loads(log)
+        self.assertEqual(record["event"], "btdigg_upstream_timing")
+        self.assertEqual(record["failure"], "dns")
+        self.assertIsNone(record["open_ms"])
+        self.assertIsNone(record["read_ms"])
+        self.assertGreaterEqual(record["total_ms"], 0)
 
     def test_real_fetch_url_is_fixed(self):
         # A static contract check: arbitrary URLs cannot be influenced by request.
