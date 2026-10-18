@@ -267,7 +267,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "candidate_btdigg_positive_result_count": 10,
         "btdigg_production_positive_e2e_verified": True,
         "btdigg_production_positive_result_count": 10,
-        "btdigg_intermitttent_source_unavailability_observed": True,
+        "btdigg_intermittent_source_unavailability_observed": True,
         "btdigg_differential_run": 39134428856,
         "candidate_btdigg_source_timeout_http_504_observed": True,
         "btdigg_differential_workflow": ".github/workflows/diagnose-btdigg-differential.yml",
