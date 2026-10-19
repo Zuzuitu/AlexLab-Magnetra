@@ -56,19 +56,31 @@ def audit(version, deployments):
     shares = latest.get("versions")
     if not isinstance(shares, list) or not shares:
         return output + ["TRAFFIC_SHARES: UNVERIFIED"], False
-    compact = [(d.get("version_id"), d.get("percentage")) for d in shares if isinstance(d, dict)]
-    if len(compact) != len(shares) or not all(
-            isinstance(v, str) and UUID.fullmatch(v) and type(p) in (float, int)
-            and 0 < p <= 100 for v, p in compact):
+    # Cloudflare can return the exact 100% old + 0% candidate slot.
+    # A 0% entry is deliberately present for version overrides, not live traffic.
+    # Accept ONLY old-only 100% or the known two-version 100/0 slot.
+    if len(shares) not in (1, 2) or any(not isinstance(d, dict) for d in shares):
+        return output + ["TRAFFIC_SHARES: UNVERIFIED"], False
+    compact = [(d.get("version_id"), d.get("percentage")) for d in shares]
+    if (not all(isinstance(v, str) and UUID.fullmatch(v)
+                and type(p) in (float, int) and 0 <= p <= 100 for v, p in compact)
+            or len({v for v, _ in compact}) != len(compact)):
         return output + ["TRAFFIC_SHARES: UNVERIFIED"], False
     if abs(sum(p for _, p in compact) - 100) > 0.001:
         return output + ["TRAFFIC_TOTAL: UNVERIFIED"], False
-    rollback_only = len(compact) == 1 and compact[0][0].startswith(ROLLBACK) and compact[0][1] == 100
-    candidate_active = any(v == VERSION for v, _ in compact)
-    output.append("ROLLBACK_ACTIVE_100_PERCENT: " + ("PASS" if rollback_only else "NOT_CONFIRMED"))
-    output.append("CANDIDATE_NO_TRAFFIC: " + ("PASS" if not candidate_active else "FAIL"))
-    return output, all_bindings_ok and rollback_only and not candidate_active
-
+    shares_by_id = dict(compact)
+    old_ids = [v for v in shares_by_id if v.startswith(ROLLBACK)]
+    rollback_id = old_ids[0] if len(old_ids) == 1 else None
+    old_only = rollback_id is not None and shares_by_id == {rollback_id: 100}
+    zero_slot = (rollback_id is not None and
+                 shares_by_id == {rollback_id: 100, VERSION: 0})
+    candidate_no_traffic = shares_by_id.get(VERSION, 0) == 0
+    output.append("ROLLBACK_ACTIVE_100_PERCENT: " +
+                  ("PASS" if old_only or zero_slot else "NOT_CONFIRMED"))
+    output.append("CANDIDATE_NO_TRAFFIC: " +
+                  ("PASS" if candidate_no_traffic else "FAIL"))
+    output.append("ZERO_PERCENT_SLOT: " + ("PRESENT" if zero_slot else "ABSENT"))
+    return output, all_bindings_ok and (old_only or zero_slot)
 
 def main():
     if len(sys.argv) != 3:
