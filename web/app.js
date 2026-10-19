@@ -162,7 +162,13 @@ async function copyMagnet(magnet) {
 }
 async function ensureMagnet(item){
  if(item.magnet?.startsWith("magnet:?"))return item.magnet;
- const source=item.magnetSource||item.details;
+ // Verified production 2026 card audit: OxTorrent/Torrent9 magnetSource
+ // points to a noncanonical download/ad route on every sampled listing
+ // (50 OxTorrent + 20 Torrent9). The source-owned details page resolves
+ // genuine BTIH magnets through the fixed-origin HTML gateway.
+ // Keep all other 44 providers' source precedence unchanged.
+ const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9";
+ const source=preferDetails&&item.details ? item.details : item.magnetSource||item.details;
  if(!source)throw Error("Provider has no supported magnet or details link.");
  const res=await api("/api/resolve",{
   method:"POST",headers:{"content-type":"application/json"},
