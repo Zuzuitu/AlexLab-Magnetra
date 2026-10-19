@@ -57,7 +57,8 @@
       ".github/workflows/verify-magnetra-canary-e2e.yml",
       ".github/workflows/release-magnetra-candidate-100.yml",
       ".github/workflows/diagnose-magnetra-detail-routes.yml",
-      ".github/workflows/diagnose-magnetra-exact-oxtorrent-resolve.yml"
+      ".github/workflows/diagnose-magnetra-exact-oxtorrent-resolve.yml",
+      ".github/workflows/diagnose-magnetra-2026-resolve.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",

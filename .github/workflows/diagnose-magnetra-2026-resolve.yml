@@ -1,0 +1,58 @@
+# One explicit owner-authorized, read-only production 2026 card→Resolve diagnostic.
+# No BTDigg, EZTV, Flud, magnet/.torrent download, Worker/PWA upload or traffic change.
+name: Diagnose Magnetra 2026 Resolve Fields (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic_choice:
+        description: "Choose exact bounded two-provider 2026 diagnosis; CANCEL does nothing"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_BOUNDED_2026_CARD_RESOLVE
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-2026-resolve-readonly
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Explicit read-only diagnostic approval before network calls
+        shell: bash
+        env:
+          CHOICE: ${{ inputs.diagnostic_choice }}
+        run: |
+          if [ "$CHOICE" != "RUN_BOUNDED_2026_CARD_RESOLVE" ]; then
+            echo "::error::Explicit two-provider diagnostic approval required."
+            exit 2
+          fi
+          echo "DIAGNOSTIC_APPROVAL: PASS"
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Preserve project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline bounded card and source safety tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_2026_card_resolve.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_exact_oxtorrent_resolve.py'
+      - name: Compare public PWA card fields and one Resolve per original source
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_2026_CARD_DIAGNOSTIC_APPROVAL: ${{ inputs.diagnostic_choice }}
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_magnetra_2026_card_resolve.py
