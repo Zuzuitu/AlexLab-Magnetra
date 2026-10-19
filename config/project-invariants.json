@@ -59,7 +59,9 @@
       ".github/workflows/diagnose-magnetra-detail-routes.yml",
       ".github/workflows/diagnose-magnetra-exact-oxtorrent-resolve.yml",
       ".github/workflows/diagnose-magnetra-2026-resolve.yml",
-      ".github/workflows/inspect-magnetra-resolve-fix-stage.yml"
+      ".github/workflows/inspect-magnetra-resolve-fix-stage.yml",
+      ".github/workflows/magnetra-resolve-fix-zero-slot.yml",
+      ".github/workflows/verify-magnetra-fix-zero-e2e.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -388,11 +390,20 @@
     "resolve_fix_stage_run_id": 39298077357,
     "resolve_fix_staged_source_commit": "c6867647c10bba33db0361178f3380a7ffa48385",
     "resolve_fix_staged_upload_confirmed": true,
-    "resolve_fix_staged_binding_audit_passed": false,
+    "resolve_fix_staged_binding_audit_passed": true,
     "resolve_fix_staged_version_currently_deployed": false,
     "resolve_fix_staged_audit_workflow": ".github/workflows/inspect-magnetra-resolve-fix-stage.yml",
     "resolve_fix_staged_e2e_verified": false,
     "resolve_fix_rollout_owner_approved": false,
-    "resolve_fix_rollout_executed": false
+    "resolve_fix_rollout_executed": false,
+    "resolve_fix_binding_audit_run_id": 39303873161,
+    "resolve_fix_binding_audit_result": "PASS_540B_BINDINGS_AND_249D100",
+    "resolve_fix_zero_slot_workflow": ".github/workflows/magnetra-resolve-fix-zero-slot.yml",
+    "resolve_fix_zero_slot_prepared": true,
+    "resolve_fix_zero_slot_owner_approved": false,
+    "resolve_fix_zero_slot_executed": false,
+    "resolve_fix_zero_e2e_workflow": ".github/workflows/verify-magnetra-fix-zero-e2e.yml",
+    "resolve_fix_zero_e2e_prepared": true,
+    "resolve_fix_zero_e2e_executed": false
   }
 }

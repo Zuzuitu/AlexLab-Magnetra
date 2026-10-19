@@ -1,0 +1,76 @@
+# Owner approval required. This MUTATES the Cloudflare deployment record,
+# but sends ZERO normal traffic to the staged fix. Never an automatic action.
+name: Magnetra Resolve Fix 0 Percent Slot (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      zero_slot_action:
+        description: "Explicitly approve only 249d 100% / 540b 0%, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_CURRENT_100_FIX_0
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  prepare-zero-slot:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Exact owner approval before ANY Cloudflare call
+        shell: bash
+        env:
+          ACTION: ${{ inputs.zero_slot_action }}
+        run: |
+          set -euo pipefail
+          if [ "$ACTION" != CONFIRM_CURRENT_100_FIX_0 ]; then
+            echo "::error::Explicit owner approval required; default CANCEL performs no Cloudflare call."
+            exit 2
+          fi
+          echo "ZERO_SLOT_OWNER_APPROVAL: PASS"
+      - name: Checkout reviewed main (no persistent credentials)
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Preserve repository and release invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Fail-closed offline deployment and binding tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_slot.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_stage_audit.py'
+      - name: Configure pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify unchanged Worker name, custom domain and assets boundary
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("worker/wrangler.jsonc",encoding="utf-8") as file:
+              c=json.load(file)
+          assert c["name"]=="alexlab-magnetra"
+          assert c["main"]=="src/index.mjs"
+          assert c["assets"]["binding"]=="ASSETS"
+          assert c["routes"]==[{"pattern":"index.alexlab.media","custom_domain":True}]
+          print("ORIGIN_AND_ASSETS_BOUNDARY: PASS")
+          PY
+      - name: Set only exact 100/0 deployment record with verified postflight
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_FIX_ZERO_ACTION: ${{ inputs.zero_slot_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_magnetra_fix_zero_slot.py
