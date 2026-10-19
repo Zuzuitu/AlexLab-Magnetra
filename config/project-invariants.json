@@ -281,7 +281,7 @@
     "active_100_percent_after_stage_reverified": true,
     "staged_worker_authenticated_test_passed": true,
     "canary_rollout_approved": true,
-    "production_worker_promotion_completed": false,
+    "production_worker_promotion_completed": true,
     "new_code_version_id_verified_from_actions": "249d6767-f4dc-4f4d-bbf7-f57bea2e5554",
     "read_only_version_inspection_workflow": ".github/workflows/inspect-magnetra-cloudflare-version.yml",
     "read_only_version_audit_run": 39047958484,
@@ -371,7 +371,14 @@
     "canary_post_e2e_share_verified_95_5": true,
     "full_promotion_workflow": ".github/workflows/release-magnetra-candidate-100.yml",
     "full_promotion_prepared": true,
-    "full_promotion_owner_approved": false,
-    "full_promotion_executed": false
+    "full_promotion_owner_approved": true,
+    "full_promotion_executed": true,
+    "full_promotion_run_id": 39243522237,
+    "full_promotion_main_commit": "d026ef841f716f000dc8231ef68189a6b75107bc",
+    "full_promotion_100_percent_postflight_verified": true,
+    "current_production_candidate_traffic_percent": 100,
+    "current_rollback_version_traffic_percent": 0,
+    "full_promotion_pwa_user_acceptance_confirmed": false,
+    "full_promotion_independent_http_smoke_confirmed": false
   }
 }
