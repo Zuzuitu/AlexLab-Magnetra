@@ -1,0 +1,59 @@
+# Explicit owner-triggered source E2E. This workflow NEVER changes Cloudflare.
+# Only after the separate manual 249d100 / 540b0 slot is confirmed.
+name: Verify Magnetra 0 Percent Resolve Fix (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      e2e_action:
+        description: "Approve bounded OxTorrent/Torrent9 source requests on exact staged Worker, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_READONLY_540B_FIX_E2E
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-resolve-fix-zero-e2e
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Explicit bounded E2E approval before any Cloudflare or source requests
+        shell: bash
+        env:
+          ACTION: ${{ inputs.e2e_action }}
+        run: |
+          set -euo pipefail
+          if [ "$ACTION" != RUN_READONLY_540B_FIX_E2E ]; then
+            echo "::error::Explicit source probe approval required; default CANCEL sends nothing."
+            exit 2
+          fi
+          echo "READ_ONLY_OWNER_APPROVAL: PASS"
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Protect project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline asset-identity and provider/rollback tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_e2e.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_slot.py'
+      - name: Exact-version E2E — public app.js, 46 providers, OxTorrent and Torrent9
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_FIX_E2E_ACTION: ${{ inputs.e2e_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_magnetra_fix_zero_e2e.py
