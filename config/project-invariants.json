@@ -55,7 +55,8 @@
       ".github/workflows/diagnose-btdigg-differential.yml",
       ".github/workflows/deploy-magnetra-canary-5.yml",
       ".github/workflows/verify-magnetra-canary-e2e.yml",
-      ".github/workflows/release-magnetra-candidate-100.yml"
+      ".github/workflows/release-magnetra-candidate-100.yml",
+      ".github/workflows/diagnose-magnetra-detail-routes.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
