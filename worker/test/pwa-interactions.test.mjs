@@ -37,7 +37,7 @@ function harness(fetcher,initialStorage={}){
  renderResults=()=>{};
  renderProviderErrors=()=>{};
  toast=()=>{};
- globalThis.testing={state,search,sendMagnet,magnetIdentity,
+ globalThis.testing={state,search,sendMagnet,ensureMagnet,magnetIdentity,
   chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg};
  `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element,storage};
@@ -193,4 +193,74 @@ test("rapid BTDigg distinct searches wait locally and aborted waits never reach 
  controller.abort();
  await assert.rejects(pending,/cancelled/i);
  assert.equal(calls,0,"cancelled, not-yet-sent searches do not hit Rock64");
+});
+
+test("production 50 OxTorrent and 20 Torrent9 card Resolve requests choose canonical details, not advertising magnetSource",async()=>{
+ const submissions=[];
+ const {api}=harness(async(path,options)=>{
+  assert.equal(path,"/api/resolve");
+  const body=JSON.parse(options.body);
+  submissions.push(body);
+  return json({provider:body.provider,magnet});
+ });
+ const cases=[
+  ...Array.from({length:50},(_,i)=>({
+   id:"oxtorrent:sample"+i,provider:"oxtorrent",
+   details:"https://www.oxtorrent.co/torrent/"+(133995+i)+"/toy-story-5-2026-multi-ca-1080p",
+   magnetSource:"https://www.oxtorrent.co/telecharger/advertising-"+i,
+   torrentFile:"https://www.oxtorrent.co/telecharger/advertising-"+i
+  })),
+  ...Array.from({length:20},(_,i)=>({
+   id:"torrent9:sample"+i,provider:"torrent9",
+   details:"https://www7.torrent9.to/torrent/"+(133873+i)+"/hope-2026-multi-ca",
+   magnetSource:"https://www7.torrent9.to/download/advertising-"+i,
+   torrentFile:"https://www7.torrent9.to/download/advertising-"+i
+  }))
+ ];
+ for(const item of cases) {
+  const received=await api.ensureMagnet(item);
+  assert.equal(received,magnet);
+  assert.equal(item.magnet,magnet);
+ }
+ assert.equal(submissions.length,70);
+ for(let i=0;i<submissions.length;i++){
+  assert.equal(submissions[i].provider,cases[i].provider);
+  assert.equal(submissions[i].details,cases[i].details,"must use original canonical details route");
+  assert.notEqual(submissions[i].details,cases[i].magnetSource,"must never click provider advertising/download route");
+ }
+ // Already resolved BTIH must be returned without another HTTP request.
+ await api.ensureMagnet(cases[0]);
+ assert.equal(submissions.length,70);
+});
+
+test("original deferred magnetSource precedence remains unchanged for all other providers",async()=>{
+ const requests=[];
+ const {api}=harness(async(path,options)=>{
+  assert.equal(path,"/api/resolve");
+  requests.push(JSON.parse(options.body));
+  return json({magnet});
+ });
+ const oldProvider={
+  provider:"nyaasi",
+  details:"https://nyaa.si/view/123456",
+  magnetSource:"https://nyaa.si/download/123456.torrent"
+ };
+ assert.equal(await api.ensureMagnet(oldProvider),magnet);
+ assert.equal(requests.length,1);
+ assert.equal(requests[0].provider,"nyaasi");
+ assert.equal(requests[0].details,oldProvider.magnetSource);
+});
+
+test("HTML source Resolve retains missing-details behavior and never opens an off-origin URL in the browser",async()=>{
+ const requests=[];
+ const {api}=harness(async(path,options)=>{
+  requests.push(JSON.parse(options.body));
+  return json({error:"Details URL is not in the provider allowlist."},400);
+ });
+ await assert.rejects(api.ensureMagnet({
+  provider:"oxtorrent",details:null,magnetSource:"https://external.invalid/download"
+ }),/Details URL is not in the provider allowlist/i);
+ assert.equal(requests.length,1,"browser does not follow a download/ad URL");
+ assert.equal(requests[0].provider,"oxtorrent");
+ assert.equal(requests[0].details,"https://external.invalid/download");
 });
