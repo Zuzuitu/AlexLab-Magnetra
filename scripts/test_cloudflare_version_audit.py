@@ -35,6 +35,64 @@ class AuditTest(unittest.TestCase):
         self.assertNotIn("SECRET_DO_NOT_PRINT", "\n".join(lines))
         self.assertNotIn("OTHER_PRIVATE", "\n".join(lines))
 
+    def test_exact_two_version_zero_slot_passes(self):
+        lines, ok = mod.audit(v(), dep([
+            {"version_id": OLD, "percentage": 100},
+            {"version_id": NEW, "percentage": 0},
+        ]))
+        self.assertTrue(ok)
+        self.assertIn("ROLLBACK_ACTIVE_100_PERCENT: PASS", lines)
+        self.assertIn("CANDIDATE_NO_TRAFFIC: PASS", lines)
+        self.assertIn("ZERO_PERCENT_SLOT: PRESENT", lines)
+        self.assertNotIn("SECRET_DO_NOT_PRINT", "\n".join(lines))
+        self.assertNotIn("OTHER_PRIVATE", "\n".join(lines))
+
+    def test_exact_slot_order_does_not_matter(self):
+        lines, ok = mod.audit(v(), dep([
+            {"version_id": NEW, "percentage": 0.0},
+            {"version_id": OLD, "percentage": 100.0},
+        ]))
+        self.assertTrue(ok)
+        self.assertIn("ZERO_PERCENT_SLOT: PRESENT", lines)
+
+    def test_legacy_old_only_still_passes(self):
+        lines, ok = mod.audit(v(), dep([
+            {"version_id": OLD, "percentage": 100},
+        ]))
+        self.assertTrue(ok)
+        self.assertIn("ZERO_PERCENT_SLOT: ABSENT", lines)
+
+    def test_five_percent_canary_requires_different_gate(self):
+        lines, ok = mod.audit(v(), dep([
+            {"version_id": OLD, "percentage": 95},
+            {"version_id": NEW, "percentage": 5},
+        ]))
+        self.assertFalse(ok)
+        self.assertIn("CANDIDATE_NO_TRAFFIC: FAIL", lines)
+
+    def test_reject_duplicate_version_or_unknown_slot(self):
+        unknown = "bbbbbbbb-1111-4111-8111-111111111111"
+        bad_shares = [
+            [{"version_id": OLD, "percentage": 100},
+             {"version_id": OLD, "percentage": 0}],
+            [{"version_id": OLD, "percentage": 100},
+             {"version_id": unknown, "percentage": 0}],
+            [{"version_id": OLD, "percentage": 100},
+             {"version_id": NEW, "percentage": 0},
+             {"version_id": unknown, "percentage": 0}],
+        ]
+        for bad in bad_shares:
+            with self.subTest(bad=bad):
+                self.assertFalse(mod.audit(v(), dep(bad))[1])
+
+    def test_reject_invalid_percentage_types_and_totals(self):
+        for pct in (-1, 0.01, True, "0", None, 101):
+            with self.subTest(pct=pct):
+                self.assertFalse(mod.audit(v(), dep([
+                    {"version_id": OLD, "percentage": 100},
+                    {"version_id": NEW, "percentage": pct},
+                ]))[1])
+
     def test_missing_secret(self):
         self.assertFalse(mod.audit(v(GOOD[1:]), dep([{"version_id": OLD, "percentage": 100}]))[1])
 
