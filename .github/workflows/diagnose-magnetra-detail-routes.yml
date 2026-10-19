@@ -1,0 +1,57 @@
+# One manual read-only search to classify detail-link shapes in 100% production.
+# Does not log titles, provider URLs, details IDs, hashes, or magnets.
+# No PWA/Worker deploy, no DNS/Tunnel/Rock64 modification.
+name: Diagnose Magnetra Detail Routes (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic_choice:
+        description: "Explicitly allow one benign 2026 source search for OxTorrent+Torrent9, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_READONLY_2026_DETAIL_SHAPES
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-detail-route-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnostic:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Explicit owner consent before outbound source requests
+        shell: bash
+        env:
+          CHOICE: ${{ inputs.diagnostic_choice }}
+        run: |
+          if [ "$CHOICE" != "RUN_READONLY_2026_DETAIL_SHAPES" ]; then
+            echo "::error::Explicit bounded read-only provider diagnostic approval required."
+            exit 2
+          fi
+          echo "READ_ONLY_DETAIL_DIAGNOSTIC_APPROVAL: PASS"
+      - name: Checkout immutable reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate repository invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline safety and URL-shape tests (no network)
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_detail_routes.py'
+      - name: One 2026 query to production for only two provider route shapes
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_DETAIL_DIAGNOSTIC_APPROVAL: ${{ inputs.diagnostic_choice }}
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_magnetra_detail_routes.py
