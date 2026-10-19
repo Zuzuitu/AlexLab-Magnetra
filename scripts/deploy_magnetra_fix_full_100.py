@@ -107,10 +107,25 @@ def promote() -> int:
     verify_bindings(STAGED)
     canary.verify_versions_immutable_assets()
     canary.source.verify_provider_catalog()
-    # This is ordinary production (without version override) after 100%.
-    public_js = canary.source.http_get("/app.js", staged=False)
+    # Static asset routing may briefly lag a successful Cloudflare version-only
+    # deployment. Retry ONLY a successful HTTP-200 /app.js whose hash is old;
+    # never retry an HTTP error, provider request, 429 or 504, or write twice.
     reviewed = (Path(__file__).resolve().parent.parent / "web" / "app.js").read_bytes()
-    if hashlib.sha256(public_js).digest() != hashlib.sha256(reviewed).digest():
+    reviewed_hash = hashlib.sha256(reviewed).digest()
+    public_asset_verified = False
+    post_deployment_id = None
+    for attempt in range(4):
+        public_js = canary.source.http_get("/app.js", staged=False)
+        if hashlib.sha256(public_js).digest() == reviewed_hash:
+            public_asset_verified = True
+            break
+        record, shares = snapshot()
+        if shares != FULL or (post_deployment_id is not None and record["id"] != post_deployment_id):
+            raise Stop("PROMOTION_POSTFLIGHT_DEPLOYMENT_CHANGED")
+        post_deployment_id = record["id"]
+        if attempt < 3:
+            time.sleep(2)
+    if not public_asset_verified:
         raise Stop("PROMOTION_POSTFLIGHT_PUBLIC_ASSET_UNVERIFIED")
     print("PROMOTION_POSTFLIGHT_PASS: 249d 0%, 540b 100%, binding/JS/catalog verified.")
     print("IPHONE_UX_ACCEPTANCE: PENDING explicit human Resolve tests, no Flud auto-send.")
