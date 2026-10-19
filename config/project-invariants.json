@@ -54,7 +54,8 @@
       ".github/workflows/test-magnetra-candidate-e2e.yml",
       ".github/workflows/diagnose-btdigg-differential.yml",
       ".github/workflows/deploy-magnetra-canary-5.yml",
-      ".github/workflows/verify-magnetra-canary-e2e.yml"
+      ".github/workflows/verify-magnetra-canary-e2e.yml",
+      ".github/workflows/release-magnetra-candidate-100.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -357,6 +358,20 @@
     "canary_active_candidate_traffic_percent": 5,
     "canary_active_old_traffic_percent": 95,
     "canary_readonly_e2e_workflow": ".github/workflows/verify-magnetra-canary-e2e.yml",
-    "canary_readonly_e2e_completed": false
+    "canary_readonly_e2e_completed": true,
+    "canary_readonly_e2e_run_id": 39241165033,
+    "canary_readonly_html_results": {
+      "oxtorrent": 3,
+      "torrent9": 3
+    },
+    "canary_readonly_deferred_magnets_verified": [
+      "oxtorrent",
+      "torrent9"
+    ],
+    "canary_post_e2e_share_verified_95_5": true,
+    "full_promotion_workflow": ".github/workflows/release-magnetra-candidate-100.yml",
+    "full_promotion_prepared": true,
+    "full_promotion_owner_approved": false,
+    "full_promotion_executed": false
   }
 }
