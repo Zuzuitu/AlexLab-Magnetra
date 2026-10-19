@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 
 from deploy_magnetra_zero_percent import (
     _current_deployment, _get_api, _is_target, _is_old_only,
@@ -64,7 +65,15 @@ def start_canary() -> int:
         "Magnetra approved bounded canary: old 95%, candidate 5%",
     )
     try:
-        observed = _shares(_current_deployment(_get_api("/deployments")))
+        # Wrangler can return before the Cloudflare deployment read API catches up.
+        # Poll only the deployment metadata, never source indexers or gateways.
+        for attempt in range(4):
+            observed = _shares(_current_deployment(_get_api("/deployments")))
+            if is_canary(observed, old):
+                break
+            if not cli_success or observed != {old: 100, VERSION: 0} or attempt == 3:
+                break
+            time.sleep(2)
     except ValueError:
         print("CRITICAL: postflight unreadable; attempting guarded 100% old rollback.")
         _recover(old)
@@ -75,7 +84,7 @@ def start_canary() -> int:
         return 0
     print("STOP: CLI or Cloudflare postflight did not verify exact 95/5.")
     if observed == {old: 100, VERSION: 0} or _is_old_only(observed, old):
-        print("NO_TRAFFIC_SHIFT_CONFIRMED: candidate remains at 0%.")
+        print("POSTFLIGHT_UNCONFIRMED: last API read showed candidate 0%; check Cloudflare before retry.")
         return 1
     if set(observed).issubset({old, VERSION}):
         print("ATTEMPTING_GUARDED_ROLLBACK: restore old 100%.")
