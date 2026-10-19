@@ -31,6 +31,9 @@ jobs:
       - name: Test read-only 95/5 canary E2E attribution without network
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_canary_e2e.py'
 
+      - name: Test manual 100 percent Worker promotion and rollback offline
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_release_100.py'
+
       - name: Test candidate E2E fingerprint and sanitization offline
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_candidate_e2e.py'
 
