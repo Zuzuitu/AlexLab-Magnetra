@@ -1,0 +1,67 @@
+# Manual ONLY. Owner-approved bounded 5% candidate traffic or guarded rollback.
+# No PWA source upload, no DNS, no tunnel or Rock64 mutation.
+name: Activate Magnetra 5 Percent Canary (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      canary_action:
+        description: "Select one exact operation; CANCEL performs no Cloudflare calls"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_CANARY_5_PERCENT
+          - CONFIRM_ROLLBACK_OLD_100
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  guarded-canary:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Explicit human choice before Cloudflare operations
+        env:
+          ACTION: ${{ inputs.canary_action }}
+        shell: bash
+        run: |
+          case "$ACTION" in
+            CONFIRM_CANARY_5_PERCENT|CONFIRM_ROLLBACK_OLD_100)
+              echo "MANUAL_CANARY_APPROVAL: PASS"
+              ;;
+            *)
+              echo "::error::Choose the exact canary or rollback action; default CANCEL does nothing."
+              exit 2
+              ;;
+          esac
+      - name: Checkout main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Preserve project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline canary and rollback safety tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_cloudflare_version_audit.py'
+          python3 -m unittest discover -s scripts -p 'test_zero_traffic_deployment.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_canary.py'
+      - name: Use pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Apply only the explicitly selected action
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_CANARY_ACTION: ${{ inputs.canary_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_magnetra_canary.py
