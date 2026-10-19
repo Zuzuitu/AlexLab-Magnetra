@@ -1,0 +1,59 @@
+# Manually reproduce one iPhone OxTorrent Resolve without torrent download.
+# GET provider search + POST /api/resolve are non-mutating; they may read the
+# original upstream HTML page. No magnet output, no Flud, no deployment.
+name: Diagnose Exact OxTorrent Resolve (NO DEPLOY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic_approval:
+        description: "Approve bounded search + up to two /api/resolve reads, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_EXACT_OXTORRENT_READONLY
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-exact-oxtorrent-nondeploy
+  cancel-in-progress: false
+
+jobs:
+  exact-resolve-diagnostic:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Mandatory owner approval before any Cloudflare or source requests
+        shell: bash
+        env:
+          CHOICE: ${{ inputs.diagnostic_approval }}
+        run: |
+          if [ "$CHOICE" != "RUN_EXACT_OXTORRENT_READONLY" ]; then
+            echo "::error::Explicit owner approval required; default CANCEL makes no calls."
+            exit 2
+          fi
+          echo "EXACT_OXTORRENT_DIAGNOSTIC_APPROVAL: PASS"
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Preserve repository invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline PWA field and canonical route regression tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_exact_oxtorrent_resolve.py'
+          node --test worker/test/html-rock64.test.mjs
+      - name: Non-mutating exact live Resolve comparison (no logs of URL or magnet)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_EXACT_RESOLVE_APPROVAL: ${{ inputs.diagnostic_approval }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_magnetra_exact_oxtorrent_resolve.py

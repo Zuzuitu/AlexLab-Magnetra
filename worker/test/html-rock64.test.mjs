@@ -22,6 +22,18 @@ test("two verified hosts only, exact search and detail source routes",()=>{
   assert.equal(u.searchParams.get(mode==="search"?"q":"path"),value);
  }
 });
+test("owner-reported OxTorrent detail URL maps to exact fixed gateway route",()=>{
+ // This URL was copied from the iPhone result's Details action on Oct 19.
+ // A wrong assumption that this slug is noncanonical would hide the real bug.
+ const source="https://www.oxtorrent.co/torrent/133995/toy-story-5-2026-multi-ca-1080p-web-h264-supply";
+ const route=new URL(routeHtmlRequest("oxtorrent",source));
+ assert.equal(route.origin,HTML_GATEWAY_ORIGIN);
+ assert.equal(route.pathname,"/v1/oxtorrent/html");
+ assert.equal(route.searchParams.get("mode"),"detail");
+ assert.equal(route.searchParams.get("path"),"/torrent/133995/toy-story-5-2026-multi-ca-1080p-web-h264-supply");
+ assert.equal(route.searchParams.size,2);
+});
+
 test("no activation without secret, never use arbitrary destination",async()=>{
  assert.equal(rock64HtmlFetcher("oxtorrent",{}),null);
  assert.equal(rock64HtmlFetcher("torrent9",{MAGNETRA_GATEWAY_TOKEN:""}),null);
