@@ -304,10 +304,16 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "canary_approval_date": "2026-10-19",
         "canary_approval_target_percent": 5,
         "canary_rollout_manual_workflow": ".github/workflows/deploy-magnetra-canary-5.yml",
-        "canary_deployment_completed": False,
+        "canary_deployment_completed": True,
+        "canary_run_id": 39234183618,
+        "canary_postflight_95_5_verified": True,
+        "canary_active_candidate_traffic_percent": 5,
+        "canary_active_old_traffic_percent": 95,
+        "canary_readonly_e2e_workflow": ".github/workflows/verify-magnetra-canary-e2e.yml",
+        "canary_readonly_e2e_completed": False,
         "canary_rollback_verified": False,
         "production_worker_promotion_completed": False,
-        "worker_code_version_activated": False,
+        "worker_code_version_activated": True,
         "requires_binding_review_before_activation": True,
         "rollout_rollback_version_owner_reported": "a9df4429",
         "worker_to_tunnel_authenticated_e2e_confirmed": True,
@@ -1048,7 +1054,7 @@ def check_shared_magnetra_gateway(config: dict) -> None:
         "physical_8798_acceptance_passed": True,
         "installer_code_staged": True,
         "read_only_acceptance_code_staged": True,
-        "worker_activated": False,
+        "worker_activated": True,
         "dispatcher_code_staged": True,
         "new_tunnel_installed": False,
         "new_dns_route_created": True,
@@ -1127,8 +1133,16 @@ def check_shared_magnetra_gateway(config: dict) -> None:
                        "rock64/check-magnetra-gateway.py",
                        "rock64/test_magnetra_install.py"):
             require_file(ROOT / needed)
-        if gw.get("new_tunnel_installed") is not False or gw.get("worker_activated") is not False:
-            fail("shared route acceptance must not imply a new tunnel or Worker activation")
+        if gw.get("new_tunnel_installed") is not False:
+            fail("shared route must not imply a new Cloudflare tunnel")
+        # Activation is evidenced by the exact owner-approved Cloudflare 95/5
+        # postflight, not merely by installing or accepting the local gateway.
+        stage = config.get("cloudflare_worker_stage", {})
+        if (gw.get("worker_activated") is not True or
+                stage.get("canary_deployment_completed") is not True or
+                stage.get("canary_run_id") != 39234183618 or
+                stage.get("canary_postflight_95_5_verified") is not True):
+            fail("shared Worker activation requires documented 95/5 postflight")
     for old in ("rock64/install-eztv-tunnel.sh",
                 "rock64/magnetra-eztv-tunnel.service",
                 "rock64/test_eztv_tunnel_install.py"):
