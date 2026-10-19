@@ -126,6 +126,22 @@ class ReleaseTests(unittest.TestCase):
                     self.assertEqual(m.promote(), 1)
                     restore.assert_not_called()
 
+    def test_guarded_restore_corrects_wrong_known_version_split(self):
+        wrong = dep({OLD: 90, NEW: 10}, ident="d2")
+        with patch.object(m, "_get_api", side_effect=[
+                wrong, wrong, RESTORED]):
+            with patch.object(m, "_wrangler_deploy", return_value=True) as writer:
+                self.assertTrue(m.guarded_restore(OLD))
+                self.assertEqual(writer.call_args.args[0],
+                                 [OLD + "@100%", NEW + "@0%"])
+
+    def test_guarded_restore_refuses_unknown_third_party_version(self):
+        unknown = dep({OLD: 90, OTHER: 10}, ident="d2")
+        with patch.object(m, "_get_api", return_value=unknown):
+            with patch.object(m, "_wrangler_deploy") as writer:
+                self.assertFalse(m.guarded_restore(OLD))
+                writer.assert_not_called()
+
     def test_manual_rollback_from_exact_promoted_to_old_100(self):
         with patch.dict(os.environ, {"MAGNETRA_RELEASE_ACTION": m.ROLLBACK_ACTION}):
             with patch.object(m, "_get_api", side_effect=[
