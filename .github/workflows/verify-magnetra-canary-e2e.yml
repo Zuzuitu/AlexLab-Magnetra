@@ -1,0 +1,64 @@
+# Manual-only, read-only E2E gate for the actual 95/5 Cloudflare canary.
+# Both Worker versions are selected explicitly; no traffic or source deployment.
+# Absolutely no fresh BTDigg upstream requests, no .torrent download.
+name: Verify Magnetra 5 Percent Canary E2E (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_readonly:
+        description: "Explicitly approve bounded provider checks, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_READONLY_HTML
+          - RUN_READONLY_HTML_EZTV
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-canary-readonly-e2e
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Manual approval before any source or Cloudflare request
+        shell: bash
+        env:
+          CHOICE: ${{ inputs.confirm_readonly }}
+        run: |
+          case "$CHOICE" in
+            RUN_READONLY_HTML|RUN_READONLY_HTML_EZTV)
+              echo "READONLY_CANARY_APPROVAL: PASS"
+              ;;
+            *)
+              echo "::error::Explicit read-only canary approval is required."
+              exit 2
+              ;;
+          esac
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Repository invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline canary attribution and source safety tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_canary_e2e.py'
+          python3 -m unittest discover -s scripts -p 'test_cloudflare_version_audit.py'
+      - name: Authenticated E2E on exact 5% candidate version
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_CANARY_E2E_CHOICE: ${{ inputs.confirm_readonly }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check-magnetra-canary-e2e.py
