@@ -22,9 +22,9 @@
 ---
 
 
-_Last synchronized: 2026-10-12, verified GitHub main immediately before this docs PR: `8969b9fe6758f859ac072bea984a5f9c9c59597f`. Always refetch GitHub main._
+_Historical synchronization record from 2026-10-12 (sha `8969b9fe6758f859ac072bea984a5f9c9c59597f`). **Superseded by 2026-10-19 current checkpoint above**. Always refetch GitHub main._
 
-## READ FIRST — current operational state confirmed 2026-10-12
+## HISTORICAL snapshot — superseded 2026-10-12 operational state (DO NOT follow as current)
 
 **Never reopen the rejected BTDigg Safari/bookmarklet/clipboard flow.** The owner wants genuine **automatic** BTDigg results when searching *inside* Magnetra. Any manual BTDigg import UI was intentionally deleted by PR #19. Generic paste-magnet → Flud remains. Preserve the original 46 providers and Flud Companion; changes must be BTDigg-only. Never disguise independent DHT results, Bitmagnet, Knaben or another index as BTDigg; no new costs, proxies or CAPTCHA/rate-limit bypass.
 
