@@ -122,6 +122,11 @@ def execute() -> int:
         print("ZERO_SLOT_POSTFLIGHT_PASS: old active 249d 100%, new fix 540b 0%.")
         print("E2E_NEXT: stage is selectable by exact Worker Version Override only.")
         return 0
+    if desired(observed):
+        # A failed CLI return cannot be called a deployment PASS even if the
+        # metadata indicates a safe 100/0 slot. Do not write a second time.
+        print("SLOT_TRAFFIC_SAFE_BUT_CLI_UNVERIFIED: current 100%, fix 0%.")
+        return 1
     if observed == shares:
         print("SLOT_POSTFLIGHT_UNCONFIRMED: latest API still shows previous safe 100% split.")
         return 1
