@@ -322,7 +322,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "full_promotion_run_id": 39243522237,
         "full_promotion_main_commit": "d026ef841f716f000dc8231ef68189a6b75107bc",
         "full_promotion_100_percent_postflight_verified": True,
-        "current_production_candidate_traffic_percent": 95,
+        "current_production_candidate_traffic_percent": 0,
         "current_rollback_version_traffic_percent": 0,
         "full_promotion_pwa_user_acceptance_confirmed": False,
         "full_promotion_independent_http_smoke_confirmed": False,
@@ -355,8 +355,8 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "resolve_fix_canary_executed": True,
         "resolve_fix_canary_run_id": 39323736403,
         "resolve_fix_canary_postflight_95_5_verified": True,
-        "resolve_fix_current_active_249d_traffic_percent": 95,
-        "resolve_fix_current_540b_traffic_percent": 5,
+        "resolve_fix_current_active_249d_traffic_percent": 0,
+        "resolve_fix_current_540b_traffic_percent": 100,
         "resolve_fix_canary_e2e_workflow": ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml",
         "resolve_fix_canary_e2e_prepared": True,
         "resolve_fix_canary_e2e_executed": True,
@@ -372,9 +372,19 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "resolve_fix_rollout_executed": True,
         "resolve_fix_full_promotion_workflow": ".github/workflows/magnetra-resolve-fix-full-100.yml",
         "resolve_fix_full_promotion_prepared": True,
-        "resolve_fix_full_promotion_owner_approved": False,
-        "resolve_fix_full_promotion_executed": False,
-        "resolve_fix_full_promotion_postflight_verified": False,
+        "resolve_fix_full_promotion_owner_approved": True,
+        "resolve_fix_full_promotion_owner_approval_date": "2026-10-20",
+        "resolve_fix_full_promotion_executed": True,
+        "resolve_fix_full_promotion_postflight_verified": True,
+        "resolve_fix_full_promotion_run_id": 39337836125,
+        "resolve_fix_full_promotion_workflow_conclusion": "FAILURE_AT_FIRST_PUBLIC_JS_HASH_POSTFLIGHT",
+        "resolve_fix_full_promotion_readonly_diagnostic_workflow": ".github/workflows/magnetra-public-postflight-diagnostic.yml",
+        "resolve_fix_full_promotion_readonly_diagnostic_run_id": 39338307381,
+        "resolve_fix_full_promotion_readonly_diagnostic_result": "PASS_540B100_PUBLIC_APPJS_46_CATALOG_AND_TWO_PROVIDER_RESOLVES",
+        "resolve_fix_full_promotion_public_asset_sha256_verified": True,
+        "resolve_fix_full_promotion_public_resolve_verified": ["oxtorrent", "torrent9"],
+        "resolve_fix_full_promotion_initial_asset_mismatch_observed": True,
+        "resolve_fix_full_promotion_asset_mismatch_root_cause_proven": False,
         "resolve_fix_full_promotion_iphone_acceptance_confirmed": False,
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
@@ -409,6 +419,17 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                           "wrangler secret put"):
             if forbidden in body:
                 fail("540b full release must never auto-deploy or upload: " + forbidden)
+    fix_public_diag = ROOT / ".github/workflows/magnetra-public-postflight-diagnostic.yml"
+    require_file(fix_public_diag)
+    if fix_public_diag.is_file():
+        body = fix_public_diag.read_text(encoding="utf8")
+        if "workflow_dispatch:" not in body or "scripts/diagnose_magnetra_public_postflight.py" not in body:
+            fail("Read-only 540b postflight diagnostic must remain manually dispatched.")
+        for forbidden in ("push:", "schedule:", "wrangler versions deploy",
+                          "wrangler deploy", "wrangler secret put"):
+            if forbidden in body:
+                fail("Read-only 540b postflight diagnostic must never auto-deploy: " + forbidden)
+    require_file(ROOT / "scripts/diagnose_magnetra_public_postflight.py")
     full_script = ROOT / "scripts/deploy_magnetra_fix_full_100.py"
     require_file(full_script)
     if full_script.is_file():
