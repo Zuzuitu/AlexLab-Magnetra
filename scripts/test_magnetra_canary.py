@@ -48,6 +48,24 @@ class CanaryTests(unittest.TestCase):
                     deployer.assert_called_once()
                     self.assertEqual(deployer.call_args.args[0], [OLD + "@95%", NEW + "@5%"])
 
+    def test_canary_waits_boundedly_for_cloudflare_metadata(self):
+        with patch.object(m, "_get_api", side_effect=[
+            VERSION, ZERO, ZERO, ZERO, CANARY,
+        ]):
+            with patch.object(m, "_wrangler_deploy", return_value=True):
+                with patch.object(m.time, "sleep") as sleeper:
+                    self.assertEqual(m.start_canary(), 0)
+                    sleeper.assert_called_once_with(2)
+
+    def test_canary_never_claims_success_from_stale_postflight(self):
+        with patch.object(m, "_get_api", side_effect=[
+            VERSION, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO,
+        ]):
+            with patch.object(m, "_wrangler_deploy", return_value=True):
+                with patch.object(m.time, "sleep") as sleeper:
+                    self.assertEqual(m.start_canary(), 1)
+                    self.assertEqual(sleeper.call_count, 3)
+
     def test_canary_only_starts_at_exact_100_0(self):
         with patch.object(m, "_get_api", side_effect=[VERSION, OLD_ONLY]):
             with patch.object(m, "_wrangler_deploy") as deployer:
