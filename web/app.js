@@ -168,7 +168,7 @@ async function ensureMagnet(item){
  // genuine BTIH magnets through the fixed-origin HTML gateway.
  // Keep all other 44 providers' source precedence unchanged.
  const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9";
- const source=preferDetails&&item.details ? item.details : item.magnetSource||item.details;
+ const source=preferDetails ? item.details : item.magnetSource||item.details;
  if(!source)throw Error("Provider has no supported magnet or details link.");
  const res=await api("/api/resolve",{
   method:"POST",headers:{"content-type":"application/json"},
