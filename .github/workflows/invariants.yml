@@ -31,6 +31,12 @@ jobs:
       - name: Test staged 540b asset attribution and provider E2E offline
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_e2e.py'
 
+      - name: Test bounded 540b Resolve fix canary and safe rollback offline
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_canary_5.py'
+
+      - name: Test exact old/new version attribution in 540b canary E2E
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_canary_5_e2e.py'
+
       - name: Test guarded Cloudflare zero-percent deployment without external calls
         run: python3 -m unittest discover -s scripts -p 'test_zero_traffic_deployment.py'
 

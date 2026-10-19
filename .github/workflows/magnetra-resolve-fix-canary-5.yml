@@ -1,0 +1,79 @@
+# Manual-only bounded 5% traffic allocation. A GitHub PR or merge NEVER
+# invokes this. 249d is always the immediate recovery target at 100%.
+name: Magnetra Resolve Fix 5 Percent Canary (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      canary_action:
+        description: "Owner authorizes bounded 540b 5% canary, known rollback, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_FIX_540B_CANARY_5
+          - CONFIRM_RESTORE_249D_100
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Exact owner permission BEFORE Cloudflare requests
+        shell: bash
+        env:
+          ACTION: ${{ inputs.canary_action }}
+        run: |
+          case "$ACTION" in
+            CONFIRM_FIX_540B_CANARY_5|CONFIRM_RESTORE_249D_100)
+              echo "CANARY_OWNER_APPROVAL_GATE: PASS"
+              ;;
+            *)
+              echo "::error::Explicit owner rollout action required; default CANCEL makes no calls."
+              exit 2
+              ;;
+          esac
+      - name: Checkout reviewed main (no persistent credentials)
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Preserve all technical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline canary, binding and zero-slot safety tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_canary_5.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_slot.py'
+      - name: Configure pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Ensure immutable Worker identity and route
+        run: |
+          python3 - <<'PY'
+          import json
+          conf=json.load(open("worker/wrangler.jsonc"))
+          assert conf["name"]=="alexlab-magnetra"
+          assert conf["main"]=="src/index.mjs"
+          assert conf["assets"]["directory"]=="../web"
+          assert conf["assets"]["binding"]=="ASSETS"
+          assert conf["routes"]==[{"pattern":"index.alexlab.media","custom_domain":True}]
+          print("WORKER_DEPLOYMENT_BOUNDARY: PASS")
+          PY
+      - name: Exact 249d95 540b5 allocation or owner-confirmed restore (postflight checked)
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_FIX_CANARY_ACTION: ${{ inputs.canary_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_magnetra_fix_canary_5.py
