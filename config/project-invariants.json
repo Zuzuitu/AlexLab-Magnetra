@@ -53,7 +53,8 @@
       ".github/workflows/configure-magnetra-zero-percent.yml",
       ".github/workflows/test-magnetra-candidate-e2e.yml",
       ".github/workflows/diagnose-btdigg-differential.yml",
-      ".github/workflows/deploy-magnetra-canary-5.yml"
+      ".github/workflows/deploy-magnetra-canary-5.yml",
+      ".github/workflows/verify-magnetra-canary-e2e.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -200,7 +201,7 @@
       "/v1/oxtorrent/html",
       "/v1/torrent9/html"
     ],
-    "worker_activated": false,
+    "worker_activated": true,
     "dispatcher_code_staged": true,
     "new_tunnel_installed": false,
     "new_dns_route_created": true,
@@ -266,7 +267,7 @@
     "stage_workflow_has_no_deploy_command": true,
     "stage_workflow_has_required_secret_name_checks": true,
     "worker_code_version_uploaded": true,
-    "worker_code_version_activated": false,
+    "worker_code_version_activated": true,
     "requires_binding_review_before_activation": true,
     "rollout_rollback_version_owner_reported": "a9df4429",
     "worker_to_tunnel_authenticated_e2e_confirmed": true,
@@ -349,7 +350,13 @@
     "canary_approval_date": "2026-10-19",
     "canary_approval_target_percent": 5,
     "canary_rollout_manual_workflow": ".github/workflows/deploy-magnetra-canary-5.yml",
-    "canary_deployment_completed": false,
-    "canary_rollback_verified": false
+    "canary_deployment_completed": true,
+    "canary_rollback_verified": false,
+    "canary_run_id": 39234183618,
+    "canary_postflight_95_5_verified": true,
+    "canary_active_candidate_traffic_percent": 5,
+    "canary_active_old_traffic_percent": 95,
+    "canary_readonly_e2e_workflow": ".github/workflows/verify-magnetra-canary-e2e.yml",
+    "canary_readonly_e2e_completed": false
   }
 }
