@@ -1,0 +1,59 @@
+# Manual-only read-only E2E during 249d95/540b5 canary. Distinguishes
+# both versions using exact Cloudflare Worker version override headers.
+name: Verify Magnetra Resolve Fix 5 Percent Canary (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      e2e_action:
+        description: "Explicitly approve one bounded 540b OxTorrent/Torrent9 source E2E, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_READONLY_FIX_540B_CANARY
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-fix-540b-canary-e2e
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Explicit source probing permission BEFORE network or Cloudflare call
+        shell: bash
+        env:
+          ACTION: ${{ inputs.e2e_action }}
+        run: |
+          set -euo pipefail
+          if [ "$ACTION" != RUN_READONLY_FIX_540B_CANARY ]; then
+            echo "::error::Owner approval required, default CANCEL sends nothing."
+            exit 2
+          fi
+          echo "CANARY_READONLY_OWNER_APPROVAL: PASS"
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify technical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline canary and E2E proof-safety tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_canary_5_e2e.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_e2e.py'
+      - name: Read-only exact 540b canary E2E; no BTDigg or EZTV requests
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_FIX_CANARY_E2E_ACTION: ${{ inputs.e2e_action }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_magnetra_fix_canary_5_e2e.py
