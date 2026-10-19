@@ -1,11 +1,9 @@
-# READ ONLY. A one-off branch audit after an owner-approved 540b 100% promotion.
+# READ ONLY. Manual postflight audit after an owner-approved 540b 100% promotion.
 # Never deploy, upload or modify Worker versions, secrets, routing or Rock64.
 name: Magnetra public 100 percent JS attribution (READ ONLY)
 
 on:
-  push:
-    branches:
-      - diagnostics/magnetra-public-appjs-postflight
+  workflow_dispatch:
 
 permissions:
   contents: read
