@@ -93,6 +93,32 @@ class CardTests(unittest.TestCase):
             self.assertEqual(remote.call_count, 2)
             self.assertIn("PWA_PREFERRED_RESOLVE_oxtorrent: HTTP_502_NONCANONICAL_WORKER_ROUTE", stream.getvalue())
 
+    def test_public_js_version_compare_is_hash_only(self):
+        data = (m.DIRECTORY.parent / "web" / "app.js").read_bytes()
+        class Resp:
+            status = 200
+            def __init__(self, body):
+                self.body = body
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                return False
+            def read(self, _n):
+                return self.body
+        class Opener:
+            def __init__(self, body):
+                self.body = body
+            def open(self, request, timeout):
+                self._last_request = request
+                self._last_timeout = timeout
+                return Resp(self.body)
+        good = Opener(data)
+        bad = Opener(data + b"// stale asset")
+        self.assertEqual(m.compare_live_pwa_asset(good), "MATCH_REVIEWED_MAIN")
+        self.assertEqual(m.compare_live_pwa_asset(bad), "DIFFERS_FROM_REVIEWED_MAIN")
+        self.assertEqual(good._last_timeout, 15)
+        self.assertEqual(good._last_request.full_url, "https://index.alexlab.media/app.js")
+
     def test_no_approval_no_network_calls(self):
         with patch.dict(os.environ, {"MAGNETRA_2026_CARD_DIAGNOSTIC_APPROVAL": "CANCEL"}):
             with patch.object(m._exact, "gate") as cloudflare, \
