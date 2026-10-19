@@ -6,6 +6,7 @@ provider-search traffic is required. Uses standard Python only.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import time
@@ -34,6 +35,19 @@ def fetch(path: str, *, response_json: bool = True):
     return body.decode("utf-8", errors="replace")
 
 
+def app_asset_parity() -> str:
+    """One unauthenticated static GET; compare exact deployed JS bytes to main.
+
+    Observational only. A drift is expected until an independently approved
+    PWA/Worker release; never silently deploy or mark the backend broken.
+    """
+    live = fetch("/app.js", response_json=False).encode("utf-8")
+    repository = (ROOT / "web" / "app.js").read_bytes()
+    # Compare fixed-length digests; print no source code or user data.
+    equal = hashlib.sha256(live).digest() == hashlib.sha256(repository).digest()
+    return "LIVE_APP_JS_PARITY=" + ("PASS" if equal else "DRIFT")
+
+
 def verify() -> str:
     health = fetch("/api/health")
     if health.get("ok") is not True or health.get("product") != "AlexLab Magnetra":
@@ -55,7 +69,8 @@ def verify() -> str:
     root = fetch("/", response_json=False)
     if "<title>AlexLab Magnetra" not in root or "/app.js" not in root:
         raise AssertionError("PWA homepage does not contain expected app bootstrapping")
-    return f"HTTP+TLS OK; HTML, manifest, /api/health, /api/providers OK; {ported}/{TOTAL} adapters inventoried as ported"
+    return (f"HTTP+TLS OK; HTML, manifest, /api/health, /api/providers OK; "
+            f"{ported}/{TOTAL} adapters inventoried as ported; {app_asset_parity()}")
 
 
 if __name__ == "__main__":
