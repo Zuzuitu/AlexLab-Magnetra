@@ -251,16 +251,16 @@ test("original deferred magnetSource precedence remains unchanged for all other 
  assert.equal(requests[0].details,oldProvider.magnetSource);
 });
 
-test("HTML source Resolve retains missing-details behavior and never opens an off-origin URL in the browser",async()=>{
+test("OxTorrent/Torrent9 missing canonical details fail closed without contacting advertising source",async()=>{
  const requests=[];
  const {api}=harness(async(path,options)=>{
-  requests.push(JSON.parse(options.body));
-  return json({error:"Details URL is not in the provider allowlist."},400);
+  requests.push({path,options});
+  throw Error("Unexpected remote call");
  });
- await assert.rejects(api.ensureMagnet({
-  provider:"oxtorrent",details:null,magnetSource:"https://external.invalid/download"
- }),/Details URL is not in the provider allowlist/i);
- assert.equal(requests.length,1,"browser does not follow a download/ad URL");
- assert.equal(requests[0].provider,"oxtorrent");
- assert.equal(requests[0].details,"https://external.invalid/download");
+ for(const provider of ["oxtorrent","torrent9"]){
+  await assert.rejects(api.ensureMagnet({
+   provider,details:null,magnetSource:"https://external.invalid/download"
+  }),/Provider has no supported magnet or details link/i);
+ }
+ assert.equal(requests.length,0,"do not send ad/redirect URLs even to the backend");
 });
