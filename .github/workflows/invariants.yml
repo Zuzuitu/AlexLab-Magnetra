@@ -34,6 +34,9 @@ jobs:
       - name: Test manual 100 percent Worker promotion and rollback offline
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_release_100.py'
 
+      - name: Test read-only OxTorrent and Torrent9 detail URL shapes without network
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_detail_routes.py'
+
       - name: Test candidate E2E fingerprint and sanitization offline
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_candidate_e2e.py'
 
