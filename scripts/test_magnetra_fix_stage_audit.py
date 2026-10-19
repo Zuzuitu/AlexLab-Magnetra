@@ -34,7 +34,6 @@ class ReadOnlyStageGateTests(unittest.TestCase):
     def test_two_version_old_zero_production_is_safe(self):
         lines, passed = mod.audit(version(), deployments({mod.ACTIVE: 100, OLD: 0}))
         self.assertTrue(passed)
-        self.assertIn("STAGE_GATE", "STAGE_GATE")
         self.assertIn("NEW_540B_VERSION_NOT_DEPLOYED: PASS", lines)
         self.assertIn("CURRENT_PRODUCTION_249D_100_PERCENT: PASS", lines)
         self.assertIn("BTDIGG_GATEWAY_TOKEN: PASS", lines)
