@@ -1,0 +1,69 @@
+# MANUAL ONLY: immutable old/candidate Worker versions and exact 0/100 release.
+# Merely merging this file NEVER deploys or changes production traffic.
+# Default CANCEL; explicit approval for promotion or rollback separately.
+name: Magnetra Candidate 100 Percent Release (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_action:
+        description: "Choose one exact operation. CANCEL performs no Cloudflare calls"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_PROMOTE_CANDIDATE_100
+          - CONFIRM_RESTORE_OLD_100
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  guarded-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Explicit owner release approval before Cloudflare calls
+        shell: bash
+        env:
+          ACTION: ${{ inputs.release_action }}
+        run: |
+          case "$ACTION" in
+            CONFIRM_PROMOTE_CANDIDATE_100|CONFIRM_RESTORE_OLD_100)
+              echo "MANUAL_RELEASE_APPROVAL_GATE: PASS"
+              ;;
+            *)
+              echo "::error::Explicit release/rollback approval required; CANCEL does nothing."
+              exit 2
+              ;;
+          esac
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline immutable-version promotion and rollback tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_release_100.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_canary.py'
+          python3 -m unittest discover -s scripts -p 'test_cloudflare_version_audit.py'
+      - name: Set up pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Execute exact owner-selected release operation
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_RELEASE_ACTION: ${{ inputs.release_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/release_magnetra_candidate_100.py
