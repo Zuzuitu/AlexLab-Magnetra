@@ -58,7 +58,8 @@
       ".github/workflows/release-magnetra-candidate-100.yml",
       ".github/workflows/diagnose-magnetra-detail-routes.yml",
       ".github/workflows/diagnose-magnetra-exact-oxtorrent-resolve.yml",
-      ".github/workflows/diagnose-magnetra-2026-resolve.yml"
+      ".github/workflows/diagnose-magnetra-2026-resolve.yml",
+      ".github/workflows/inspect-magnetra-resolve-fix-stage.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -382,6 +383,16 @@
     "current_production_candidate_traffic_percent": 100,
     "current_rollback_version_traffic_percent": 0,
     "full_promotion_pwa_user_acceptance_confirmed": false,
-    "full_promotion_independent_http_smoke_confirmed": false
+    "full_promotion_independent_http_smoke_confirmed": false,
+    "resolve_fix_staged_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
+    "resolve_fix_stage_run_id": 39298077357,
+    "resolve_fix_staged_source_commit": "c6867647c10bba33db0361178f3380a7ffa48385",
+    "resolve_fix_staged_upload_confirmed": true,
+    "resolve_fix_staged_binding_audit_passed": false,
+    "resolve_fix_staged_version_currently_deployed": false,
+    "resolve_fix_staged_audit_workflow": ".github/workflows/inspect-magnetra-resolve-fix-stage.yml",
+    "resolve_fix_staged_e2e_verified": false,
+    "resolve_fix_rollout_owner_approved": false,
+    "resolve_fix_rollout_executed": false
   }
 }
