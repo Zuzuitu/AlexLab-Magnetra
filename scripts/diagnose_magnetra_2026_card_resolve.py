@@ -9,11 +9,14 @@ Never emit source URL/title/item ID/magnet/token/provider HTML in logs.
 from __future__ import annotations
 
 from collections import Counter
+import hashlib
 import importlib.util
 import os
 from pathlib import Path
 import sys
 import urllib.parse
+import urllib.request
+import urllib.error
 
 DIRECTORY = Path(__file__).resolve().parent
 
@@ -137,11 +140,43 @@ def probe(provider, row):
                "SKIPPED_NONCANONICAL_PREFERRED_LINK"))
 
 
+def compare_live_pwa_asset(opener=None):
+    """Compare public app.js bytes with repo checkout, without displaying code.
+
+    A mismatch is evidence of static asset version skew, not proof that the
+    immutable Worker script itself differs. Never use local browser cache here.
+    """
+    req = urllib.request.Request(
+        "https://index.alexlab.media/app.js",
+        method="GET",
+        headers={
+            "Accept": "text/javascript,application/javascript",
+            "Accept-Encoding": "identity",
+            "Cache-Control": "no-cache",
+            "User-Agent": "AlexLab-Magnetra-SourceAssetAudit/1.0",
+        },
+    )
+    client = opener or urllib.request.build_opener(_exact.NoRedirect)
+    try:
+        with client.open(req, timeout=15) as response:
+            if response.status != 200:
+                return "HTTP_UNVERIFIED"
+            body = response.read(250_001)
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError):
+        return "TRANSPORT_UNVERIFIED"
+    if len(body) > 250_000 or not body:
+        return "BODY_SIZE_UNVERIFIED"
+    local = (DIRECTORY.parent / "web" / "app.js").read_bytes()
+    return ("MATCH_REVIEWED_MAIN" if hashlib.sha256(body).digest() ==
+            hashlib.sha256(local).digest() else "DIFFERS_FROM_REVIEWED_MAIN")
+
+
 def execute():
     if os.environ.get("MAGNETRA_2026_CARD_DIAGNOSTIC_APPROVAL") != ACTION:
         raise Stop("EXPLICIT_OWNER_DIAGNOSTIC_APPROVAL_REQUIRED")
     before = _exact.gate()
     print("PRODUCTION_GATE: CANDIDATE_100_OLD_0_VERIFIED")
+    print("PUBLIC_APP_JS_VS_GITHUB_MAIN: " + compare_live_pwa_asset())
     params = urllib.parse.urlencode({
         "q": QUERY, "category": "all", "providers": ",".join(PROVIDERS),
     })
