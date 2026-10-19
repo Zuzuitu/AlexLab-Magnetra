@@ -135,6 +135,7 @@ class CardTests(unittest.TestCase):
         ]
         with patch.dict(os.environ, {"MAGNETRA_2026_CARD_DIAGNOSTIC_APPROVAL": m.ACTION}):
             with patch.object(m._exact, "gate", side_effect=["id1", "id1"]), \
+                 patch.object(m, "compare_live_pwa_asset", return_value="MATCH_REVIEWED_MAIN"), \
                  patch.object(m._exact, "request_json", side_effect=[
                     (200, {"results": results, "errors": []}),
                     (200, {"magnet": BTIH}),
