@@ -89,8 +89,11 @@ def guarded_restore(old: str) -> bool:
         if existing == {old: 100} or restored(existing, old):
             print("RESTORE_ALREADY_SAFE: old 100%.")
             return True
-        if not (canary(existing, old) or promoted(existing, old)):
-            print("RESTORE_REFUSED: unknown/concurrent traffic split.")
+        # Any valid but incorrect split of precisely these two immutable
+        # versions is ours to restore after a failed promotion. Unknown or
+        # third-party versions must never be overwritten.
+        if set(existing) != {old, VERSION}:
+            print("RESTORE_REFUSED: unknown/concurrent Worker version.")
             return False
         # Double-check before changing traffic; do not overwrite another deploy.
         if not stable(deployment, existing):
