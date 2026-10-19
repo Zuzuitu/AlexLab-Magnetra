@@ -1,5 +1,19 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## READ FIRST — LATEST VERIFIED 2026-10-20 00:56 EUROPE/ROME: 540b LIVE 100%, PUBLIC RESOLVE PASS
+
+**This section supersedes the older READ FIRST 540b@5% paragraph and every historical deploy snapshot below.** Latest authenticated production and GitHub code supersede even this observation. Main repository: `Zuzuitu/AlexLab-Magnetra`, site `https://index.alexlab.media`.
+
+**Confirmed Cloudflare version split:** fix `540b3417-f845-47e8-96bd-856ccc9f1350` serves **100%**, previous `249d6767-f4dc-4f4d-bbf7-f57bea2e5554` retained at **0%** as guarded manual rollback slot. Owner explicitly approved 100% on 20 October 2026. Reviewed PR #94 merged at `d819a54704df139e6a1a500b957ce22f97e3b8d5`, all four PR and main CI checks passed, default PWA deploy skipped. Owner dispatched `CONFIRM_PROMOTE_FIX_540B_100` in [run #39337836125](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39337836125). Version-only Cloudflare write **took effect**, but release workflow concluded **FAILURE** at first public `/app.js` hash check; do not falsely report that run SUCCESS. No auto-rollback or second deploy.
+
+**Separate later genuine LIVE verification:** read-only [run #39338307381](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39338307381), job `118353253206`, ended **SUCCESS**. Verified exact 249d0/540b100 live deployment, fixed `web/app.js` local SHA256 prefix `6fe7ac5e60ab9f72` and 28,097 bytes identical to both 540b override, normal public `/app.js` and cache-busted public `/app.js`; old 249d override differed, prefix `80fead40b472e563` and 27,644 bytes. HTTP edge reported `CF-Cache-Status: HIT`. The earlier public mismatch had disappeared **without another Cloudflare write**. Temporary asset propagation/cache is plausible, physical cause NOT proven. PUBLIC no-override catalog **46 original IDs** and real **OxTorrent 50 + Torrent9 20** original unresolved canonical results, and a successful redacted BTIH **/api/resolve for each provider** were confirmed. This does not prove all 46 source providers healthy.
+
+**New release guard:** `scripts/deploy_magnetra_fix_full_100.py` has bounded read-only retries **only** for HTTP-200 static `app.js` hash mismatch, never retries 429/504/provider requests or deploys again; CI offline tests. `.github/workflows/magnetra-public-postflight-diagnostic.yml` is **manual read-only**, executes `scripts/diagnose_magnetra_public_postflight.py` without Cloudflare writes. Current checkpoint is canonical in `docs/PROJECT_STATE.md` and `config/project-invariants.json`. Older a9df/249d release workflow must NOT be used to promote 540b; 540b is already 100%. The existing full 100% workflow would fail closed if the starting 95/5 split is no longer present; use a separately approved rollback only if a genuine regression requires it.
+
+**Pending:** owner's actual iPhone Resolve button UX is still **NOT VERIFIED by user**. BTDigg intermittent 429/`BTDIGG_SOURCE_TIMEOUT` remains independent unsolved P0, and no BTDigg/EZTV request or Rock64 change was made in the 100% postflight. Preserve 46 identities, exact original provenance, free cost limits, restricted routes/secrets, and manual Flud Companion integration. Do not accidentally push `[deploy-pwa]` on checkpoint merge. Branch → PR → 4 CI → merge; no direct main.
+
+---
+
 
 ## READ FIRST — LATEST VERIFIED 2026-10-19 23:00 EUROPE/ROME: RESOLVE FIX LIVE 5%, NOT 100%
 

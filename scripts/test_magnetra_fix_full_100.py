@@ -119,9 +119,45 @@ class FixFullReleaseTests(unittest.TestCase):
              patch.object(mod, "verify_bindings"), \
              patch.object(mod.canary, "verify_versions_immutable_assets"), \
              patch.object(mod.canary.source, "verify_provider_catalog"), \
-             patch.object(mod.canary.source, "http_get", return_value=b"old"):
+             patch.object(mod.canary.source, "http_get", return_value=b"old"), \
+             patch.object(mod, "snapshot", return_value=({"id": "full"}, mod.FULL)), \
+             patch.object(mod.time, "sleep") as sleep:
             with self.assertRaisesRegex(mod.Stop, "PUBLIC_ASSET_UNVERIFIED"):
                 mod.promote()
+            self.assertEqual(sleep.call_count, 3)
+
+    def test_public_asset_converges_after_two_read_only_checks(self):
+        reviewed = (Path(__file__).resolve().parent.parent / "web" / "app.js").read_bytes()
+        with patch.object(mod, "read_only_preflight", return_value={"id": "five"}), \
+             patch.object(mod, "verify_stable"), \
+             patch.object(mod, "_wrangler_deploy", return_value=True) as wrangler, \
+             patch.object(mod, "confirm_postflight", return_value=True), \
+             patch.object(mod, "verify_bindings"), \
+             patch.object(mod.canary, "verify_versions_immutable_assets"), \
+             patch.object(mod.canary.source, "verify_provider_catalog"), \
+             patch.object(mod.canary.source, "http_get", side_effect=[b"old", reviewed]) as http, \
+             patch.object(mod, "snapshot", return_value=({"id": "full"}, mod.FULL)), \
+             patch.object(mod.time, "sleep") as sleep:
+            self.assertEqual(mod.promote(), 0)
+            self.assertEqual(http.call_count, 2)
+            sleep.assert_called_once_with(2)
+            wrangler.assert_called_once()
+
+    def test_post_deployment_id_changes_during_asset_poll_refused(self):
+        with patch.object(mod, "read_only_preflight", return_value={"id": "five"}), \
+             patch.object(mod, "verify_stable"), \
+             patch.object(mod, "_wrangler_deploy", return_value=True) as wrangler, \
+             patch.object(mod, "confirm_postflight", return_value=True), \
+             patch.object(mod, "verify_bindings"), \
+             patch.object(mod.canary, "verify_versions_immutable_assets"), \
+             patch.object(mod.canary.source, "verify_provider_catalog"), \
+             patch.object(mod.canary.source, "http_get", return_value=b"old"), \
+             patch.object(mod, "snapshot", side_effect=[
+                 ({"id": "first"}, mod.FULL), ({"id": "other"}, mod.FULL),
+             ]), patch.object(mod.time, "sleep"):
+            with self.assertRaisesRegex(mod.Stop, "DEPLOYMENT_CHANGED"):
+                mod.promote()
+            wrangler.assert_called_once()
 
     def test_postflight_proves_new_deployment_not_just_existing_target(self):
         with patch.object(mod, "snapshot", return_value=({"id": "new"}, mod.FULL)):

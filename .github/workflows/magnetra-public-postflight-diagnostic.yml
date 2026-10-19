@@ -1,0 +1,30 @@
+# READ ONLY. Manual postflight audit after an owner-approved 540b 100% promotion.
+# Never deploy, upload or modify Worker versions, secrets, routing or Rock64.
+name: Magnetra public 100 percent JS attribution (READ ONLY)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-public-appjs-audit
+  cancel-in-progress: false
+
+jobs:
+  audit-public-asset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source without persisted GitHub credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify canonical project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Read-only Cloudflare version and public asset attribution
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/diagnose_magnetra_public_postflight.py
