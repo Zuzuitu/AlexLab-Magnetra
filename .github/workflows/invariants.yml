@@ -25,6 +25,12 @@ jobs:
       - name: Test new 540b staged Resolve version read-only audit without network
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_stage_audit.py'
 
+      - name: Test guarded manual 249d 100 / 540b 0 slot offline
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_slot.py'
+
+      - name: Test staged 540b asset attribution and provider E2E offline
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_zero_e2e.py'
+
       - name: Test guarded Cloudflare zero-percent deployment without external calls
         run: python3 -m unittest discover -s scripts -p 'test_zero_traffic_deployment.py'
 
