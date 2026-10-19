@@ -40,6 +40,9 @@ jobs:
       - name: Regress owner reported exact OxTorrent Resolve without network
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_exact_oxtorrent_resolve.py'
 
+      - name: Test bounded real-card 2026 Resolve transport without network
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_2026_card_resolve.py'
+
       - name: Test candidate E2E fingerprint and sanitization offline
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_candidate_e2e.py'
 
