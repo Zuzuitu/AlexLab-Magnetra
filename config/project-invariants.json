@@ -52,7 +52,8 @@
       ".github/workflows/inspect-magnetra-cloudflare-version.yml",
       ".github/workflows/configure-magnetra-zero-percent.yml",
       ".github/workflows/test-magnetra-candidate-e2e.yml",
-      ".github/workflows/diagnose-btdigg-differential.yml"
+      ".github/workflows/diagnose-btdigg-differential.yml",
+      ".github/workflows/deploy-magnetra-canary-5.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -277,7 +278,7 @@
     "new_code_version_required_bindings_verified": true,
     "active_100_percent_after_stage_reverified": true,
     "staged_worker_authenticated_test_passed": true,
-    "canary_rollout_approved": false,
+    "canary_rollout_approved": true,
     "production_worker_promotion_completed": false,
     "new_code_version_id_verified_from_actions": "249d6767-f4dc-4f4d-bbf7-f57bea2e5554",
     "read_only_version_inspection_workflow": ".github/workflows/inspect-magnetra-cloudflare-version.yml",
@@ -344,6 +345,11 @@
     "btdigg_next_diagnostic": "DNS/TCP/TLS/TTFB",
     "btdigg_next_diagnostic_executed": false,
     "btdigg_next_diagnostic_requires_owner_approval": true,
-    "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-18.md"
+    "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-18.md",
+    "canary_approval_date": "2026-10-19",
+    "canary_approval_target_percent": 5,
+    "canary_rollout_manual_workflow": ".github/workflows/deploy-magnetra-canary-5.yml",
+    "canary_deployment_completed": false,
+    "canary_rollback_verified": false
   }
 }
