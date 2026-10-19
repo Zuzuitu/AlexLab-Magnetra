@@ -1298,3 +1298,15 @@ Owner completed [Diagnose BTDigg Old vs Candidate (READ ONLY) #1](https://github
 - **BTDigg:** produce date originale și pe veche, și pe nouă și pe iPhone, **dar un 504 intermitent poate reapărea**. Nu declara „reparat definitiv” și nu seta `btdigg_source_timeout_fix_verified=true`.
 - **NEXT ACTION P0:** numai **diagnostic read-only al timpilor BTDigg Rock64→sursa originală** și o investigație a diferențelor DNS / TCP connect / TLS / TTFB / read, plus sănătatea procesului 8796, fără secrete/loguri raw și fără cereri repetate la 429/504. Începe cu audit de cod și statusuri local read-only, apoi **o singură probă upstream dacă userul autorizează**, nu un bulk-scan. Dacă este nevoie de actualizarea Python, pregătește branch/PR și rollback, apoi cere acord pentru instalarea fizică.
 - **Fără deployment:** păstrează Cloudflare old 100% / candidate 0%, `canary_rollout_approved=false`, `production_worker_promotion_completed=false`; fără `[deploy-pwa]`, manual Deploy, schimbări DNS/Tunnel, servicii Rock64 sau Flud. Costuri noi = zero fără acord expres.
+
+## 2026-10-19 — Cloudflare 100/0 audit correction and owner-authorized 5% canary preparation
+
+**Observed in PWA:** BTDigg yielded genuine results, while OxTorrent and Torrent9 did not appear operational in normal traffic. Their earlier authenticated E2E successes targeted the 0%-traffic candidate Worker, not ordinary production.
+
+**Read-only Cloudflare inspection #2:** candidate ID and binding names/types (BTDIGG_GATEWAY_TOKEN, MAGNETRA_GATEWAY_TOKEN, ASSETS) passed; job stopped at TRAFFIC_SHARES: UNVERIFIED. Root cause in scripts/inspect_cloudflare_version.py: rejected legitimate 0%-share entries and the expected two-version 100% old / 0% candidate deployment. This was an audit/parser failure, NOT evidence of modified deployment. Fix permits only old-only 100% or exact old 100% + approved candidate 0%; rejects duplicates, unexpected IDs, positive candidate traffic, invalid totals/types. Tests cover both accepted and fail-closed states.
+
+**Owner decision (19 Oct):** explicitly authorized bounded candidate canary 5% / old 95%, with rollback to old 100%. This approval is not evidence of actual Cloudflare execution, successful PWA acceptance or permission to promote candidate to 100%.
+
+**Prepared implementation:** scripts/deploy_magnetra_canary.py and manual-only .github/workflows/deploy-magnetra-canary-5.yml verify exact version and bindings, 100/0 preflight, deployment race protection, precise 95/5 operation, Cloudflare API postflight, guarded rollback refusing unknown concurrent deployments. Offline regression tests added. Default workflow input CANCEL. Only owner-triggered main-branch workflow can write deployment. No new Worker upload, Tunnel, DNS, Rock64, secret or frontend modifications.
+
+**Deployment status at this checkpoint:** canary NOT EXECUTED; latest real split requires read-only Cloudflare confirmation. Do not mark worker_activated, production_worker_promotion_completed or canary_deployment_completed as true until actual live postflight evidence.
