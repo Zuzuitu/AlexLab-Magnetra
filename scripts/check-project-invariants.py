@@ -370,7 +370,8 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "resolve_fix_canary_user_acceptance_confirmed": False,
         "resolve_fix_rollout_owner_approved": True,
         "resolve_fix_rollout_executed": True,
-        "resolve_fix_full_promotion_prepared": False,
+        "resolve_fix_full_promotion_workflow": ".github/workflows/magnetra-resolve-fix-full-100.yml",
+        "resolve_fix_full_promotion_prepared": True,
         "resolve_fix_full_promotion_owner_approved": False,
         "resolve_fix_full_promotion_executed": False,
         "resolve_fix_full_promotion_postflight_verified": False,
@@ -391,6 +392,32 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    fix_full = ROOT / ".github/workflows/magnetra-resolve-fix-full-100.yml"
+    require_file(fix_full)
+    if fix_full.is_file():
+        body = fix_full.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "magnetra-production-traffic-change", "default: CANCEL",
+                       "CONFIRM_PROMOTE_FIX_540B_100",
+                       "CONFIRM_RESTORE_249D_FROM_FIX_540B_100",
+                       "python3 scripts/check-project-invariants.py",
+                       "python3 scripts/deploy_magnetra_fix_full_100.py"):
+            if marker not in body:
+                fail("540b full release must remain owner-gated: " + marker)
+        for forbidden in ("push:", "schedule:", "[deploy-pwa]",
+                          "wrangler versions upload", "wrangler deploy",
+                          "wrangler secret put"):
+            if forbidden in body:
+                fail("540b full release must never auto-deploy or upload: " + forbidden)
+    full_script = ROOT / "scripts/deploy_magnetra_fix_full_100.py"
+    require_file(full_script)
+    if full_script.is_file():
+        text = full_script.read_text(encoding="utf8")
+        for marker in ("FIVE", "FULL", "ZERO", "verify_versions_immutable_assets",
+                       "verify_provider_catalog", "verify_original_sources",
+                       "UNKNOWN_THIRD_OR_MISSING_VERSION_REFUSED", "confirm_postflight"):
+            if marker not in text:
+                fail("540b full release script is missing a critical guard: " + marker)
     prompt_file = ROOT / stage.get("current_master_prompt", "")
     require_file(prompt_file)
     if prompt_file.is_file():

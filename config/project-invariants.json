@@ -63,7 +63,8 @@
       ".github/workflows/magnetra-resolve-fix-zero-slot.yml",
       ".github/workflows/verify-magnetra-fix-zero-e2e.yml",
       ".github/workflows/magnetra-resolve-fix-canary-5.yml",
-      ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml"
+      ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml",
+      ".github/workflows/magnetra-resolve-fix-full-100.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -438,7 +439,8 @@
       "torrent9"
     ],
     "resolve_fix_canary_user_acceptance_confirmed": false,
-    "resolve_fix_full_promotion_prepared": false,
+    "resolve_fix_full_promotion_workflow": ".github/workflows/magnetra-resolve-fix-full-100.yml",
+    "resolve_fix_full_promotion_prepared": true,
     "resolve_fix_full_promotion_owner_approved": false,
     "resolve_fix_full_promotion_executed": false,
     "resolve_fix_full_promotion_postflight_verified": false,
