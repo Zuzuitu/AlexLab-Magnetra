@@ -77,11 +77,11 @@ class ReleaseTests(unittest.TestCase):
                 with patch.object(m, "_get_api", side_effect=[
                         VERSION, state, state]):
                     with patch.object(m, "_wrangler_deploy") as write:
-                        result = m.main() if False else None
-                        try:
+                        if state["result"]["deployments"][0]["versions"][0]["version_id"] == OTHER:
+                            with self.assertRaises(ValueError):
+                                m.promote()
+                        else:
                             self.assertEqual(m.promote(), 2)
-                        except ValueError:
-                            pass
                         write.assert_not_called()
 
     def test_race_before_write_stops_promotion(self):
@@ -153,8 +153,7 @@ class ReleaseTests(unittest.TestCase):
         unknown = dep({OLD: 70, OTHER: 30})
         with patch.object(m, "_get_api", return_value=unknown):
             with patch.object(m, "_wrangler_deploy") as write:
-                with self.assertRaises(ValueError):
-                    m.rollback()
+                self.assertEqual(m.rollback(), 2)
                 write.assert_not_called()
 
     def test_rollback_refuses_post_preflight_deployment_race(self):
