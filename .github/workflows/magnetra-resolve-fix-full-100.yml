@@ -1,0 +1,83 @@
+# MANUAL ONLY. PR/merge never deploys or changes Cloudflare routing.
+# Exact immutable 249d95/540b5 -> 249d0/540b100 with separate 100->0 rollback.
+name: Magnetra Resolve Fix 100 Percent Release (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      full_action:
+        description: "Select one EXPLICIT release or rollback operation; default CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_PROMOTE_FIX_540B_100
+          - CONFIRM_RESTORE_249D_FROM_FIX_540B_100
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  guarded-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Explicit owner permission before ANY Cloudflare/provider calls
+        shell: bash
+        env:
+          ACTION: ${{ inputs.full_action }}
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            CONFIRM_PROMOTE_FIX_540B_100|CONFIRM_RESTORE_249D_FROM_FIX_540B_100)
+              echo "FIX_FULL_OWNER_APPROVAL: PASS"
+              ;;
+            *)
+              echo "::error::No approval: default CANCEL makes no network calls or deploy."
+              exit 2
+              ;;
+          esac
+      - name: Checkout reviewed main without persisted credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify technical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline promotion, immutable source and rollback regression tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_full_100.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_canary_5_e2e.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_fix_canary_5.py'
+      - name: Set up pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Guard Worker name, source and production custom domain
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c = json.loads(Path("worker/wrangler.jsonc").read_text())
+          assert c["name"] == "alexlab-magnetra"
+          assert c["main"] == "src/index.mjs"
+          assert c["assets"]["directory"] == "../web"
+          assert c["assets"]["binding"] == "ASSETS"
+          assert c["routes"] == [{"pattern": "index.alexlab.media", "custom_domain": True}]
+          print("FIX_FULL_DEPLOYMENT_BOUNDARY: PASS")
+          PY
+      - name: Owner-selected exact 540b release or rollback (bounded write plus Cloudflare postflight)
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_FIX_FULL_ACTION: ${{ inputs.full_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_magnetra_fix_full_100.py
