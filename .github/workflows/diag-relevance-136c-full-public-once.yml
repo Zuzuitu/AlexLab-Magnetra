@@ -1,0 +1,24 @@
+# One-shot owner-approved release acceptance: NO Cloudflare mutations.
+name: Magnetra 136c Full Public Readonly Postflight
+on:
+  push:
+    branches:
+      - audit/relevance-136c-full-live-20261020
+permissions:
+  contents: read
+jobs:
+  public-postflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reviewed release source (no persisted credentials)
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check technical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Real public JS, immutable Cloudflare traffic and one title-query audit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/diagnose_relevance_136c_full_public_once.py
