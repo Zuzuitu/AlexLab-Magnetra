@@ -356,7 +356,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "resolve_fix_canary_run_id": 39323736403,
         "resolve_fix_canary_postflight_95_5_verified": True,
         "resolve_fix_current_active_249d_traffic_percent": 0,
-        "resolve_fix_current_540b_traffic_percent": 95,
+        "resolve_fix_current_540b_traffic_percent": 0,
         "resolve_fix_canary_e2e_workflow": ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml",
         "resolve_fix_canary_e2e_prepared": True,
         "resolve_fix_canary_e2e_executed": True,
@@ -394,8 +394,8 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_stage_binding_audit_passed": True,
         "relevance_fix_stage_override_asset_verified": True,
         "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
-        "relevance_fix_current_source_traffic_percent": 95,
-        "relevance_fix_current_staged_traffic_percent": 5,
+        "relevance_fix_current_source_traffic_percent": 0,
+        "relevance_fix_current_staged_traffic_percent": 100,
         "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
         "relevance_fix_zero_slot_prepared": True,
         "relevance_fix_zero_slot_owner_dispatched": True,
@@ -432,8 +432,8 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_full_promotion_workflow": ".github/workflows/magnetra-relevance-136c-full-100.yml",
         "relevance_fix_full_promotion_prepared": True,
         "relevance_fix_full_promotion_dispatched": True,
-        "relevance_fix_full_promotion_executed": False,
-        "relevance_fix_full_promotion_postflight_verified": False,
+        "relevance_fix_full_promotion_executed": True,
+        "relevance_fix_full_promotion_postflight_verified": True,
         "relevance_fix_full_restore_prepared": True,
         "relevance_fix_full_promotion_attempt_run_id": 39495655870,
         "relevance_fix_full_promotion_attempt_conclusion": "FAILURE_BEFORE_TRAFFIC_WRITE",
@@ -445,6 +445,22 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_full_promotion_readonly_diagnostic_yts_valid_matches": 4,
         "relevance_fix_full_promotion_readonly_diagnostic_timeouts": ["torrent9","oxtorrent"],
         "relevance_fix_full_promotion_timeout_isolation_prepared": True,
+        "relevance_fix_full_promotion_success_run_id": 39500459736,
+        "relevance_fix_full_promotion_success_run_conclusion": "SUCCESS",
+        "relevance_fix_full_promotion_public_independent_audit_run_id": 39500843622,
+        "relevance_fix_full_promotion_public_independent_audit_conclusion": "SUCCESS",
+        "relevance_fix_full_promotion_public_app_js_sha256_prefix": "ca9c44f311aa00f0",
+        "relevance_fix_full_promotion_public_app_js_bytes": 28637,
+        "relevance_fix_full_promotion_public_query": "the good dinosaur 2015",
+        "relevance_fix_full_promotion_public_matching_results": 93,
+        "relevance_fix_full_promotion_public_excluded_offtopic": 71,
+        "relevance_fix_full_promotion_public_provider_errors": 0,
+        "relevance_fix_full_promotion_public_tested_provider_ids": ["knaben","torrentscsv","torrent9","oxtorrent","ytsmx"],
+        "relevance_fix_full_promotion_public_provider_counts": {"knaben":77,"torrentscsv":12,"torrent9":0,"oxtorrent":0,"ytsmx":4},
+        "relevance_fix_full_promotion_public_title_gate_verified": True,
+        "relevance_fix_full_promotion_public_catalog_ids_verified": 46,
+        "relevance_fix_full_promotion_rollback_540b_share": 0,
+        "relevance_fix_full_promotion_readonly_workflow": ".github/workflows/verify-relevance-136c-full-public-readonly.yml",
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
         "resolve_fix_rollback_to_249d_live_executed": False,
@@ -519,6 +535,29 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                        "STAGED_ASSET_SHA_MISMATCH_NO_WRITE"):
             if marker not in source:
                 fail("136c canary/restore guard missing: " + marker)
+    relevance_public_audit = ROOT / ".github/workflows/verify-relevance-136c-full-public-readonly.yml"
+    relevance_public_script = ROOT / "scripts/verify_relevance_136c_full_public_readonly.py"
+    require_file(relevance_public_audit)
+    require_file(relevance_public_script)
+    if relevance_public_audit.is_file():
+        audit_body = relevance_public_audit.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "scripts/check-project-invariants.py",
+                       "scripts/verify_relevance_136c_full_public_readonly.py"):
+            if marker not in audit_body:
+                fail("136c full public audit must remain explicitly manual and read only: " + marker)
+        for forbidden in ("push:", "schedule:", "wrangler deploy",
+                          "wrangler versions deploy", "wrangler versions upload",
+                          "wrangler secret put", "[deploy-pwa]"):
+            if forbidden in audit_body:
+                fail("136c full public audit must not deploy or auto-run: " + forbidden)
+    if relevance_public_script.is_file():
+        audit_source = relevance_public_script.read_text(encoding="utf8")
+        for marker in ("EXPECTED={CURRENT:0,NEW:100}", "PUBLIC_APP_JS",
+                       "PUBLIC_IRRELEVANT_TITLE_LEAK", "PUBLIC_PER_SOURCE_COUNTS_DISAGREE",
+                       "READ_ONLY_FULL_POSTFLIGHT"):
+            if marker not in audit_source:
+                fail("136c public audit immutable/provenance checks missing: " + marker)
     relevance_full = ROOT / ".github/workflows/magnetra-relevance-136c-full-100.yml"
     require_file(relevance_full)
     if relevance_full.is_file():
