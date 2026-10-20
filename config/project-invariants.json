@@ -433,7 +433,7 @@
     "resolve_fix_canary_run_id": 39323736403,
     "resolve_fix_canary_postflight_95_5_verified": true,
     "resolve_fix_current_active_249d_traffic_percent": 0,
-    "resolve_fix_current_540b_traffic_percent": 100,
+    "resolve_fix_current_540b_traffic_percent": 95,
     "resolve_fix_canary_e2e_run_id": 39324007635,
     "resolve_fix_canary_e2e_verified": true,
     "resolve_fix_canary_e2e_oxtorrent_results": 50,
