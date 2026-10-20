@@ -1,6 +1,6 @@
 "use strict";
 const $=id=>document.getElementById(id);
-const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1"};
+const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
 const BTDIGG_MIN_GAP_MS=5500;
@@ -34,7 +34,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set()};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -71,6 +71,37 @@ function updatePairChip(text,online=false){
  $("companionStatus").textContent=text;
 }
 function updateBookmarkCount(){const count=$("bookmarkCount");if(count)count.textContent=String(Object.keys(state.bookmarks).length);}
+// A provider error at the end of a completed search only affects future searches.
+ // No source retries, no removal of adapter identity and no changes to Flud.
+function pausedFromFailures(ids,failures,selected){
+ const queried=new Set(ids);
+ const failed=new Set(failures.map(f=>f.provider).filter(id=>queried.has(id)&&selected.has(id)));
+ const active=[...selected].filter(id=>queried.has(id)&&!failed.has(id));
+ return active.length?[...failed]:[];
+}
+function savePausedSources(){
+ save(STORAGE.paused,[...state.pausedIds]);
+ const visible=[...state.pausedIds].filter(id=>state.providers.some(p=>p.id===id));
+ $("sourceHealthSummary").textContent=visible.length?
+  visible.length+" failed indexer"+(visible.length===1?"":"s")+
+  " paused automatically. Next searches use the remaining selected sources; tap Indexers to retry.":"";
+}
+function unpauseSources(ids){
+ for(const id of ids)state.pausedIds.delete(id);
+ savePausedSources();
+}
+function pauseFailedSources(ids,failures){
+ const paused=pausedFromFailures(ids,failures,state.selected);
+ if(!paused.length)return 0;
+ for(const id of paused){
+  state.selected.delete(id);
+  state.pausedIds.add(id);
+ }
+ save(STORAGE.selected,[...state.selected]);
+ savePausedSources();
+ updateProviderCount();renderProviders();
+ return paused.length;
+}
 function chooseProviders(){
  const stored=load(STORAGE.selected,null);
  if(Array.isArray(stored)){
@@ -83,7 +114,11 @@ function chooseProviders(){
  const valid=new Set(state.providers.filter(x=>x.ported).map(x=>x.id));
  state.selected=new Set([...state.selected].filter(x=>valid.has(x)));
  if(!state.selected.size)state.selected=new Set(preferred.filter(x=>valid.has(x)));
+ const recorded=load(STORAGE.paused,[]);
+ state.pausedIds=new Set((Array.isArray(recorded)?recorded:[])
+  .filter(id=>valid.has(id)&&!state.selected.has(id)));
  save(STORAGE.selected,[...state.selected]);
+ savePausedSources();
  updateProviderCount();
 }
 function updateProviderCount(){$("providerCount").textContent=String(state.selected.size)+"/"+state.providers.length;}
@@ -116,6 +151,7 @@ function renderProviders(){
     if(input.checked){
       if(state.selected.size>=state.providers.length){input.checked=false;toast("All available indexers are already selected.");return;}
       state.selected.add(p.id);
+      unpauseSources([p.id]);
     }else state.selected.delete(p.id);
     save(STORAGE.selected,[...state.selected]);updateProviderCount();
   });
@@ -126,7 +162,8 @@ function renderProviders(){
   const auditLabel=recent
    ?(audit==="results"?"RESULTS THIS SESSION":audit==="error"?"ERROR THIS SESSION":"0 THIS SESSION")
    :(audit==="results"?"RESULTS IN AUDIT":audit==="empty-unverified"?"0 IN AUDIT":audit==="error"?"ERROR IN AUDIT":"NOT AUDITED");
-  const marker=el("small","audit-"+(audit||"unknown"),p.ported?auditLabel:"PORT PENDING");
+  const autoPaused=state.pausedIds.has(p.id)&&!state.selected.has(p.id);
+  const marker=el("small","audit-"+(audit||"unknown"),autoPaused?"PAUSED AFTER ERROR":p.ported?auditLabel:"PORT PENDING");
   if(recent)marker.title="Search in this browser session at "+recent.at+
     "; "+recent.count+" results. Not a continuous live status.";
   else if(audit)marker.title="Historical "+(state.audit?.query||"")+
@@ -332,9 +369,15 @@ function renderProviderErrors(failures){
  const alternatives=el("button","source-alt","Search with available indexers →");
  alternatives.type="button";
  alternatives.addEventListener("click",()=>{
-  const ids=["knaben","torrentscsv","thepiratebay","internetarchive"].filter(id=>state.providers.some(p=>p.id===id&&p.ported));
+  // Use successful observations from THIS session, not obsolete dated audit
+  // or hardcoded providers that may currently be blocked.
+  const live=orderedProviders(state.providers).filter(p=>p.ported&&
+   ["results","empty-unverified"].includes(state.sessionAudit[p.id]?.state)).map(p=>p.id);
+  const ids=live.length?live:["knaben","torrentscsv","ytsmx"].filter(id=>
+   state.providers.some(p=>p.id===id&&p.ported));
   if(!ids.length){toast("No alternative indexers are available.");return;}
   state.selected=new Set(ids);
+  unpauseSources(ids);
   save(STORAGE.selected,ids);updateProviderCount();renderProviders();
   if(state.searching){
     state.pendingAlternativeSearch=true;
@@ -415,8 +458,10 @@ async function search(){
    }
   }));
   if(!controller.signal.aborted){
+   const paused=pauseFailedSources(ids,failures);
    if(!state.items.length)$("notice").textContent=failures.length?"No matching results; some indexers failed.":"No matching titles in selected indexers.";
    else $("notice").textContent="";
+   if(paused)toast(paused+" failing indexer"+(paused===1?"":"s")+" paused for future searches.");
   }
  }finally{
   const cancelled=controller.signal.aborted;
@@ -497,12 +542,14 @@ function init(){
   const ids=orderedProviders(state.providers).filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
   if(!ids.length){toast("No tested sources with results in the saved audit.");return;}
   state.selected=new Set(ids);
+  unpauseSources(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
   toast("Selected "+ids.length+" sources with results in the last audit (not guaranteed online).");
  });
  $("selectAllProviders").addEventListener("click",()=>{
   const ids=state.providers.filter(p=>p.ported).map(p=>p.id);
   state.selected=new Set(ids);
+  unpauseSources(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
   toast("Selected all "+ids.length+" indexers, including sources that may fail.");
  });
