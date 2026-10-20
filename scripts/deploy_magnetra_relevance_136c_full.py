@@ -50,27 +50,64 @@ def screenshot_source_gate():
     if not all(isinstance(v,list) for v in (rows,stats,errors)):
         raise Stop("SCREENSHOT_SOURCE_RESPONSE_SHAPE")
     ids={"torrent9","oxtorrent","ytsmx"}
-    if len(stats)!=3 or len(rows)>300 or errors or data.get("total")!=len(rows):
-        raise Stop("SCREENSHOT_SOURCE_UNVERIFIED_OR_ERRORS")
+    if len(stats)!=3 or len(rows)>300 or data.get("total")!=len(rows):
+        raise Stop("SCREENSHOT_SOURCE_RESPONSE_COUNTS_UNVERIFIED")
+    # Provider availability is a separate concern from title relevance. A
+    # genuine TIMEOUT may be reported, but ONLY when the provider is correctly
+    # attributed as unavailable and another original provider returns at
+    # least one title with a verified query+year match. No retries of any kind.
+    timed_out=set()
+    for err in errors:
+        if not isinstance(err,dict):
+            raise Stop("SCREENSHOT_SOURCE_ERROR_SHAPE")
+        provider=err.get("provider")
+        if (provider not in ids or provider in timed_out or
+                err.get("code")!="TIMEOUT"):
+            raise Stop("SCREENSHOT_SOURCE_UNEXPECTED_ERROR")
+        timed_out.add(provider)
     excluded=0
+    counts={}
     for s in stats:
         if not isinstance(s,dict) or s.get("provider") not in ids:
             raise Stop("SCREENSHOT_SOURCE_STAT_INVALID")
+        p=s["provider"]
+        if p in counts:
+            raise Stop("SCREENSHOT_DUPLICATE_SOURCE_STAT")
         count,raw,removed=s.get("count"),s.get("rawCount"),s.get("excludedOffTopic")
         if not all(type(v)==int and v>=0 for v in (count,raw,removed)) or raw!=count+removed:
             raise Stop("SCREENSHOT_SOURCE_RELEVANCE_COUNTS")
+        if p in timed_out:
+            if s.get("ok") is not False or any((count,raw,removed)):
+                raise Stop("SCREENSHOT_TIMEOUT_NOT_TRUTHFULLY_REPORTED")
+        elif s.get("ok") is not True:
+            raise Stop("SCREENSHOT_HEALTHY_SOURCE_NOT_VERIFIED")
+        counts[p]=count
         excluded+=removed
-    if {s["provider"] for s in stats}!=ids or data.get("excludedOffTopic")!=excluded:
+    if set(counts)!=ids or data.get("excludedOffTopic")!=excluded:
         raise Stop("SCREENSHOT_SOURCE_STAT_TOTALS")
+    if sum(counts.values())!=len(rows):
+        raise Stop("SCREENSHOT_SOURCE_RESULT_COUNT_MISMATCH")
+    seen={key:0 for key in ids}
     for row in rows:
         if not isinstance(row,dict) or row.get("provider") not in ids:
             raise Stop("SCREENSHOT_SOURCE_WRONG_PROVIDER")
+        provider=row["provider"]
+        if provider in timed_out:
+            raise Stop("SCREENSHOT_TIMEOUT_SOURCE_WITH_ROWS")
         actual=set(re.findall(r"[a-z0-9]+",str(row.get("name","")).lower()))
         if not {"good","dinosaur","2015"}.issubset(actual):
             raise Stop("SCREENSHOT_OFFTOPIC_LEAK")
-    if not rows:raise Stop("SCREENSHOT_NO_POSITIVE_SAMPLE")
-    print("SCREENSHOT_ORIGINAL_SOURCES: PASS matches="+str(len(rows))+
-          " excluded="+str(excluded)+" errors=0 (no titles/magnets logged)")
+        seen[provider]+=1
+    if seen!=counts:
+        raise Stop("SCREENSHOT_SOURCE_COUNT_PROVENANCE_MISMATCH")
+    if not rows:
+        raise Stop("SCREENSHOT_NO_POSITIVE_SAMPLE")
+    print("SCREENSHOT_ORIGINAL_SOURCES: TITLE_GATE_PASS matches="+str(len(rows))+
+          " excluded="+str(excluded)+" sourceTimeouts="+str(len(timed_out))+
+          " (no source titles, magnets or URLs logged)")
+    if timed_out:
+        print("SOURCE_AVAILABILITY_DEGRADED: TIMEOUT providers="+
+              ",".join(sorted(timed_out))+"; no retry; not counted as healthy")
 
 def read_only_preflight():
     verify_versions()
@@ -82,7 +119,7 @@ def read_only_preflight():
         raise Stop("KNABEN_TORRENTSCSV_SOURCE_NOT_VERIFIED")
     screenshot_source_gate()
     stable(before,FIVE)
-    print("RELEVANCE_FULL_PREFLIGHT_PASS: 5 genuine original source IDs; immutable JS and 3 bindings")
+    print("RELEVANCE_FULL_PREFLIGHT_PASS: five source IDs checked for title correctness; independent availability failures kept visible")
     return before
 
 def await_version_split(before,target,previous,wrote):
