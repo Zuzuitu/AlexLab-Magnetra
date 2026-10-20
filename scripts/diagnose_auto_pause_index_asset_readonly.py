@@ -49,6 +49,22 @@ def main():
    for a,b in zip(reviewed,data):
     if a!=b:break
     common+=1
+   suffix_equal=0
+   for a,b in zip(reversed(reviewed),reversed(data)):
+    if a!=b:break
+    suffix_equal+=1
+   middle=data[common:len(data)-suffix_equal] if suffix_equal else b""
+   import re
+   safe_tags=re.findall(rb"<\\s*(?:/)?\\s*([a-zA-Z][a-zA-Z0-9]*)",middle)
+   tags=[tag.decode("ascii","ignore").lower() for tag in safe_tags][:8]
+   print("HTML_DIFFERENCE "+label+" "+path+" prefix="+str(common)+
+         " suffix="+str(suffix_equal)+" extra="+str(len(middle))+
+         " marker_cf="+str(b"cloudflare" in middle.lower())+
+         " marker_cdn_cgi="+str(b"/cdn-cgi/" in middle.lower())+
+         " marker_cf_beacon="+str(b"cf-beacon" in middle.lower())+
+         " marker_script="+str(b"<script" in middle.lower())+
+         " marker_nonce="+str(b"nonce" in middle.lower())+
+         " safe_markup_tags="+",".join(tags))
    print(label+" "+path+" STATUS=200 size="+str(len(data))+" sha="+digest(data)+
          " match="+str(data==reviewed)+
          " prefix_equal="+str(common)+
