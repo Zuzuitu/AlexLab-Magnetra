@@ -431,10 +431,20 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_canary_live_five_provider_errors": 0,
         "relevance_fix_full_promotion_workflow": ".github/workflows/magnetra-relevance-136c-full-100.yml",
         "relevance_fix_full_promotion_prepared": True,
-        "relevance_fix_full_promotion_dispatched": False,
+        "relevance_fix_full_promotion_dispatched": True,
         "relevance_fix_full_promotion_executed": False,
         "relevance_fix_full_promotion_postflight_verified": False,
         "relevance_fix_full_restore_prepared": True,
+        "relevance_fix_full_promotion_attempt_run_id": 39495655870,
+        "relevance_fix_full_promotion_attempt_conclusion": "FAILURE_BEFORE_TRAFFIC_WRITE",
+        "relevance_fix_full_promotion_preflight_abort_reason": "TORRENT9_OXTORRENT_TIMEOUT",
+        "relevance_fix_full_promotion_first_attempt_traffic_write_executed": False,
+        "relevance_fix_full_promotion_readonly_diagnostic_run_id": 39496009852,
+        "relevance_fix_full_promotion_readonly_diagnostic_540b_percent": 95,
+        "relevance_fix_full_promotion_readonly_diagnostic_136c_percent": 5,
+        "relevance_fix_full_promotion_readonly_diagnostic_yts_valid_matches": 4,
+        "relevance_fix_full_promotion_readonly_diagnostic_timeouts": ["torrent9","oxtorrent"],
+        "relevance_fix_full_promotion_timeout_isolation_prepared": True,
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
         "resolve_fix_rollback_to_249d_live_executed": False,
@@ -537,7 +547,12 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                        'CURRENT+"@100%"', 'NEW+"@0%"',
                        "SCREENSHOT_OFFTOPIC_LEAK", "read_only_preflight",
                        "UNKNOWN_OR_CONCURRENT_DEPLOYMENT_NO_AUTO_ROLLBACK",
-                       "POSTFLIGHT_PUBLIC_ASSET_SHA_UNVERIFIED"):
+                       "POSTFLIGHT_PUBLIC_ASSET_SHA_UNVERIFIED",
+                       'err.get("code")!="TIMEOUT"',
+                       "SOURCE_AVAILABILITY_DEGRADED",
+                       "SCREENSHOT_NO_POSITIVE_SAMPLE",
+                       "SCREENSHOT_OFFTOPIC_LEAK",
+                       "SCREENSHOT_TIMEOUT_NOT_TRUTHFULLY_REPORTED"):
             if marker not in source:
                 fail("136c full release safety or source provenance guard missing: " + marker)
     fix_full = ROOT / ".github/workflows/magnetra-resolve-fix-full-100.yml"
