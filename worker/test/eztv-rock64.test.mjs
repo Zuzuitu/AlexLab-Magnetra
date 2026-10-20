@@ -111,7 +111,7 @@ test("full Worker API uses EZTV gateway only when its secret is supplied",async(
   const response=await app.fetch(request,{MAGNETRA_GATEWAY_TOKEN:secret});
   const parsed=await response.json();
   assert.equal(response.status,200);
-  assert.deepEqual(parsed.stats,[{provider:"eztvx",count:1,ok:true}]);
+  assert.deepEqual(parsed.stats,[{provider:"eztvx",count:1,rawCount:1,excludedOffTopic:0,ok:true}]);
   assert.equal(parsed.total,1);
   assert.equal(parsed.results[0].provider,"eztvx");
   assert.equal(parsed.results[0].magnet,row.magnet_url);
