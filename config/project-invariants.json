@@ -281,7 +281,7 @@
     "source_zero_matching_rows_not_error": true,
     "no_extra_provider_health_queries": true,
     "failures_never_pause_all_selected_sources": true,
-    "auto_pause_release_status": "IMMUTABLE_C86C_ZERO_SHARE_VERIFIED"
+    "auto_pause_release_status": "PRODUCTION_C86C100_VERIFIED"
   },
   "cloudflare_worker_stage": {
     "staged_secret_version_owner_reported": "ce808b27",
@@ -485,7 +485,7 @@
     "relevance_fix_stage_override_asset_verified": true,
     "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
     "relevance_fix_current_source_traffic_percent": 0,
-    "relevance_fix_current_staged_traffic_percent": 100,
+    "relevance_fix_current_staged_traffic_percent": 0,
     "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
     "relevance_fix_zero_slot_prepared": true,
     "relevance_fix_zero_slot_owner_dispatched": true,
@@ -578,8 +578,8 @@
     "auto_pause_original_stable_version": "136c1425-0070-48db-b995-5708bd35bb75",
     "auto_pause_single_action_attempt_run_id": 39510888059,
     "auto_pause_single_action_conclusion": "FAILURE_AFTER_ZERO_SHARE_BEFORE_FULL_WRITE",
-    "auto_pause_slot_136c_percent": 100,
-    "auto_pause_slot_c86c_percent": 0,
+    "auto_pause_slot_136c_percent": 0,
+    "auto_pause_slot_c86c_percent": 100,
     "auto_pause_candidate_js_verified": true,
     "auto_pause_candidate_css_verified": true,
     "auto_pause_candidate_html_root_verified": true,
@@ -588,9 +588,16 @@
     "auto_pause_html_readonly_diagnostic_run_id": 39511936377,
     "auto_pause_resume_workflow": ".github/workflows/magnetra-auto-pause-resume-c86c.yml",
     "auto_pause_resume_prepared": true,
-    "auto_pause_resume_dispatched": false,
-    "auto_pause_resume_full_executed": false,
-    "auto_pause_resume_full_postflight_verified": false,
-    "auto_pause_manual_restore_prepared": true
+    "auto_pause_resume_dispatched": true,
+    "auto_pause_resume_full_executed": true,
+    "auto_pause_resume_full_postflight_verified": true,
+    "auto_pause_manual_restore_prepared": true,
+    "auto_pause_resume_success_run_id": 39516593949,
+    "auto_pause_resume_success_run_conclusion": "SUCCESS",
+    "auto_pause_public_js_sha_prefix": "9998e0130b19ece9",
+    "auto_pause_public_css_sha_prefix": "1c7080d499b00207",
+    "auto_pause_public_html_source_sha_prefix": "6e6e2ca3388a5ce7",
+    "auto_pause_public_html_cf_beacon_verified": true,
+    "auto_pause_new_app_iphone_acceptance_confirmed": false
   }
 }
