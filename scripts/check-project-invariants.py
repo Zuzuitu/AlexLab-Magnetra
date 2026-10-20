@@ -402,7 +402,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_zero_slot_executed": True,
         "relevance_fix_zero_slot_e2e_verified": True,
         "relevance_fix_title_query_e2e_verified": True,
-        "relevance_fix_iphone_search_acceptance_confirmed": False,
+        "relevance_fix_iphone_search_acceptance_confirmed": True,
         "relevance_fix_zero_slot_run_id": 39475416019,
         "relevance_fix_zero_slot_workflow_conclusion": "FAILURE_AT_FIRST_STAGED_APP_JS_HASH_POSTFLIGHT",
         "relevance_fix_zero_slot_metadata_verified": True,
