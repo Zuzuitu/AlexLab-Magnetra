@@ -1,0 +1,30 @@
+# OWNER-MANUAL READ-ONLY health acceptance. Never writes Cloudflare traffic.
+name: Magnetra 136c Full Public Audit (READ ONLY)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-relevance-136c-full-readonly-audit
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reviewed production source without credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Canonical project invariant checks
+        run: python3 scripts/check-project-invariants.py
+      - name: Verify production 136c 100 percent, public JS and one original-title search
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/verify_relevance_136c_full_public_readonly.py
