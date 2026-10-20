@@ -1558,10 +1558,36 @@ def check_all_provider_recovery(config: dict) -> None:
         "dated_audit_run": 38373699387,
         "html_source_fix_staged": ["oxtorrent", "torrent9"],
         "physical_search_to_detail_magnet_verified": ["oxtorrent", "torrent9"],
+        "auto_pause_source_errors_after_completed_search": True,
+        "auto_pause_persisted_per_browser": True,
+        "allow_manual_source_reselection": True,
+        "never_remove_original_46_adapters": True,
+        "source_zero_matching_rows_not_error": True,
+        "no_extra_provider_health_queries": True,
+        "failures_never_pause_all_selected_sources": True,
+        "auto_pause_release_status": "SOURCE_ONLY_NOT_DEPLOYED",
     }
     for name, value in expected.items():
         require_equal(plan.get(name) if isinstance(plan, dict) else None,
                       value, "provider_recovery_v1." + name)
+    app = ROOT / "web/app.js"
+    page = ROOT / "web/index.html"
+    auto_pause_test = ROOT / "worker/test/auto-pause-indexers.test.mjs"
+    require_file(app)
+    require_file(page)
+    require_file(auto_pause_test)
+    if app.is_file():
+        js = app.read_text(encoding="utf8")
+        for snippet in ('pausedFromFailures(ids,failures,selected)',
+                        'pauseFailedSources(ids,failures)',
+                        'STORAGE.paused', 'savePausedSources()',
+                        'unpauseSources(ids)', 'if(!controller.signal.aborted)',
+                        'const paused=pauseFailedSources(ids,failures);'):
+            if snippet not in js:
+                fail("auto-pause genuine error-only selection gate missing: " + snippet)
+    if page.is_file() and 'id="sourceHealthSummary"' not in page.read_text(encoding="utf8"):
+        fail("source auto-pause needs visible, accessible status")
+
     for filename in ("worker/src/recovery-strategy.mjs",
                      "worker/test/recovery-strategy.test.mjs",
                      "scripts/recovery-plan.mjs"):
