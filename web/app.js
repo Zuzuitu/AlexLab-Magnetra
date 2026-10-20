@@ -34,7 +34,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{}};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -244,11 +244,13 @@ async function sendMagnet(item,button){
 function renderResults(){
  const root=$("results");root.replaceChildren();
  const items=state.bookmarksMode?Object.values(state.bookmarks):state.items;
- const sorted=sortItems(items);$("resultCount").textContent=sorted.length+" RESULTS";
+ const sorted=sortItems(items);$("resultCount").textContent=sorted.length+(state.bookmarksMode?" SAVED":" MATCHES");
  $("resultsTitle").textContent=state.bookmarksMode?"Saved bookmarks":"Search results";
+ $("searchQuality").textContent=state.bookmarksMode?"":state.excludedOffTopic?
+  state.excludedOffTopic+" unrelated source results excluded from this search. Only title-matching entries are shown.":"";
  if(!sorted.length){
    if(state.bookmarksMode)$("notice").textContent="No bookmarks saved yet.";
-   else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent="No results. Try another query or indexer.";
+   else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent="No matching titles. Try another title, fewer keywords or different indexers.";
    return;
  }
  $("notice").textContent="";
@@ -354,7 +356,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast("Select at least one indexer.");return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];state.excludedOffTopic=0;
  $("searchButton").disabled=false;$("searchButton").textContent="Cancel search ×";
  $("notice").textContent="Searching "+ids.length+" indexers…";$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -377,6 +379,9 @@ async function search(){
      const data=await api(url.pathname+url.search,{signal:controller.signal});
      if(controller.signal.aborted)return;
      state.items.push(...(data.results||[]));
+     // Source-side relevance exclusions are not provider transport errors.
+     const quality=(data.stats||[]).find(s=>s.provider===id);
+     state.excludedOffTopic+=Math.max(0,Number(quality?.excludedOffTopic)||0);
      for(const e of data.errors||[])failures.push(e);
      const observed=(data.stats||[]).find(s=>s.provider===id);
      if(observed)state.sessionAudit[id]={
@@ -405,12 +410,12 @@ async function search(){
     completed++;
     renderResults();
     renderProviders(); // Update session-only observations; no extra provider calls.
-    $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" results found.";
+    $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" relevant matches.";
     renderProviderErrors(failures);
    }
   }));
   if(!controller.signal.aborted){
-   if(!state.items.length)$("notice").textContent=failures.length?"No results; some indexers failed.":"No matching results in selected indexers.";
+   if(!state.items.length)$("notice").textContent=failures.length?"No matching results; some indexers failed.":"No matching titles in selected indexers.";
    else $("notice").textContent="";
   }
  }finally{
