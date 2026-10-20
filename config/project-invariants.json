@@ -520,9 +520,22 @@
     "relevance_fix_canary_live_five_provider_errors": 0,
     "relevance_fix_full_promotion_workflow": ".github/workflows/magnetra-relevance-136c-full-100.yml",
     "relevance_fix_full_promotion_prepared": true,
-    "relevance_fix_full_promotion_dispatched": false,
+    "relevance_fix_full_promotion_dispatched": true,
     "relevance_fix_full_promotion_executed": false,
     "relevance_fix_full_promotion_postflight_verified": false,
-    "relevance_fix_full_restore_prepared": true
+    "relevance_fix_full_restore_prepared": true,
+    "relevance_fix_full_promotion_attempt_run_id": 39495655870,
+    "relevance_fix_full_promotion_attempt_conclusion": "FAILURE_BEFORE_TRAFFIC_WRITE",
+    "relevance_fix_full_promotion_preflight_abort_reason": "TORRENT9_OXTORRENT_TIMEOUT",
+    "relevance_fix_full_promotion_first_attempt_traffic_write_executed": false,
+    "relevance_fix_full_promotion_readonly_diagnostic_run_id": 39496009852,
+    "relevance_fix_full_promotion_readonly_diagnostic_540b_percent": 95,
+    "relevance_fix_full_promotion_readonly_diagnostic_136c_percent": 5,
+    "relevance_fix_full_promotion_readonly_diagnostic_yts_valid_matches": 4,
+    "relevance_fix_full_promotion_readonly_diagnostic_timeouts": [
+      "torrent9",
+      "oxtorrent"
+    ],
+    "relevance_fix_full_promotion_timeout_isolation_prepared": true
   }
 }

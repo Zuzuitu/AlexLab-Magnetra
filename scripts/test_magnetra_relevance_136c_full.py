@@ -21,6 +21,70 @@ class FullGateTests(unittest.TestCase):
   with patch.object(m,"verify_versions") as v,patch.object(m,"snapshot",return_value=OLD),patch.object(m,"verify_source_asset") as asset,patch.object(m.source,"stage_e2e",return_value=True) as e2e,patch.object(m,"screenshot_source_gate") as extra,patch.object(m,"stable") as stable:
    self.assertEqual(m.read_only_preflight(),OLD[0])
    v.assert_called_once();asset.assert_called_once();e2e.assert_called_once();extra.assert_called_once();stable.assert_called_once()
+ def test_release_source_gate_allows_only_truthful_timeout_with_a_valid_title(self):
+  data={
+   "results":[{"provider":"ytsmx","name":"The.Good.Dinosaur.2015.1080p.BluRay.x265"}],
+   "stats":[
+    {"provider":"torrent9","ok":False,"count":0,"rawCount":0,"excludedOffTopic":0},
+    {"provider":"oxtorrent","ok":False,"count":0,"rawCount":0,"excludedOffTopic":0},
+    {"provider":"ytsmx","ok":True,"count":1,"rawCount":1,"excludedOffTopic":0}],
+   "errors":[{"provider":"torrent9","code":"TIMEOUT"},
+             {"provider":"oxtorrent","code":"TIMEOUT"}],
+   "total":1,"excludedOffTopic":0
+  }
+  with patch.object(m.source,"request",return_value=data) as get:
+   m.screenshot_source_gate()
+   get.assert_called_once()
+ def test_release_source_gate_fails_closed_on_all_sources_timeout(self):
+  data={"results":[],"stats":[
+   {"provider":p,"ok":False,"count":0,"rawCount":0,"excludedOffTopic":0}
+   for p in ("torrent9","oxtorrent","ytsmx")],
+   "errors":[{"provider":p,"code":"TIMEOUT"} for p in ("torrent9","oxtorrent","ytsmx")],
+   "total":0,"excludedOffTopic":0}
+  with patch.object(m.source,"request",return_value=data):
+   with self.assertRaisesRegex(m.Stop,"NO_POSITIVE_SAMPLE"):
+    m.screenshot_source_gate()
+ def test_release_source_gate_refuses_non_timeout_or_forged_timeout(self):
+  data={"results":[{"provider":"ytsmx","name":"The.Good.Dinosaur.2015.1080p"}],
+   "stats":[{"provider":"torrent9","ok":False,"count":0,"rawCount":0,"excludedOffTopic":0},
+            {"provider":"oxtorrent","ok":True,"count":0,"rawCount":0,"excludedOffTopic":0},
+            {"provider":"ytsmx","ok":True,"count":1,"rawCount":1,"excludedOffTopic":0}],
+   "errors":[{"provider":"torrent9","code":"TIMEOUT"}],
+   "total":1,"excludedOffTopic":0}
+  for bad in ("UPSTREAM_429","UPSTREAM_ERROR","HTTP_403","UNEXPECTED"):
+   with self.subTest(bad=bad):
+    item={**data,"errors":[{"provider":"torrent9","code":bad}]}
+    with patch.object(m.source,"request",return_value=item):
+     with self.assertRaisesRegex(m.Stop,"UNEXPECTED_ERROR"):
+      m.screenshot_source_gate()
+  forged={**data,"stats":[{**data["stats"][0],"ok":True},*data["stats"][1:]]}
+  with patch.object(m.source,"request",return_value=forged):
+   with self.assertRaisesRegex(m.Stop,"TIMEOUT_NOT_TRUTHFULLY"):
+    m.screenshot_source_gate()
+ def test_release_source_gate_offtopic_still_refused_with_timeouts(self):
+  data={"results":[{"provider":"ytsmx","name":"Knock.Knock.2015.1080p"}],
+   "stats":[{"provider":"torrent9","ok":False,"count":0,"rawCount":0,"excludedOffTopic":0},
+            {"provider":"oxtorrent","ok":False,"count":0,"rawCount":0,"excludedOffTopic":0},
+            {"provider":"ytsmx","ok":True,"count":1,"rawCount":1,"excludedOffTopic":0}],
+   "errors":[{"provider":"torrent9","code":"TIMEOUT"},
+             {"provider":"oxtorrent","code":"TIMEOUT"}],
+   "total":1,"excludedOffTopic":0}
+  with patch.object(m.source,"request",return_value=data):
+   with self.assertRaisesRegex(m.Stop,"OFFTOPIC_LEAK"):
+    m.screenshot_source_gate()
+ def test_source_stat_duplicates_and_mismatched_counts_abort(self):
+  good={"results":[{"provider":"ytsmx","name":"The Good Dinosaur (2015)"}],
+   "stats":[{"provider":"torrent9","ok":True,"count":0,"rawCount":0,"excludedOffTopic":0},
+            {"provider":"oxtorrent","ok":True,"count":0,"rawCount":0,"excludedOffTopic":0},
+            {"provider":"ytsmx","ok":True,"count":1,"rawCount":1,"excludedOffTopic":0}],
+   "errors":[],"total":1,"excludedOffTopic":0}
+  bad_duplicate={**good,"stats":[good["stats"][0],good["stats"][0],good["stats"][2]]}
+  with patch.object(m.source,"request",return_value=bad_duplicate):
+   with self.assertRaisesRegex(m.Stop,"DUPLICATE_SOURCE_STAT"):m.screenshot_source_gate()
+  bad_count={**good,"stats":[good["stats"][0],good["stats"][1],
+      {**good["stats"][2],"count":2,"rawCount":2}]}
+  with patch.object(m.source,"request",return_value=bad_count):
+   with self.assertRaisesRegex(m.Stop,"RESULT_COUNT_MISMATCH"):m.screenshot_source_gate()
  def test_wrong_split_and_unknown_versions_abort_before_write(self):
   for bad in ({m.CURRENT:100,m.NEW:0},{m.CURRENT:90,m.NEW:10},{m.CURRENT:95,OTHER:5},{m.NEW:100,m.CURRENT:0}):
    with self.subTest(bad=bad),patch.object(m,"verify_versions"),patch.object(m,"snapshot",return_value=({"id":"bad"},bad)),patch.object(m,"_wrangler_deploy") as w,patch.object(m,"verify_source_asset") as a:
