@@ -433,7 +433,7 @@
     "resolve_fix_canary_run_id": 39323736403,
     "resolve_fix_canary_postflight_95_5_verified": true,
     "resolve_fix_current_active_249d_traffic_percent": 0,
-    "resolve_fix_current_540b_traffic_percent": 95,
+    "resolve_fix_current_540b_traffic_percent": 0,
     "resolve_fix_canary_e2e_run_id": 39324007635,
     "resolve_fix_canary_e2e_verified": true,
     "resolve_fix_canary_e2e_oxtorrent_results": 50,
@@ -476,8 +476,8 @@
     "relevance_fix_stage_binding_audit_passed": true,
     "relevance_fix_stage_override_asset_verified": true,
     "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
-    "relevance_fix_current_source_traffic_percent": 95,
-    "relevance_fix_current_staged_traffic_percent": 5,
+    "relevance_fix_current_source_traffic_percent": 0,
+    "relevance_fix_current_staged_traffic_percent": 100,
     "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
     "relevance_fix_zero_slot_prepared": true,
     "relevance_fix_zero_slot_owner_dispatched": true,
@@ -521,8 +521,8 @@
     "relevance_fix_full_promotion_workflow": ".github/workflows/magnetra-relevance-136c-full-100.yml",
     "relevance_fix_full_promotion_prepared": true,
     "relevance_fix_full_promotion_dispatched": true,
-    "relevance_fix_full_promotion_executed": false,
-    "relevance_fix_full_promotion_postflight_verified": false,
+    "relevance_fix_full_promotion_executed": true,
+    "relevance_fix_full_promotion_postflight_verified": true,
     "relevance_fix_full_restore_prepared": true,
     "relevance_fix_full_promotion_attempt_run_id": 39495655870,
     "relevance_fix_full_promotion_attempt_conclusion": "FAILURE_BEFORE_TRAFFIC_WRITE",
@@ -536,6 +536,34 @@
       "torrent9",
       "oxtorrent"
     ],
-    "relevance_fix_full_promotion_timeout_isolation_prepared": true
+    "relevance_fix_full_promotion_timeout_isolation_prepared": true,
+    "relevance_fix_full_promotion_success_run_id": 39500459736,
+    "relevance_fix_full_promotion_success_run_conclusion": "SUCCESS",
+    "relevance_fix_full_promotion_public_independent_audit_run_id": 39500843622,
+    "relevance_fix_full_promotion_public_independent_audit_conclusion": "SUCCESS",
+    "relevance_fix_full_promotion_public_app_js_sha256_prefix": "ca9c44f311aa00f0",
+    "relevance_fix_full_promotion_public_app_js_bytes": 28637,
+    "relevance_fix_full_promotion_public_query": "the good dinosaur 2015",
+    "relevance_fix_full_promotion_public_matching_results": 93,
+    "relevance_fix_full_promotion_public_excluded_offtopic": 71,
+    "relevance_fix_full_promotion_public_provider_errors": 0,
+    "relevance_fix_full_promotion_public_tested_provider_ids": [
+      "knaben",
+      "torrentscsv",
+      "torrent9",
+      "oxtorrent",
+      "ytsmx"
+    ],
+    "relevance_fix_full_promotion_public_provider_counts": {
+      "knaben": 77,
+      "torrentscsv": 12,
+      "torrent9": 0,
+      "oxtorrent": 0,
+      "ytsmx": 4
+    },
+    "relevance_fix_full_promotion_public_title_gate_verified": true,
+    "relevance_fix_full_promotion_public_catalog_ids_verified": 46,
+    "relevance_fix_full_promotion_rollback_540b_share": 0,
+    "relevance_fix_full_promotion_readonly_workflow": ".github/workflows/verify-relevance-136c-full-public-readonly.yml"
   }
 }
