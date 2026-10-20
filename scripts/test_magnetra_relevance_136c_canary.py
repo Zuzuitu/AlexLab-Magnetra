@@ -29,6 +29,10 @@ class Canary(unittest.TestCase):
   with patch.object(m,"verify_version"),patch.object(m,"snapshot",return_value=SLOT),patch.object(m,"request",return_value=b"wrong"),patch.object(m,"_wrangler_deploy") as w:
    with self.assertRaisesRegex(m.Stop,"ASSET_SHA_MISMATCH"):m.canary()
    w.assert_not_called()
+ def test_missing_staged_asset_fails_closed_with_no_write(self):
+  with patch.dict(os.environ,{"MAGNETRA_RELEVANCE_CANARY_ACTION":m.PROMOTE}),patch.object(m,"verify_version"),patch.object(m,"snapshot",return_value=SLOT),patch.object(m,"request",side_effect=m.StagedStop("OVERRIDE_TRANSPORT_UNVERIFIED")),patch.object(m,"_wrangler_deploy") as w:
+   self.assertEqual(m.execute(),1)
+   w.assert_not_called()
  def test_verified_asset_safely_matches_reviewed_source(self):
   blob=(Path(__file__).resolve().parent.parent/"web"/"app.js").read_bytes()
   with patch.object(m,"request",return_value=blob) as req:
