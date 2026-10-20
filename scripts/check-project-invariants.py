@@ -386,6 +386,23 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "resolve_fix_full_promotion_initial_asset_mismatch_observed": True,
         "resolve_fix_full_promotion_asset_mismatch_root_cause_proven": False,
         "resolve_fix_full_promotion_iphone_acceptance_confirmed": False,
+        "relevance_fix_main_commit": "83e1659538e037a12f4bf8044d2cb52f89e72d7f",
+        "relevance_fix_staged_version_id": "136c1425-0070-48db-b995-5708bd35bb75",
+        "relevance_fix_stage_run_id": 39450609144,
+        "relevance_fix_stage_uploaded": True,
+        "relevance_fix_stage_binding_audit_run_id": 39451169718,
+        "relevance_fix_stage_binding_audit_passed": True,
+        "relevance_fix_stage_override_asset_verified": False,
+        "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
+        "relevance_fix_current_source_traffic_percent": 100,
+        "relevance_fix_current_staged_traffic_percent": 0,
+        "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
+        "relevance_fix_zero_slot_prepared": True,
+        "relevance_fix_zero_slot_owner_dispatched": False,
+        "relevance_fix_zero_slot_executed": False,
+        "relevance_fix_zero_slot_e2e_verified": False,
+        "relevance_fix_title_query_e2e_verified": False,
+        "relevance_fix_iphone_search_acceptance_confirmed": False,
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
         "resolve_fix_rollback_to_249d_live_executed": False,
@@ -402,6 +419,34 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         return
     for key, value in expected.items():
         require_equal(stage.get(key), value, "cloudflare_worker_stage." + key)
+    relevance_zero = ROOT / ".github/workflows/magnetra-relevance-136c-zero-slot.yml"
+    require_file(relevance_zero)
+    if relevance_zero.is_file():
+        body = relevance_zero.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "magnetra-production-traffic-change", "default: CANCEL",
+                       "CONFIRM_540B100_136C0_SLOT_AND_READONLY_E2E",
+                       "scripts/check-project-invariants.py",
+                       "scripts/deploy_magnetra_relevance_136c_slot.py"):
+            if marker not in body:
+                fail("136c slot must remain owner-gated: " + marker)
+        for forbidden in ("push:", "schedule:", "[deploy-pwa]",
+                          "wrangler versions upload", "wrangler deploy",
+                          "wrangler secret put"):
+            if forbidden in body:
+                fail("136c zero slot must never auto-deploy or upload: " + forbidden)
+    relevance_source = ROOT / "scripts/deploy_magnetra_relevance_136c_slot.py"
+    relevance_test = ROOT / "scripts/test_magnetra_relevance_136c_slot.py"
+    require_file(relevance_source)
+    require_file(relevance_test)
+    if relevance_source.is_file():
+        source = relevance_source.read_text(encoding="utf8")
+        for marker in ("136c1425-0070-48db-b995-5708bd35bb75",
+                       "CONFIRM_540B100_136C0_SLOT_AND_READONLY_E2E",
+                       "PRODUCTION_REMAINS_540B_100", "reviewed", "NEW_IMMUTABLE_PWA_ASSETS",
+                       "expected.issubset(actual)", "excludedOffTopic"):
+            if marker not in source:
+                fail("136c slot provenance/relevance safety gate missing: " + marker)
     fix_full = ROOT / ".github/workflows/magnetra-resolve-fix-full-100.yml"
     require_file(fix_full)
     if fix_full.is_file():
