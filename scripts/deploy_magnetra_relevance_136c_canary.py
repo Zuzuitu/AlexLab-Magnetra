@@ -14,7 +14,7 @@ import time
 
 from deploy_magnetra_zero_percent import _wrangler_deploy
 from deploy_magnetra_relevance_136c_slot import (
-    CURRENT, NEW, SLOT, snapshot, verify_version, request
+    CURRENT, NEW, SLOT, snapshot, verify_version, request, Stop as StagedStop
 )
 
 PROMOTE="CONFIRM_RELEVANCE_136C_CANARY_5"
@@ -88,8 +88,8 @@ def execute():
         print("STOP: explicit manual canary/restore action absent; no network or write")
         return 2
     try: return canary() if action==PROMOTE else restore()
-    except (Stop,ValueError,TypeError,KeyError,OSError) as e:
-        print("RELEVANCE_CANARY_STOP: "+str(e) if isinstance(e,Stop) else "RELEVANCE_CANARY_STOP: SANITIZED_METADATA_OR_TRANSPORT")
+    except (Stop,StagedStop,ValueError,TypeError,KeyError,OSError) as e:
+        print("RELEVANCE_CANARY_STOP: "+str(e) if isinstance(e,(Stop,StagedStop)) else "RELEVANCE_CANARY_STOP: SANITIZED_METADATA_OR_TRANSPORT")
         return 1
 
 if __name__=="__main__":
