@@ -35,7 +35,8 @@ def get_public(path,mime):
            "Accept":mime})
  try:
   with urllib.request.build_opener(NoRedirect()).open(req,timeout=38) as res:
-   if res.status!=200 or mime.split(",")[0].split(";")[0] not in res.headers.get("content-type",""):
+   expected_type="json" if mime=="application/json" else "javascript"
+   if res.status!=200 or expected_type not in res.headers.get("content-type",""):
     raise Stop("PUBLIC_CONTENT_OR_STATUS_UNVERIFIED")
    body=res.read(LIMIT+1)
  except urllib.error.HTTPError as e:raise Stop("PUBLIC_HTTP_"+str(e.code)) from None
