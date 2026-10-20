@@ -55,7 +55,7 @@ def main():
     suffix_equal+=1
    middle=data[common:len(data)-suffix_equal] if suffix_equal else b""
    import re
-   safe_tags=re.findall(rb"<\\s*(?:/)?\\s*([a-zA-Z][a-zA-Z0-9]*)",middle)
+   safe_tags=re.findall(rb"<\s*(?:/)?\s*([a-zA-Z][a-zA-Z0-9]*)",middle)
    tags=[tag.decode("ascii","ignore").lower() for tag in safe_tags][:8]
    print("HTML_DIFFERENCE "+label+" "+path+" prefix="+str(common)+
          " suffix="+str(suffix_equal)+" extra="+str(len(middle))+
@@ -63,6 +63,11 @@ def main():
          " marker_cdn_cgi="+str(b"/cdn-cgi/" in middle.lower())+
          " marker_cf_beacon="+str(b"cf-beacon" in middle.lower())+
          " marker_script="+str(b"<script" in middle.lower())+
+         " marker_cfinsights="+str(b"static.cloudflareinsights.com" in middle.lower())+
+         " marker_beaconjs="+str(b"beacon.min.js" in middle.lower())+
+         " marker_databeacon="+str(b"data-cf-beacon" in middle.lower())+
+         " starts_script="+str(middle.lstrip().lower().startswith(b"<script"))+
+         " ends_script="+str(middle.rstrip().lower().endswith(b"</script>"))+
          " marker_nonce="+str(b"nonce" in middle.lower())+
          " safe_markup_tags="+",".join(tags))
    print(label+" "+path+" STATUS=200 size="+str(len(data))+" sha="+digest(data)+
