@@ -18,6 +18,7 @@ NEW="136c1425-0070-48db-b995-5708bd35bb75"
 BASE="https://index.alexlab.media"
 LIMIT=1000000
 TITLE="the good dinosaur 2015"
+SOURCE_IDS=("torrent9","oxtorrent","ytsmx")
 ALLOW={"app.js","api/search"}
 class Stop(Exception): pass
 class NoRedirect(HTTPRedirectHandler):
@@ -30,7 +31,7 @@ def get(kind,version=None,bust=False):
     if kind=="app.js" and bust:
         route+="?magnetra_136c_asset_audit=20261020"
     if kind=="api/search":
-        route+="?"+urlencode({"q":TITLE,"providers":"knaben,torrentscsv","category":"all"})
+        route+="?"+urlencode({"q":TITLE,"providers":",".join(SOURCE_IDS),"category":"all"})
     headers={"Accept-Encoding":"identity", "Cache-Control":"no-cache,no-store,max-age=0",
              "Pragma":"no-cache", "User-Agent":"MagnetraReadOnly136cPostflight/1.0",
              "Accept":"application/json" if kind=="api/search" else "text/javascript"}
@@ -96,9 +97,9 @@ def main():
         print("STAGED_API_SCHEMA: fields rawCount="+str(all(isinstance(s,dict) and isinstance(s.get("rawCount"),int) for s in stats))+
               " excludedOffTopic="+str(isinstance(d.get("excludedOffTopic"),int))+
               " providerStats="+str(len(stats))+" returned="+str(len(rows))+" errors="+str(len(errors)))
-        if len(stats)!=2 or len(rows)>200:raise Stop("SOURCE_STATS_COUNT_UNVERIFIED")
+        if len(stats)!=len(SOURCE_IDS) or len(rows)>300:raise Stop("SOURCE_STATS_COUNT_UNVERIFIED")
         for item in rows:
-            if not isinstance(item,dict) or item.get("provider") not in ("knaben","torrentscsv"):
+            if not isinstance(item,dict) or item.get("provider") not in SOURCE_IDS:
                 raise Stop("ROW_PROVENANCE_UNVERIFIED")
             if not {"good","dinosaur","2015"}.issubset(set(re.findall(r"[a-z0-9]+",str(item.get("name","")).lower()))):
                 raise Stop("UNRELATED_RESULT_STILL_SHOWN")
