@@ -281,7 +281,7 @@
     "source_zero_matching_rows_not_error": true,
     "no_extra_provider_health_queries": true,
     "failures_never_pause_all_selected_sources": true,
-    "auto_pause_release_status": "SOURCE_ONLY_NOT_DEPLOYED"
+    "auto_pause_release_status": "IMMUTABLE_C86C_ZERO_SHARE_VERIFIED"
   },
   "cloudflare_worker_stage": {
     "staged_secret_version_owner_reported": "ce808b27",
@@ -572,6 +572,25 @@
     "relevance_fix_full_promotion_public_title_gate_verified": true,
     "relevance_fix_full_promotion_public_catalog_ids_verified": 46,
     "relevance_fix_full_promotion_rollback_540b_share": 0,
-    "relevance_fix_full_promotion_readonly_workflow": ".github/workflows/verify-relevance-136c-full-public-readonly.yml"
+    "relevance_fix_full_promotion_readonly_workflow": ".github/workflows/verify-relevance-136c-full-public-readonly.yml",
+    "auto_pause_source_main_commit": "fc3bceb2f56c59bf9aa95667cb9b95a827a4faf9",
+    "auto_pause_new_candidate_version": "c86c9a32-31fd-4952-86ed-b35f1763b342",
+    "auto_pause_original_stable_version": "136c1425-0070-48db-b995-5708bd35bb75",
+    "auto_pause_single_action_attempt_run_id": 39510888059,
+    "auto_pause_single_action_conclusion": "FAILURE_AFTER_ZERO_SHARE_BEFORE_FULL_WRITE",
+    "auto_pause_slot_136c_percent": 100,
+    "auto_pause_slot_c86c_percent": 0,
+    "auto_pause_candidate_js_verified": true,
+    "auto_pause_candidate_css_verified": true,
+    "auto_pause_candidate_html_root_verified": true,
+    "auto_pause_html_original_request_redirect_status": 307,
+    "auto_pause_html_cloudflare_beacon_source_equivalence_proven": true,
+    "auto_pause_html_readonly_diagnostic_run_id": 39511936377,
+    "auto_pause_resume_workflow": ".github/workflows/magnetra-auto-pause-resume-c86c.yml",
+    "auto_pause_resume_prepared": true,
+    "auto_pause_resume_dispatched": false,
+    "auto_pause_resume_full_executed": false,
+    "auto_pause_resume_full_postflight_verified": false,
+    "auto_pause_manual_restore_prepared": true
   }
 }
