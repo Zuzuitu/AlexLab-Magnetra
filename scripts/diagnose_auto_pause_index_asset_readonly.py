@@ -7,6 +7,7 @@ import urllib.request
 import urllib.error
 from deploy_magnetra_relevance_136c_slot import snapshot
 from deploy_magnetra_auto_pause_once import bindings
+from cloudflare_html_asset_guard import verify_reviewed_html, HTMLAssetMismatch
 
 OLD="136c1425-0070-48db-b995-5708bd35bb75"
 NEW="c86c9a32-31fd-4952-86ed-b35f1763b342"
@@ -70,6 +71,12 @@ def main():
          " ends_script="+str(middle.rstrip().lower().endswith(b"</script>"))+
          " marker_nonce="+str(b"nonce" in middle.lower())+
          " safe_markup_tags="+",".join(tags))
+   if label=="new-c86" and path=="/":
+    try:
+     print("STRICT_CLOUDFLARE_HTML_SOURCE_GATE: "+verify_reviewed_html(reviewed,data))
+    except HTMLAssetMismatch:
+     print("STRICT_CLOUDFLARE_HTML_SOURCE_GATE: FAIL")
+     return 3
    print(label+" "+path+" STATUS=200 size="+str(len(data))+" sha="+digest(data)+
          " match="+str(data==reviewed)+
          " prefix_equal="+str(common)+
