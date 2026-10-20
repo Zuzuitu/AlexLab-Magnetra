@@ -36,6 +36,7 @@
       <div class="search-options"><div class="field"><label for="category">CATEGORY</label><select id="category"><option value="all">All categories</option><option value="movies">Movies</option><option value="series">Series</option><option value="apps">Apps</option><option value="games">Games</option><option value="anime">Anime</option><option value="music">Music</option><option value="books">Books</option><option value="other">Other</option><option value="porn">Adult</option></select></div>
       <div class="field"><label for="sort">SORT BY</label><select id="sort"><option value="seeders">Most seeders</option><option value="date">Newest first</option><option value="size">Largest first</option><option value="name">Name A–Z</option></select></div>
       <button type="button" class="providers-trigger" id="providersButton">Indexers <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
+      <p id="sourceHealthSummary" class="source-health-summary" role="status" aria-live="polite"></p>
     </form>
   </section>
   <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
@@ -46,7 +47,7 @@
 
 <dialog id="providersDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">SEARCH SOURCES</div><h2>Indexers</h2><p id="catalogSummary" class="muted">Loading source catalog…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Close">×</button></div>
-  <p class="muted">BTDigg stays first. Indexers with recorded results appear next, unverified ones in the middle, and errors last. Recent searches in this browser may update their positions. Statuses are observations, not live uptime; all 46 remain selectable.</p>
+  <p class="muted">After each completed search, indexers that returned errors are automatically unchecked for future searches on this device. Indexers that return zero matching titles without an error stay enabled. You can re-enable any source manually or select all 46; none are deleted. Statuses are observations, not live uptime; all 46 sources stay available for manual retry.</p>
   <p class="muted">EZTV series-name lookup uses <a href="https://www.tvmaze.com" rel="noopener noreferrer" target="_blank">TVmaze</a> metadata to identify a show by IMDb ID; torrent results come only from EZTV.</p>
   <div class="provider-grid" id="providerGrid"></div>
   <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select last-audit results</button><button type="button" class="secondary" id="selectAllProviders">Select all 46</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>

@@ -273,7 +273,15 @@
     "physical_search_to_detail_magnet_verified": [
       "oxtorrent",
       "torrent9"
-    ]
+    ],
+    "auto_pause_source_errors_after_completed_search": true,
+    "auto_pause_persisted_per_browser": true,
+    "allow_manual_source_reselection": true,
+    "never_remove_original_46_adapters": true,
+    "source_zero_matching_rows_not_error": true,
+    "no_extra_provider_health_queries": true,
+    "failures_never_pause_all_selected_sources": true,
+    "auto_pause_release_status": "SOURCE_ONLY_NOT_DEPLOYED"
   },
   "cloudflare_worker_stage": {
     "staged_secret_version_owner_reported": "ce808b27",
@@ -484,7 +492,7 @@
     "relevance_fix_zero_slot_executed": true,
     "relevance_fix_zero_slot_e2e_verified": true,
     "relevance_fix_title_query_e2e_verified": true,
-    "relevance_fix_iphone_search_acceptance_confirmed": false,
+    "relevance_fix_iphone_search_acceptance_confirmed": true,
     "relevance_fix_zero_slot_run_id": 39475416019,
     "relevance_fix_zero_slot_workflow_conclusion": "FAILURE_AT_FIRST_STAGED_APP_JS_HASH_POSTFLIGHT",
     "relevance_fix_zero_slot_metadata_verified": true,
