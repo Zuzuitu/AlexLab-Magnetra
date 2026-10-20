@@ -492,7 +492,7 @@
     "relevance_fix_zero_slot_executed": true,
     "relevance_fix_zero_slot_e2e_verified": true,
     "relevance_fix_title_query_e2e_verified": true,
-    "relevance_fix_iphone_search_acceptance_confirmed": false,
+    "relevance_fix_iphone_search_acceptance_confirmed": true,
     "relevance_fix_zero_slot_run_id": 39475416019,
     "relevance_fix_zero_slot_workflow_conclusion": "FAILURE_AT_FIRST_STAGED_APP_JS_HASH_POSTFLIGHT",
     "relevance_fix_zero_slot_metadata_verified": true,
