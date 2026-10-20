@@ -1,0 +1,24 @@
+# One-shot branch-triggered diagnostics only; NEVER deploy/update Worker or Rock64.
+name: EZTV year query vs IMDb live (READ ONLY)
+
+on:
+  push:
+    branches:
+      - diagnostics/eztv-2026-query-check
+
+permissions:
+  contents: read
+
+jobs:
+  compare-one-shot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout read-only
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Audit canonical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Real public production query read-only
+        run: python3 scripts/diagnose_eztv_2026_readonly.py
