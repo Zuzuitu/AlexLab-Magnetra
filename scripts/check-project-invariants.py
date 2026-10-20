@@ -461,6 +461,25 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_full_promotion_public_catalog_ids_verified": 46,
         "relevance_fix_full_promotion_rollback_540b_share": 0,
         "relevance_fix_full_promotion_readonly_workflow": ".github/workflows/verify-relevance-136c-full-public-readonly.yml",
+        "auto_pause_source_main_commit": "fc3bceb2f56c59bf9aa95667cb9b95a827a4faf9",
+        "auto_pause_new_candidate_version": "c86c9a32-31fd-4952-86ed-b35f1763b342",
+        "auto_pause_original_stable_version": "136c1425-0070-48db-b995-5708bd35bb75",
+        "auto_pause_single_action_attempt_run_id": 39510888059,
+        "auto_pause_single_action_conclusion": "FAILURE_AFTER_ZERO_SHARE_BEFORE_FULL_WRITE",
+        "auto_pause_slot_136c_percent": 100,
+        "auto_pause_slot_c86c_percent": 0,
+        "auto_pause_candidate_js_verified": True,
+        "auto_pause_candidate_css_verified": True,
+        "auto_pause_candidate_html_root_verified": True,
+        "auto_pause_html_original_request_redirect_status": 307,
+        "auto_pause_html_cloudflare_beacon_source_equivalence_proven": True,
+        "auto_pause_html_readonly_diagnostic_run_id": 39511936377,
+        "auto_pause_resume_workflow": ".github/workflows/magnetra-auto-pause-resume-c86c.yml",
+        "auto_pause_resume_prepared": True,
+        "auto_pause_resume_dispatched": False,
+        "auto_pause_resume_full_executed": False,
+        "auto_pause_resume_full_postflight_verified": False,
+        "auto_pause_manual_restore_prepared": True,
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
         "resolve_fix_rollback_to_249d_live_executed": False,
@@ -1565,7 +1584,7 @@ def check_all_provider_recovery(config: dict) -> None:
         "source_zero_matching_rows_not_error": True,
         "no_extra_provider_health_queries": True,
         "failures_never_pause_all_selected_sources": True,
-        "auto_pause_release_status": "SOURCE_ONLY_NOT_DEPLOYED",
+        "auto_pause_release_status": "IMMUTABLE_C86C_ZERO_SHARE_VERIFIED",
     }
     for name, value in expected.items():
         require_equal(plan.get(name) if isinstance(plan, dict) else None,
@@ -1620,6 +1639,47 @@ def check_all_provider_recovery(config: dict) -> None:
                        "RESTORE_REQUIRES_EXACT_CANDIDATE_VERSION_ID"):
             if marker not in src:
                 fail("one-action release asset/version guard missing: " + marker)
+    # Cloudflare 136c100/c86c0 is already live. Resume MUST NOT upload again.
+    resume_workflow = ROOT / ".github/workflows/magnetra-auto-pause-resume-c86c.yml"
+    resume_source = ROOT / "scripts/resume_magnetra_auto_pause_c86c.py"
+    html_guard = ROOT / "scripts/cloudflare_html_asset_guard.py"
+    resume_test = ROOT / "scripts/test_magnetra_auto_pause_resume.py"
+    for path in (resume_workflow, resume_source, html_guard, resume_test):
+        require_file(path)
+    if resume_workflow.is_file():
+        body = resume_workflow.read_text(encoding="utf8")
+        for required in ("workflow_dispatch:", "default: CANCEL",
+                         "magnetra-production-traffic-change",
+                         "github.ref == 'refs/heads/main'",
+                         "CONFIRM_RESUME_VERIFIED_C86C_100",
+                         "CONFIRM_RESTORE_136C_FROM_C86C_100",
+                         "scripts/resume_magnetra_auto_pause_c86c.py"):
+            if required not in body:
+                fail("c86c resume must remain owner-manual with rollback: " + required)
+        for forbidden in ("push:", "schedule:", "wrangler versions upload", "[deploy-pwa]"):
+            if forbidden in body:
+                fail("c86c resume must not upload or run automatically: " + forbidden)
+    if resume_source.is_file():
+        code = resume_source.read_text(encoding="utf8")
+        for required in ("c86c9a32-31fd-4952-86ed-b35f1763b342",
+                         'OLD+"@0%"', 'NEW+"@100%"',
+                         'OLD+"@100%"', 'NEW+"@0%"',
+                         "verify_reviewed_html(raw,html_root(version))",
+                         "NO VERSION UPLOAD", "RESUME_FULL_POSTFLIGHT_PASS",
+                         "HTML_ROOT_TRANSPORT_NO_RETRY"):
+            if required not in code:
+                fail("c86c resume missing strict immutable/PWA source gates: " + required)
+        for forbidden in ("upload_version(", "/api/search", "/api/resolve"):
+            if forbidden in code:
+                fail("c86c resume cannot re-upload or query sources: " + forbidden)
+    if html_guard.is_file():
+        code = html_guard.read_text(encoding="utf8")
+        for required in ("verify_reviewed_html", "static.cloudflareinsights.com",
+                         "data-cf-beacon", "HTMLAssetMismatch",
+                         "NON_CLOUDFLARE_HTML_DIFFERENCE"):
+            if required not in code:
+                fail("Cloudflare HTML source guard missing: " + required)
+
     for filename in ("worker/src/recovery-strategy.mjs",
                      "worker/test/recovery-strategy.test.mjs",
                      "scripts/recovery-plan.mjs"):
