@@ -392,17 +392,35 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "relevance_fix_stage_uploaded": True,
         "relevance_fix_stage_binding_audit_run_id": 39451169718,
         "relevance_fix_stage_binding_audit_passed": True,
-        "relevance_fix_stage_override_asset_verified": False,
+        "relevance_fix_stage_override_asset_verified": True,
         "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
         "relevance_fix_current_source_traffic_percent": 100,
         "relevance_fix_current_staged_traffic_percent": 0,
         "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
         "relevance_fix_zero_slot_prepared": True,
-        "relevance_fix_zero_slot_owner_dispatched": False,
-        "relevance_fix_zero_slot_executed": False,
-        "relevance_fix_zero_slot_e2e_verified": False,
-        "relevance_fix_title_query_e2e_verified": False,
+        "relevance_fix_zero_slot_owner_dispatched": True,
+        "relevance_fix_zero_slot_executed": True,
+        "relevance_fix_zero_slot_e2e_verified": True,
+        "relevance_fix_title_query_e2e_verified": True,
         "relevance_fix_iphone_search_acceptance_confirmed": False,
+        "relevance_fix_zero_slot_run_id": 39475416019,
+        "relevance_fix_zero_slot_workflow_conclusion": "FAILURE_AT_FIRST_STAGED_APP_JS_HASH_POSTFLIGHT",
+        "relevance_fix_zero_slot_metadata_verified": True,
+        "relevance_fix_independent_asset_e2e_run_id": 39475837891,
+        "relevance_fix_independent_screenshot_source_e2e_run_id": 39476148621,
+        "relevance_fix_screenshot_source_e2e_providers": ["torrent9","oxtorrent","ytsmx"],
+        "relevance_fix_screenshot_source_e2e_matches": 4,
+        "relevance_fix_screenshot_source_e2e_excluded": 70,
+        "relevance_fix_screenshot_source_e2e_provider_errors": 0,
+        "relevance_fix_prior_two_sources_e2e_providers": ["knaben","torrentscsv"],
+        "relevance_fix_prior_two_sources_e2e_matches": 89,
+        "relevance_fix_prior_two_sources_e2e_excluded": 1,
+        "relevance_fix_prior_two_sources_e2e_errors": 0,
+        "relevance_fix_canary_workflow": ".github/workflows/magnetra-relevance-136c-canary-5.yml",
+        "relevance_fix_canary_prepared": True,
+        "relevance_fix_canary_executed": False,
+        "relevance_fix_canary_postflight_verified": False,
+        "relevance_fix_canary_rollback_prepared": True,
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
         "resolve_fix_rollback_to_249d_live_executed": False,
@@ -447,6 +465,36 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                        "expected.issubset(actual)", "excludedOffTopic"):
             if marker not in source:
                 fail("136c slot provenance/relevance safety gate missing: " + marker)
+    relevance_canary = ROOT / ".github/workflows/magnetra-relevance-136c-canary-5.yml"
+    require_file(relevance_canary)
+    if relevance_canary.is_file():
+        body = relevance_canary.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "github.ref == 'refs/heads/main'",
+                       "magnetra-production-traffic-change", "default: CANCEL",
+                       "CONFIRM_RELEVANCE_136C_CANARY_5",
+                       "CONFIRM_RESTORE_540B100_136C0",
+                       "scripts/check-project-invariants.py",
+                       "scripts/deploy_magnetra_relevance_136c_canary.py"):
+            if marker not in body:
+                fail("136c canary must remain manually gated: " + marker)
+        for forbidden in ("push:", "schedule:", "[deploy-pwa]",
+                          "wrangler versions upload", "wrangler deploy",
+                          "wrangler secret put"):
+            if forbidden in body:
+                fail("136c canary must not auto-deploy or upload: " + forbidden)
+    relevance_canary_source = ROOT / "scripts/deploy_magnetra_relevance_136c_canary.py"
+    relevance_canary_test = ROOT / "scripts/test_magnetra_relevance_136c_canary.py"
+    require_file(relevance_canary_source)
+    require_file(relevance_canary_test)
+    if relevance_canary_source.is_file():
+        source = relevance_canary_source.read_text(encoding="utf8")
+        for marker in ("CONFIRM_RELEVANCE_136C_CANARY_5",
+                       "CONFIRM_RESTORE_540B100_136C0",
+                       'CURRENT+"@95%"', 'NEW+"@5%"',
+                       'CURRENT+"@100%"', 'NEW+"@0%"',
+                       "STAGED_ASSET_SHA_MISMATCH_NO_WRITE"):
+            if marker not in source:
+                fail("136c canary/restore guard missing: " + marker)
     fix_full = ROOT / ".github/workflows/magnetra-resolve-fix-full-100.yml"
     require_file(fix_full)
     if fix_full.is_file():
