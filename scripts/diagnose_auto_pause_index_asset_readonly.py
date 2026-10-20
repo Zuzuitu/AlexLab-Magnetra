@@ -5,7 +5,8 @@ import hashlib
 from pathlib import Path
 import urllib.request
 import urllib.error
-from deploy_magnetra_relevance_136c_slot import snapshot, verify_version
+from deploy_magnetra_relevance_136c_slot import snapshot
+from deploy_magnetra_auto_pause_once import bindings
 
 OLD="136c1425-0070-48db-b995-5708bd35bb75"
 NEW="c86c9a32-31fd-4952-86ed-b35f1763b342"
@@ -34,7 +35,7 @@ def main():
        " new="+str(shares.get(NEW))+" count="+str(len(shares)))
  if shares!=EXPECTED:
   print("STOP_UNEXPECTED_SPLIT");return 2
- verify_version(OLD);verify_version(NEW)
+ bindings(OLD);bindings(NEW)
  print("VERSION_BINDINGS_VERIFIED")
  reviewed=(ROOT/"web/index.html").read_bytes()
  print("SOURCE_INDEX: size="+str(len(reviewed))+" sha="+digest(reviewed))
