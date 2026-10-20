@@ -356,7 +356,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "resolve_fix_canary_run_id": 39323736403,
         "resolve_fix_canary_postflight_95_5_verified": True,
         "resolve_fix_current_active_249d_traffic_percent": 0,
-        "resolve_fix_current_540b_traffic_percent": 100,
+        "resolve_fix_current_540b_traffic_percent": 95,
         "resolve_fix_canary_e2e_workflow": ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml",
         "resolve_fix_canary_e2e_prepared": True,
         "resolve_fix_canary_e2e_executed": True,
