@@ -1,0 +1,26 @@
+# One-time read-only audit on branch push. No mutating tools or retries.
+name: 136c 5 Percent Canary Original Sources (READ ONLY)
+on:
+  push:
+    branches:
+      - diagnostics/relevance-136c-canary-5-readonly
+
+permissions:
+  contents: read
+
+jobs:
+  check-immutable-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source with no persisted credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify unchanged project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Exact 5 percent Cloudflare version and five original source E2E
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/diagnose_relevance_136c_canary_5_readonly.py
