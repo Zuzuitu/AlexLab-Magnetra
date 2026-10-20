@@ -26,6 +26,8 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_full_100.py'
       - name: Offline exact 136c relevance zero-slot regression tests
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_slot.py'
+      - name: Offline 136c relevance 5 percent canary and manual restore regression tests
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_canary.py'
       - name: Verify offline 46-provider recovery strategy report
         run: node scripts/recovery-plan.mjs --summary
       - name: Test Rock64 BTDigg gateway (loopback only, no external requests)
