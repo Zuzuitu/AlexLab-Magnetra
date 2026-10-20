@@ -467,6 +467,23 @@
       "torrent9"
     ],
     "resolve_fix_full_promotion_initial_asset_mismatch_observed": true,
-    "resolve_fix_full_promotion_asset_mismatch_root_cause_proven": false
+    "resolve_fix_full_promotion_asset_mismatch_root_cause_proven": false,
+    "relevance_fix_main_commit": "83e1659538e037a12f4bf8044d2cb52f89e72d7f",
+    "relevance_fix_staged_version_id": "136c1425-0070-48db-b995-5708bd35bb75",
+    "relevance_fix_stage_run_id": 39450609144,
+    "relevance_fix_stage_uploaded": true,
+    "relevance_fix_stage_binding_audit_run_id": 39451169718,
+    "relevance_fix_stage_binding_audit_passed": true,
+    "relevance_fix_stage_override_asset_verified": false,
+    "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
+    "relevance_fix_current_source_traffic_percent": 100,
+    "relevance_fix_current_staged_traffic_percent": 0,
+    "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
+    "relevance_fix_zero_slot_prepared": true,
+    "relevance_fix_zero_slot_owner_dispatched": false,
+    "relevance_fix_zero_slot_executed": false,
+    "relevance_fix_zero_slot_e2e_verified": false,
+    "relevance_fix_title_query_e2e_verified": false,
+    "relevance_fix_iphone_search_acceptance_confirmed": false
   }
 }
