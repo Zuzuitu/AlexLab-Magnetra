@@ -1,0 +1,71 @@
+# MANUAL ONLY: new 136c release candidate at exactly 0% user traffic.
+# Version-only deployment record swap: 540b100/249d0 -> 540b100/136c0.
+# No Worker uploads, no public traffic to 136c, no Git push deploy.
+name: Magnetra relevance 136c 0 percent and E2E (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Exact 540b100/136c0 manual slot plus single staged title E2E"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_540B100_136C0_SLOT_AND_READONLY_E2E
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  guarded-stage-slot:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Fail without exact manual action before Cloudflare requests
+        shell: bash
+        env:
+          ACTION: ${{ inputs.action }}
+        run: |
+          if [ "$ACTION" != "CONFIRM_540B100_136C0_SLOT_AND_READONLY_E2E" ]; then
+            echo "::error::Explicit manual action required, no Cloudflare calls."
+            exit 2
+          fi
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Canonical technical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline safety and negative path tests
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_slot.py'
+      - name: Node for pinned Wrangler
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Refuse changed Worker origin, ASSETS or route
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path("worker/wrangler.jsonc").read_text())
+          assert c["name"]=="alexlab-magnetra"
+          assert c["main"]=="src/index.mjs"
+          assert c["assets"]=={"directory":"../web","binding":"ASSETS"} or (
+              c["assets"]["directory"]=="../web" and c["assets"]["binding"]=="ASSETS")
+          assert c["routes"]==[{"pattern":"index.alexlab.media","custom_domain":True}]
+          print("CLOUDFLARE_ORIGIN_BOUNDARY: PASS")
+          PY
+      - name: Guarded single 0 percent version-only write and staged source proof
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_RELEVANCE_ZERO_ACTION: ${{ inputs.action }}
+        run: python3 scripts/deploy_magnetra_relevance_136c_slot.py
