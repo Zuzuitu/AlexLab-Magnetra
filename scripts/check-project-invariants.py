@@ -1588,6 +1588,38 @@ def check_all_provider_recovery(config: dict) -> None:
     if page.is_file() and 'id="sourceHealthSummary"' not in page.read_text(encoding="utf8"):
         fail("source auto-pause needs visible, accessible status")
 
+    # Owner-manual one-action asset-only release: never trigger by push/cron.
+    one_action = ROOT / ".github/workflows/magnetra-auto-pause-single-action.yml"
+    release_source = ROOT / "scripts/deploy_magnetra_auto_pause_once.py"
+    release_test = ROOT / "scripts/test_magnetra_auto_pause_release.py"
+    for path in (one_action, release_source, release_test):
+        require_file(path)
+    if one_action.is_file():
+        wf = one_action.read_text(encoding="utf8")
+        for marker in ("workflow_dispatch:", "default: CANCEL",
+                       "github.ref == 'refs/heads/main'",
+                       "magnetra-production-traffic-change",
+                       "CONFIRM_AUTO_PAUSE_SINGLE_ACTION_RELEASE",
+                       "CONFIRM_AUTO_PAUSE_MANUAL_RESTORE",
+                       "scripts/deploy_magnetra_auto_pause_once.py"):
+            if marker not in wf:
+                fail("auto-pause single action requires owner guard: " + marker)
+        for prohibited in ("push:", "schedule:", "[deploy-pwa]",
+                           "wrangler deploy --config", "wrangler secret put"):
+            if prohibited in wf:
+                fail("auto-pause release must not auto-deploy: " + prohibited)
+    if release_source.is_file():
+        src = release_source.read_text(encoding="utf8")
+        for marker in ("136c1425-0070-48db-b995-5708bd35bb75",
+                       'OLD+"@100%"', 'OLD+"@0%"',
+                       'new+"@0%"', 'new+"@100%"',
+                       "verify_assets(new,deployed_slot,slot)",
+                       "verify_assets(None,deployed_full,full)",
+                       "STATIC_TRANSPORT_OR_HTTP_UNVERIFIED",
+                       "UNKNOWN_POSTWRITE_DEPLOYMENT_NO_AUTORETRY",
+                       "RESTORE_REQUIRES_EXACT_CANDIDATE_VERSION_ID"):
+            if marker not in src:
+                fail("one-action release asset/version guard missing: " + marker)
     for filename in ("worker/src/recovery-strategy.mjs",
                      "worker/test/recovery-strategy.test.mjs",
                      "scripts/recovery-plan.mjs"):
