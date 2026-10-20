@@ -1,0 +1,77 @@
+# MANUAL ONLY; code review/merge NEVER changes Cloudflare traffic.
+# Exact 540b95/136c5 -> 540b0/136c100; distinct exact full rollback.
+name: Magnetra relevance 136c Full 100 Percent (MANUAL)
+on:
+  workflow_dispatch:
+    inputs:
+      full_action:
+        description: "Explicit 136c 100% release or separate 540b rollback; default CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_RELEVANCE_136C_FULL_100
+          - CONFIRM_RESTORE_540B_FROM_136C_FULL_100
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  guarded-full:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Explicit owner-approved action before Cloudflare or indexer requests
+        shell: bash
+        env:
+          ACTION: ${{ inputs.full_action }}
+        run: |
+          case "$ACTION" in
+            CONFIRM_RELEVANCE_136C_FULL_100|CONFIRM_RESTORE_540B_FROM_136C_FULL_100)
+              echo "136C_FULL_EXPLICIT_ACTION: PASS";;
+            *) echo "::error::Default CANCEL never contacts Cloudflare."; exit 2;;
+          esac
+      - name: Checkout reviewed main without persisted credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify canonical project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline release, restore and 0-percent slot regression gates
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_full.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_canary.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_slot.py'
+      - name: Configure pinned Wrangler Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Refuse changed Worker identity, source, assets or custom domain
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path("worker/wrangler.jsonc").read_text())
+          assert c["name"]=="alexlab-magnetra"
+          assert c["main"]=="src/index.mjs"
+          assert c["assets"]["directory"]=="../web"
+          assert c["assets"]["binding"]=="ASSETS"
+          assert c["routes"]==[{"pattern":"index.alexlab.media","custom_domain":True}]
+          print("136C_FULL_WORKER_ORIGIN_BOUNDARY: PASS")
+          PY
+      - name: Apply exactly one guarded version-only 136c full release or manual 540b restore
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_RELEVANCE_FULL_ACTION: ${{ inputs.full_action }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_magnetra_relevance_136c_full.py
