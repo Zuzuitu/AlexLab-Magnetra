@@ -443,7 +443,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         source = relevance_source.read_text(encoding="utf8")
         for marker in ("136c1425-0070-48db-b995-5708bd35bb75",
                        "CONFIRM_540B100_136C0_SLOT_AND_READONLY_E2E",
-                       "PRODUCTION_REMAINS_540B_100", "reviewed", "NEW_IMMUTABLE_PWA_ASSETS",
+                       "PRODUCTION_REMAINS_540B_100", 'hashlib.sha256(local).digest()', "NEW_IMMUTABLE_PWA_ASSETS",
                        "expected.issubset(actual)", "excludedOffTopic"):
             if marker not in source:
                 fail("136c slot provenance/relevance safety gate missing: " + marker)
