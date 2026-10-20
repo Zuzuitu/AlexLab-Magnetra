@@ -56,11 +56,11 @@ class FullGateTests(unittest.TestCase):
  def test_public_static_hash_mismatch_converges_successful_gets_only(self):
   real=(Path(__file__).resolve().parent.parent/"web/app.js").read_bytes()
   with patch.object(m,"public_static_asset",side_effect=[b"previous",real]) as get,patch.object(m,"snapshot",return_value=FULL),patch.object(m.time,"sleep") as sleep:
-   m.verify_public_assets(FULL[0]);self.assertEqual(get.call_count,2);sleep.assert_called_once_with(3)
- def test_public_static_persistent_mismatch_fails_after_four_gets(self):
+   m.verify_public_assets(FULL[0]);self.assertEqual(get.call_count,2);sleep.assert_called_once_with(10)
+ def test_public_static_persistent_mismatch_fails_after_twelve_gets(self):
   with patch.object(m,"public_static_asset",return_value=b"old") as get,patch.object(m,"snapshot",return_value=FULL),patch.object(m.time,"sleep") as sleep:
    with self.assertRaisesRegex(m.Stop,"SHA_UNVERIFIED"):m.verify_public_assets(FULL[0])
-   self.assertEqual(get.call_count,4);self.assertEqual(sleep.call_count,3)
+   self.assertEqual(get.call_count,12);self.assertEqual(sleep.call_count,11)
  def test_public_static_transport_error_not_retried(self):
   with patch.object(m,"public_static_asset",side_effect=m.Stop("TRANSPORT")) as get,patch.object(m.time,"sleep") as sleep:
    with self.assertRaisesRegex(m.Stop,"TRANSPORT"):m.verify_public_assets(FULL[0])
