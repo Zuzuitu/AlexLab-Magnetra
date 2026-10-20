@@ -1,0 +1,79 @@
+# MANUAL ONLY. A single guarded action stages a new immutable version at
+# 0%, verifies reviewed public PWA assets, then promotes it with 136c@0% rollback.
+# No source probes/429 retries, no automation-triggered Cloudflare writes.
+name: Magnetra Auto-Pause One-Action Safe Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_action:
+        description: "Explicit owner decision (defaults to no Cloudflare request)"
+        type: choice
+        required: true
+        options:
+          - CANCEL
+          - CONFIRM_AUTO_PAUSE_SINGLE_ACTION_RELEASE
+          - CONFIRM_AUTO_PAUSE_MANUAL_RESTORE
+        default: CANCEL
+      expected_candidate_id:
+        description: "Only for restore: exact new Worker version ID shown by the release run"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  staged-publication:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Refuse default or unknown actions BEFORE any Cloudflare contact
+        shell: bash
+        env:
+          ACTION: ${{ inputs.release_action }}
+        run: |
+          case "$ACTION" in
+            CONFIRM_AUTO_PAUSE_SINGLE_ACTION_RELEASE|CONFIRM_AUTO_PAUSE_MANUAL_RESTORE)
+              echo "EXPLICIT_OWNER_ACTION: PASS";;
+            *) echo "::error::No deployment - action CANCEL or invalid."; exit 2;;
+          esac
+      - name: Checkout reviewed main with no persisted credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify immutable canonical project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Validate both Worker/PWA and 136c rollback guards
+        run: |
+          node --check web/app.js
+          node --test worker/test/*.test.mjs
+          python3 -m unittest discover -s scripts -p 'test_magnetra_auto_pause_release.py'
+      - name: Set up pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate canonical Worker bundle (NO write)
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Validate existing owner-provided Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+            echo "::error::Missing Cloudflare credentials, no write."
+            exit 1
+          }
+      - name: Upload and verify 0% static assets then promote once, or guarded manual restore
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_AUTO_PAUSE_ACTION: ${{ inputs.release_action }}
+          MAGNETRA_AUTO_PAUSE_RESTORE_ID: ${{ inputs.expected_candidate_id }}
+        run: python3 scripts/deploy_magnetra_auto_pause_once.py
