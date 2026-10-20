@@ -1,0 +1,27 @@
+# One-shot read-only diagnostic branch after full release gate aborted without write.
+name: Magnetra 136c aborted source preflight (READ ONLY)
+
+on:
+  push:
+    branches:
+      - diagnostics/relevance-full-preflight-failure-20261020
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reviewed code without persisted credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check canonical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Inspect 95 5 Cloudflare deployment and query providers once
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/diag_relevance_full_source_abort_once.py
