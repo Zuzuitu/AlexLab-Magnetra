@@ -123,7 +123,7 @@ def verify_public_assets(deployment):
     reviewed=(Path(__file__).resolve().parent.parent/"web"/"app.js").read_bytes()
     digest=hashlib.sha256(reviewed).digest()
     # Poll only 200 JS hash mismatches; NEVER retry HTTP errors/429/504 or provider calls.
-    for attempt in range(4):
+    for attempt in range(12):
         data=public_static_asset()
         if hashlib.sha256(data).digest()==digest:
             print("RELEVANCE_FULL_PUBLIC_JS: PASS SHA256="+hashlib.sha256(reviewed).hexdigest()[:16])
@@ -131,7 +131,7 @@ def verify_public_assets(deployment):
         observed,shares=snapshot()
         if observed["id"]!=deployment["id"] or shares!=FULL:
             raise Stop("POSTFLIGHT_DEPLOYMENT_CHANGED")
-        if attempt<3:time.sleep(3)
+        if attempt<11:time.sleep(10)
     raise Stop("POSTFLIGHT_PUBLIC_ASSET_SHA_UNVERIFIED_CHECK_LATER_NO_REDEPLOY")
 
 def promote():
