@@ -5,6 +5,7 @@ import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
+import {filterRelevance} from "./query-relevance.mjs";
 import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
 import {rock64EZTVFetcher} from "./eztv-rock64.mjs";
 import {rock64HtmlFetcher} from "./html-rock64.mjs";
@@ -49,22 +50,25 @@ async function getSearch(url,env) {
        const sourceFetch=id==="btdigg"&&btdiggFetcher?btdiggFetcher:
         id==="eztvx"&&eztvFetcher?eztvFetcher:htmlFetchers[id]||fetch;
        const found=await searchProvider(id,q,category,sourceFetch);
-       return {provider:id,results:found,count:found.length};
+       const {matches,excluded}=filterRelevance(found,q);
+       return {provider:id,results:matches,count:matches.length,rawCount:found.length,excluded};
      } catch(e){
        const reason=classifyProviderError(e);
-       return {provider:id,results:[],count:0,error:String(e?.message||e).slice(0,180),
+       return {provider:id,results:[],count:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
          code:reason.code,message:reason.message,retryable:reason.retryable,openUrl:id==="btdigg"?null:directSearchUrl(id,q)};
      }
    }));
    for(const item of batch){
-     stats.push({provider:item.provider,count:item.count,ok:!item.error});
+     stats.push({provider:item.provider,count:item.count,rawCount:item.rawCount,
+       excludedOffTopic:item.excluded,ok:!item.error});
      if(item.error)errors.push({provider:item.provider,error:item.error,
        code:item.code,message:item.message,retryable:item.retryable,openUrl:item.openUrl});
      results.push(...item.results);
    }
  }
  // Preserve source identities and identical hashes across providers for traceability.
- return json({query:q,category,results,stats,errors,total:results.length});
+ return json({query:q,category,results,stats,errors,total:results.length,
+   excludedOffTopic:stats.reduce((sum,item)=>sum+item.excludedOffTopic,0)});
 }
 async function resolveMagnet(request,env){
  if(!checkSameOrigin(request))return error("Cross-origin submission not permitted.",403);

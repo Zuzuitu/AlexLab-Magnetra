@@ -1,5 +1,11 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## NEWEST ENGINEERING TASK — 2026-10-20 iPhone OFF-TOPIC RESULTS (FIX STAGED, NOT DEPLOYED)
+
+Owner searched `the good dinosaur 2015` with all **46** indexers selected, PWA reported **345 results** plus 19–21 unavailable indexers; screenshots show unrelated `Knock Knock (2015)`, `The Hateful Eight (2015)`, and `Good Luck Have Fun Don't Die (2026)` among genuinely matching original release titles. Main code bug confirmed: Worker merged `found` rows into public JSON without checking title relevance; PWA sorted these misleading entries by seeder count. The new guarded fix branch `fix/magnetra-query-relevance-guard` adds `worker/src/query-relevance.mjs` and end-to-end tests so *all 46* sources are subject to a conservative Unicode-token/all-terms/year-in-title gate. Exact IMDb and BTIH hash queries remain supported. API reports matching `total`/`stats` and separately `excludedOffTopic` without confusing off-topic rows with source failures; PWA shows `MATCHES` and explanatory excluded count. No source substitution, extra request, automatic retry, restart, Flud sends, or change to 46 providers. All changes are SOURCE ONLY pending branch → PR → four CI PASS → merge → separately guarded new Cloudflare version upload and release. Prior verified production **540b 100%** stays active until separately authenticated deployment. DO NOT claim this patch already fixed the live iPhone. Check `docs/PROJECT_STATE.md` newest section for exact evidence, limitations and test fixtures. BTDigg intermittence, EZTV year semantics, other provider errors and Flud unavailable are separate.
+
+---
+
 ## READ FIRST — LATEST VERIFIED 2026-10-20 00:56 EUROPE/ROME: 540b LIVE 100%, PUBLIC RESOLVE PASS
 
 **This section supersedes the older READ FIRST 540b@5% paragraph and every historical deploy snapshot below.** Latest authenticated production and GitHub code supersede even this observation. Main repository: `Zuzuitu/AlexLab-Magnetra`, site `https://index.alexlab.media`.

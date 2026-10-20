@@ -787,6 +787,42 @@ def check_web_parity_and_companion(config: dict) -> None:
     if set(actual_ids) != expected_ids:
         fail(f"PWA indexer registry differs from upstream IDs (missing={sorted(expected_ids-set(actual_ids))}, extra={sorted(set(actual_ids)-expected_ids)})")
 
+    # A registered adapter may ignore its query or return unrelated releases.
+    # Reject those rows at the public API without changing source attribution.
+    relevance_expected = {
+        "query_relevance_gate": "worker/src/query-relevance.mjs",
+        "query_relevance_default_title_terms_required": True,
+        "query_year_must_appear_in_title_not_upload_date": True,
+        "off_topic_rows_must_not_count_as_results": True,
+        "off_topic_rejections_are_not_provider_errors": True,
+        "query_relevance_exact_identifier_searches_preserved": True,
+    }
+    for key, value in relevance_expected.items():
+        require_equal(parity.get(key), value, "provider_parity." + key)
+    relevance_module = ROOT / relevance_expected["query_relevance_gate"]
+    relevance_test = ROOT / "worker/test/query-relevance.test.mjs"
+    for path in (relevance_module, relevance_test):
+        require_file(path)
+    if relevance_module.is_file():
+        code = relevance_module.read_text(encoding="utf-8")
+        for marker in ("relevantTitle", "filterRelevance", "LOOKUP_ID", "expected.every"):
+            if marker not in code:
+                fail("global query relevance guard missing: " + marker)
+    if source_worker.is_file():
+        worker_code = source_worker.read_text(encoding="utf-8")
+        for marker in ('from "./query-relevance.mjs"', "filterRelevance(found,q)",
+                       "rawCount:item.rawCount", "excludedOffTopic:item.excluded"):
+            if marker not in worker_code:
+                fail("global Worker relevance enforcement missing: " + marker)
+    if frontend.is_file():
+        frontend_code = frontend.read_text(encoding="utf-8")
+        html = frontend.parent.joinpath("index.html")
+        for marker in ("excludedOffTopic", "searchQuality", "MATCHES"):
+            if marker not in frontend_code:
+                fail("PWA truthful relevance status missing: " + marker)
+        if html.is_file() and 'id="searchQuality"' not in html.read_text(encoding="utf-8"):
+            fail("PWA quality/status UI is not accessible")
+
     legacy_specs = ROOT / parity.get("legacy_specs_path", "")
     legacy_module = ROOT / "worker" / "src" / "legacy-adapters.mjs"
     provider_impl = ROOT / "worker" / "src" / "providers.mjs"

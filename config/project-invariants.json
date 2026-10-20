@@ -94,7 +94,13 @@
     "audit_is_live_availability_check_not_contract_proof": true,
     "upstream_user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
     "max_same_origin_redirects": 1,
-    "off_origin_provider_redirects_forbidden": true
+    "off_origin_provider_redirects_forbidden": true,
+    "query_relevance_gate": "worker/src/query-relevance.mjs",
+    "query_relevance_default_title_terms_required": true,
+    "query_year_must_appear_in_title_not_upload_date": true,
+    "off_topic_rows_must_not_count_as_results": true,
+    "off_topic_rejections_are_not_provider_errors": true,
+    "query_relevance_exact_identifier_searches_preserved": true
   },
   "companion": {
     "allowed_remote_relay_origin": "https://flud-remote.alexlab.media",
