@@ -12,7 +12,8 @@ import resume_magnetra_auto_pause_c86c as m
 R0={"id":"old-deployment"}
 R1={"id":"new-deployment"}
 RAW=b"<html><body><div>reviewed html</div>\n</body>\n</html>"
-CF=b'<script src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="/cdn-cgi/rum">a()</script>'
+CF=(b'<script src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="/cdn-cgi/rum">' +
+    b'a'*210+b'</script>')
 class ResumeTests(unittest.TestCase):
  def test_known_cf_edge_insertion_accepted_but_exact_source_preserved(self):
   self.assertEqual(h.verify_reviewed_html(RAW,RAW),"EXACT")
