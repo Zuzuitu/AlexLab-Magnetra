@@ -474,16 +474,41 @@
     "relevance_fix_stage_uploaded": true,
     "relevance_fix_stage_binding_audit_run_id": 39451169718,
     "relevance_fix_stage_binding_audit_passed": true,
-    "relevance_fix_stage_override_asset_verified": false,
+    "relevance_fix_stage_override_asset_verified": true,
     "relevance_fix_current_source_version_id": "540b3417-f845-47e8-96bd-856ccc9f1350",
     "relevance_fix_current_source_traffic_percent": 100,
     "relevance_fix_current_staged_traffic_percent": 0,
     "relevance_fix_zero_slot_workflow": ".github/workflows/magnetra-relevance-136c-zero-slot.yml",
     "relevance_fix_zero_slot_prepared": true,
-    "relevance_fix_zero_slot_owner_dispatched": false,
-    "relevance_fix_zero_slot_executed": false,
-    "relevance_fix_zero_slot_e2e_verified": false,
-    "relevance_fix_title_query_e2e_verified": false,
-    "relevance_fix_iphone_search_acceptance_confirmed": false
+    "relevance_fix_zero_slot_owner_dispatched": true,
+    "relevance_fix_zero_slot_executed": true,
+    "relevance_fix_zero_slot_e2e_verified": true,
+    "relevance_fix_title_query_e2e_verified": true,
+    "relevance_fix_iphone_search_acceptance_confirmed": false,
+    "relevance_fix_zero_slot_run_id": 39475416019,
+    "relevance_fix_zero_slot_workflow_conclusion": "FAILURE_AT_FIRST_STAGED_APP_JS_HASH_POSTFLIGHT",
+    "relevance_fix_zero_slot_metadata_verified": true,
+    "relevance_fix_independent_asset_e2e_run_id": 39475837891,
+    "relevance_fix_independent_screenshot_source_e2e_run_id": 39476148621,
+    "relevance_fix_screenshot_source_e2e_providers": [
+      "torrent9",
+      "oxtorrent",
+      "ytsmx"
+    ],
+    "relevance_fix_screenshot_source_e2e_matches": 4,
+    "relevance_fix_screenshot_source_e2e_excluded": 70,
+    "relevance_fix_screenshot_source_e2e_provider_errors": 0,
+    "relevance_fix_prior_two_sources_e2e_providers": [
+      "knaben",
+      "torrentscsv"
+    ],
+    "relevance_fix_prior_two_sources_e2e_matches": 89,
+    "relevance_fix_prior_two_sources_e2e_excluded": 1,
+    "relevance_fix_prior_two_sources_e2e_errors": 0,
+    "relevance_fix_canary_workflow": ".github/workflows/magnetra-relevance-136c-canary-5.yml",
+    "relevance_fix_canary_prepared": true,
+    "relevance_fix_canary_executed": false,
+    "relevance_fix_canary_postflight_verified": false,
+    "relevance_fix_canary_rollback_prepared": true
   }
 }

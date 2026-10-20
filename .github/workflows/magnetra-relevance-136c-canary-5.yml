@@ -1,0 +1,72 @@
+# Exact immutable 540b95/136c5 canary; manual only, separate guarded restore.
+# No uploads, DNS/Tunnel/Rock64 changes, source retries or Flud operations.
+name: Magnetra relevance 136c 5 Percent Canary (MANUAL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      canary_action:
+        description: "Choose owner-approved exact 136c 5% or guarded 540b restore"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - CONFIRM_RELEVANCE_136C_CANARY_5
+          - CONFIRM_RESTORE_540B100_136C0
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Require explicit approved action BEFORE any Cloudflare calls
+        shell: bash
+        env:
+          ACTION: ${{ inputs.canary_action }}
+        run: |
+          case "$ACTION" in
+            CONFIRM_RELEVANCE_136C_CANARY_5|CONFIRM_RESTORE_540B100_136C0) echo "OWNER_ACTION: PASS";;
+            *) echo "::error::Default CANCEL; no network request or write."; exit 2;;
+          esac
+      - name: Checkout reviewed main without persisted credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify canonical repository invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline 136c canary and 0% staged E2E protection tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_canary.py'
+          python3 -m unittest discover -s scripts -p 'test_magnetra_relevance_136c_slot.py'
+      - name: Install pinned Wrangler runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify original Worker name and production assets route
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path("worker/wrangler.jsonc").read_text())
+          assert c["name"]=="alexlab-magnetra"
+          assert c["main"]=="src/index.mjs"
+          assert c["assets"]["directory"]=="../web"
+          assert c["assets"]["binding"]=="ASSETS"
+          assert c["routes"]==[{"pattern":"index.alexlab.media","custom_domain":True}]
+          print("PROTECTED_WORKER_IDENTITY: PASS")
+          PY
+      - name: Apply exactly one owner-selected version-only canary or restore
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_RELEVANCE_CANARY_ACTION: ${{ inputs.canary_action }}
+        run: python3 scripts/deploy_magnetra_relevance_136c_canary.py
