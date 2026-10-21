@@ -1229,7 +1229,7 @@ def check_web_parity_and_companion(config: dict) -> None:
         for id_ in hidden_ids:
             if '"' + id_ + '"' not in picker_text:
                 fail("PWA picker exclusion ID absent: " + id_)
-        if ('Select all available' not in html_text
+        if ('id="selectAllProviders">Selectează toate' not in html_text
                 or 'Select all 46' in html_text):
             fail("PWA bulk action must never imply hidden sources can be selected")
 
