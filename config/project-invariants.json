@@ -277,6 +277,20 @@
       "torrent9"
     ]
   },
+  "pwa_indexer_curation": {
+    "owner_approved_visible_only": true,
+    "original_adapter_ids_retained": 46,
+    "hidden_from_picker_and_pwa_search_count": 17,
+    "visible_picker_count": 29,
+    "hidden_ids": ["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz"],
+    "priority_visible_ids": ["btdigg","torrent9","oxtorrent","knaben","torrentscsv","thepiratebay","internetarchive"],
+    "btdigg_is_first_and_new_install_default": true,
+    "existing_selected_hidden_ids_scrubbed_on_page_load": true,
+    "bulk_buttons_never_select_hidden_ids": true,
+    "zero_real_matches_not_a_provider_failure": true,
+    "api_provider_catalog_unchanged": true,
+    "do_not_reenable_by_clicking_select_all": true
+  },
   "provider_recovery_v1": {
     "required_original_indexers": 46,
     "planned_indexers": 46,
