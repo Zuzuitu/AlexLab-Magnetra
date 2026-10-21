@@ -120,6 +120,25 @@ export async function legacySearch(id,query,category,fetcher=fetch){
   }
   return result;
 }
+// TheRarBg detail pages sometimes expose the torrent's own info hash as
+// labelled text while rendering the "Magnet Download" action with JavaScript.
+// Never infer this value from titles, linked related torrents, or other sites.
+// A unique 40-char v1 hash adjacent to "Info Hash:" on the validated detail
+// document is sufficient to form the canonical BTIH magnet URI offline.
+export function magnetFromTheRarBgInfoHash(html){
+  if(typeof html!=="string"||!html||html.length>MAX_HTML)return null;
+  const clean=html
+    .replace(/<(script|style|noscript)\\b[^>]*>[\\s\\S]*?<\\/\\1\\s*>/gi," ")
+    .replace(/<!--[\\s\\S]*?-->/g," ")
+    .replace(/<[^>]*>/g," ")
+    .replace(/&nbsp;|&#(?:160|xA0);/gi," ")
+    .replace(/&colon;|&#(?:58|x3A);/gi,":")
+    .replace(/\\s+/g," ");
+  const matches=[...clean.matchAll(/\\bInfo\\s*Hash\\s*:\\s*([a-f0-9]{40})\\b/gi)];
+  if(matches.length!==1)return null;
+  return "magnet:?xt=urn:btih:"+matches[0][1].toLowerCase();
+}
+
 export async function resolveLegacy(id,url,fetcher=fetch){
   const spec=LEGACY_SPECS[id];
   if(!spec)throw Error("provider not configured");
@@ -144,6 +163,9 @@ export async function resolveLegacy(id,url,fetcher=fetch){
     if(candidate&&candidate.startsWith("magnet:?")&&candidate.length<=12000)magnet=candidate;
   }});
   await reader.transform(new Response(html,{headers:{"content-type":"text/html"}})).text();
+  // Strict single-provider fallback; successful detail HTML was fetched via
+  // its fixed-origin allowlisted URL with anti-bot and size guards above.
+  if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgInfoHash(html);
   if(!magnet)throw Error("provider details page contains no supported magnet link");
   return {magnet};
 }
