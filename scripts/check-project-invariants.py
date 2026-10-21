@@ -487,6 +487,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "auto_pause_public_html_source_sha_prefix": "6e6e2ca3388a5ce7",
         "auto_pause_public_html_cf_beacon_verified": True,
         "auto_pause_new_app_iphone_acceptance_confirmed": False,
+        "btdigg_patch_rock64_install_user_output_received": True,
         "resolve_fix_btdigg_rate_limit_root_cause_identified": False,
         "resolve_fix_btdigg_429_unchanged_by_resolve_fix": True,
         "resolve_fix_rollback_to_249d_live_executed": False,
@@ -665,7 +666,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                        "46", "PR #105",
                        "9c3930f406078ee744e0473b2093ded9b91cead7",
                        "c86c9a32-31fd-4952-86ed-b35f1763b342",
-                       "Instalat pe Rock64: NECONFIRMAT",
+                       "Instalat pe Rock64: CONFIRMAT",
                        "rock64/update-btdigg.sh",
                        "9c3930f406078ee744e0473b2093ded9b91cead7"):
             if marker not in prompt_text:
@@ -1319,7 +1320,9 @@ def check_btdigg_residential_gateway(config: dict) -> None:
         "2026_10_21_transport_patch_single_ipv4_tcp": True,
         "2026_10_21_transport_patch_tls_ca_sni_verified": True,
         "2026_10_21_transport_patch_no_retry_or_redirect": True,
-        "2026_10_21_transport_patch_rock64_installed": False,
+        "2026_10_21_transport_patch_rock64_installed": True,
+        "2026_10_21_transport_patch_local_authenticated_health_pass": True,
+        "2026_10_21_transport_patch_local_offline_tests_passed": 99,
         "2026_10_21_transport_patch_real_postinstall_verified": False,
         "2026_10_21_transport_timeout_permanent_fix_proven": False,
         "2026_10_21_previous_rock64_errors_ms": [12852,12753],
@@ -1332,13 +1335,13 @@ def check_btdigg_residential_gateway(config: dict) -> None:
     }
     for key, value in expected.items():
         require_equal(gateway.get(key), value, "btdigg_residential_gateway." + key)
-    # The new source patch is merged, but no physical installer output exists.
-    # A later checkpoint may update these booleans only with owner-run proof.
+    # Physical installer success now has owner-provided SSH stdout evidence.
+    # No post-install genuine upstream search or permanent reliability is proven.
     require_file(ROOT / "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md")
     prompt = ROOT / "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md"
     if prompt.is_file():
         content = prompt.read_text(encoding="utf8")
-        for marker in ("Instalat pe Rock64: NECONFIRMAT",
+        for marker in ("Instalat pe Rock64: CONFIRMAT",
                        "PR #105", "9c3930f406078ee744e0473b2093ded9b91cead7"):
             if marker not in content:
                 fail("BTDigg physical-install handoff loses explicit unverified state: " + marker)
