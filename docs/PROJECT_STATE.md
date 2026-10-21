@@ -1764,3 +1764,17 @@ Code branch `ui/magnetra-ro-it-curated-12-20261021`, UI `web/app.js`, `web/index
 
 ---
 
+
+
+## 21 OCTOMBRIE 2026 — RO/IT + 12 INDEXERE: PRODUCȚIE 100% CONFIRMATĂ
+
+**Noua stare operațională autoritativă**: [GitHub Actions run #39637878742](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39637878742) = `SUCCESS`. Commit de activare `78a5f72895413b4edd3d7a7926cbae1e292d35bb`. Versiunea Cloudflare Worker+assets `60112a3d-b478-4071-b087-ab793fbdfd60@100%`, versiunea anterioară `6dadc612-9660-4195-aeed-cdb658b22cf8@0%` păstrată pentru rollback. **Nu mai considerați 6dad@100 / 9bbb@0 drept distribuție curentă**; este istoric.
+
+**Dovezi postflight de pe site:** original 6dad100/9bbb0 cu 3 bindinguri verificate; noul upload imutabil cu `--keep-vars`; staging 0% PASS; canary 5% PASS; full100 PASS. Hashuri publice/override verificate `/app.js=44f1eac85e8550a7`, `/styles.css=71ea60a9eaf7c03e`, `/index.html source=37865e2eb60ee9f0` (doar beacon Cloudflare admis), noul `/i18n.js=3ca52c9b10d49502`; `ORIGINAL_PROVIDER_CATALOG_PASS:46`, bindinguri 3/3 PASS; log exact `RO_IT_12_PRODUCTION_100_PASS: 60112a3d-b478-4071-b087-ab793fbdfd60@100 / 6dad@0`.
+
+**Comportament PWA publicat:** 12 indexere vizibile, 34 invizibile și ne-selectabile, păstrate ca originale în Worker/Android (46). Cele 15 ascunse în această sesiune: BangumiMoe, Btsow, Dmhy, LinuxTracker, MyPornClub, NekoBT, Sukebei, YTS, AniLibria, BlueRoms, EpubLibre, MegaPeer, Rutor, XXXTracker, FitGirl Repacks. BTDigg, Torrent9, OxTorrent rămân primele; BTDigg selectat implicit alături de fallback-urile consacrate. Interfața numai **română implicită / italiană opțională**, alegere salvată în browser; fără badge-uri publice `RESULTS THIS SESSION`, audit, `NOT AUDITED`, sau coduri diagnostic pe pagina normală. Avertismentele utile pentru surse încă vizibile rămân. Fără modificări Rock64, Tunnel, DNS, Flud, secrete ori costuri.
+
+**Încă neconfirmat de proprietar:** test vizual direct pe iPhone al celor 12 surse și comutarea RO↔IT; dovada Cloudflare 100% este separată și deja confirmată. Următorul pas poate fi o verificare vizuală rapidă în `https://index.alexlab.media`, fără comenzi SSH.
+
+---
+
