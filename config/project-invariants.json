@@ -48,6 +48,7 @@
       ".github/workflows/pwa.yml",
       ".github/workflows/deploy-pwa.yml",
       ".github/workflows/magnetra-curated-picker-one-shot-release.yml",
+      ".github/workflows/magnetra-hide-anime-mikan-one-shot.yml",
       ".github/workflows/production-smoke.yml",
       ".github/workflows/stage-magnetra-worker.yml",
       ".github/workflows/inspect-magnetra-cloudflare-version.yml",
@@ -309,6 +310,24 @@
     "owner_release_marker": "[magnetra-curated-publish-20261021]",
     "activation_requires_separate_main_push": true,
     "worker_and_rock64_code_unchanged": true
+  },
+  "anime_mikan_curation_release": {
+    "requested_by_owner_on": "2026-10-21",
+    "baseline_verified": {
+      "9bbb227f-7f2a-4a9b-acac-ce8cae620c51": 100,
+      "c86c9a32-31fd-4952-86ed-b35f1763b342": 0
+    },
+    "old_public_js_sha_prefix": "0945914b2f7bf266",
+    "original_adapter_ids_retained": 46,
+    "target_picker_visible": 27,
+    "target_picker_hidden": 19,
+    "unique_activation_marker": "[magnetra-hide-anime-mikan-publish-20261021]",
+    "workflow": ".github/workflows/magnetra-hide-anime-mikan-one-shot.yml",
+    "guarded_0_5_100_release_prepared": true,
+    "release_executed": false,
+    "production_100_verified": false,
+    "new_version_id": null,
+    "previous_version_preserved_for_rollback": true
   },
   "pwa_indexer_curation": {
     "owner_approved_visible_only": true,
