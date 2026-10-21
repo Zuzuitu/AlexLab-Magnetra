@@ -1328,8 +1328,11 @@ def check_btdigg_residential_gateway(config: dict) -> None:
     gateway_py = (ROOT / "rock64" / "btdigg_gateway.py").read_text(encoding="utf-8")
     gateway_js = (ROOT / "worker" / "src" / "btdigg-rock64.mjs").read_text(encoding="utf-8")
     worker = (ROOT / "worker" / "src" / "index.mjs").read_text(encoding="utf-8")
-    for required in ("127.0.0.1", "https://btdig.com", "NoRedirect",
-                     "hmac.compare_digest", "MIN_SEARCH_INTERVAL = 5",
+    for required in ("127.0.0.1", "https://btdig.com",
+                     "http.client.HTTPConnection(HOSTNAME, 443)",
+                     "response.status != 200", "socket.AF_INET",
+                     "ssl.create_default_context()", "server_hostname=HOSTNAME",
+                     "MIN_SEARCH_INTERVAL = 5", "hmac.compare_digest",
                      "MAGNETRA_BTDIGG_TOKEN"):
         if required not in gateway_py:
             fail("gateway safety guard missing: " + required)
