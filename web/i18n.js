@@ -668,6 +668,8 @@ const KEY="magnetra.language.v1";
 const languages=["ro","it"];
 let current="ro";
 try{current=localStorage.getItem(KEY)==="it"?"it":"ro";}catch{}
+const ROMANIAN_KEYS=new Map(Object.entries(DICTIONARY).map(([key,value])=>[value.ro,key]));
+function sourceKey(value){return DICTIONARY[value]?value:ROMANIAN_KEYS.get(value);}
 const savedNodes=[];
 const savedAttrs=[];
 const attrs=["placeholder","aria-label","title","content"];
@@ -677,12 +679,13 @@ function capture(){
  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
  for(let n; (n=walker.nextNode());){
   const k=n.textContent.trim();
-  if(!DICTIONARY[k])continue;
+  const key=sourceKey(k);
+  if(!key)continue;
   const spaces=n.textContent.match(/^(\s*)(.*?)(\s*)$/s);
-  savedNodes.push([n,k,spaces?.[1]||"",spaces?.[3]||""]);
+  savedNodes.push([n,key,spaces?.[1]||"",spaces?.[3]||""]);
  }
  for(const el of document.querySelectorAll("[placeholder],[aria-label],[title],[content]")){
-  for(const attr of attrs){const value=el.getAttribute(attr);if(value&&DICTIONARY[value])savedAttrs.push([el,attr,value]);}
+  for(const attr of attrs){const value=el.getAttribute(attr);if(value&&sourceKey(value))savedAttrs.push([el,attr,sourceKey(value)]);}
  }
 }
 function paint(){
