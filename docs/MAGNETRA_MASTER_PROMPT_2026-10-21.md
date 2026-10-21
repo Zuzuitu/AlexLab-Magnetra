@@ -1,5 +1,16 @@
 # CONTINUARE PROIECT REAL — ALEXLAB MAGNETRA
 
+## 21 OCTOMBRIE 2026 — EXTINDERE PWA CURATION: AnimeTosho și Mikan
+
+Utilizatorul a cerut ascunderea suplimentară a indexerelor **AnimeTosho** (ID `animetosho`) și **Mikan** (ID `mikanproject`), după erori reale observate pe iPhone. Sunt ascunse împreună cu cele 17 surse de dinainte: **19 ascunse și 27 vizibile** în PWA. Nu se șterg adaptoarele: catalogul original de **46** indexere rămâne în Worker/Android. BTDigg, Torrent9 și OxTorrent rămân prioritare; BTDigg păstrează selecția implicită și fallback-urile existente.
+
+Filtrare inclusiv a selecțiilor vechi și a pauzelor persistate, comenzilor bulk, fallback-ului și avertismentului `indexers unavailable`; dacă doar cele două surse ascunse ar fi eșuat, panoul de avertizare nu apare. Avertismentul rămâne legitim pentru eventuale *alte* surse vizibile cu erori; nu se ascund defecțiuni reale ale BTDigg. Nu există bypass de reclame/CAPTCHA, requesturi agresive, descărcări sau modificări Flud.
+
+**Publicarea e separată de commit:** producția anterioară verificată era `9bbb227f-7f2a-4a9b-acac-ce8cae620c51@100%`, rollback `c86c9a32-31fd-4952-86ed-b35f1763b342@0%`, după run `39605883294`. O nouă lansare sigură trebuie să păstreze aceste versiuni exacte ca bază și să confirme din nou calea completă 0% → 5% → 100%, fără reutilizarea workflow-ului vechi legat de c86c.
+
+---
+
+
 ## 21 OCTOMBRIE 2026 — CURATED PICKER PUBLICAT: CLOUDflare 100% PASS
 
 **Release efectiv executat:** [GitHub Actions #39605883294](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39605883294), `SUCCESS`, din `main` commit `6a832487dc75cc8694f324dfbb24a9764e503369`. Versiunea nouă Cloudflare `9bbb227f-7f2a-4a9b-acac-ce8cae620c51` la **100%**, versiunea anterioară stabilă `c86c9a32-31fd-4952-86ed-b35f1763b342` la **0% (rollback disponibil)**. Nu mai presupune că c86c@100% este live: aceea e stare istorică. Versiunea 136c a rămas disponibilă în istoricul Cloudflare, nu în actualul split.
