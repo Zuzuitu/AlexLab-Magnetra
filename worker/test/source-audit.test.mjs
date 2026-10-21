@@ -37,7 +37,7 @@ test("source-selection UI never treats all implemented adapters as verified work
  assert.match(src,/\$\("selectAllProviders"\)/);
  assert.ok(!src.includes('state.selected=new Set(state.providers.filter(p=>p.ported).map(p=>p.id));\n  save(STORAGE.selected,[...state.selected]);renderProviders();updateProviderCount();\n });'),"old misleading Select working handler is forbidden");
  assert.ok(html.includes('id="selectAllProviders"'));
- assert.ok(html.includes('Select verified sources'));
+ assert.ok(html.includes('Selectează sursele verificate'));
  assert.ok(!html.includes('not live uptime'), 'audit diagnostics are not displayed in the UI');
 });
 
