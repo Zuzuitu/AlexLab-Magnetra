@@ -245,10 +245,10 @@ class GatewayTests(unittest.TestCase):
     def test_dns_failure_remains_sanitized_and_never_connects(self):
         actions = []
         out = io.StringIO()
-        with patch.object(gateway.socket, "getaddrinfo",
-                          side_effect=socket.gaierror(-2, "sensitive DNS detail")), \\
-             patch.object(gateway.socket, "socket",
-                          side_effect=lambda *a: actions.append(a)):
+        with (patch.object(gateway.socket, "getaddrinfo",
+                           side_effect=socket.gaierror(-2, "sensitive DNS detail")),
+              patch.object(gateway.socket, "socket",
+                           side_effect=lambda *a: actions.append(a))):
             with redirect_stdout(out):
                 status, body = gateway.SearchProvider.fetch("private search phrase")
         self.assertEqual((status, body), (504, b""))
