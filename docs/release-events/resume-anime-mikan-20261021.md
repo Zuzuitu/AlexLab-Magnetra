@@ -1,0 +1,7 @@
+# AlexLab Magnetra — owner-approved immutable 6dad release resume
+
+2026-10-21: The first authorized 27-indexer curation release run #39610721257 failed its immediate unversioned public HTML postflight after JS/CSS and immutable canary asset checks passed, then successfully restored the known previous version `9bbb227f-7f2a-4a9b-acac-ce8cae620c51@100%` with already-uploaded candidate `6dadc612-9660-4195-aeed-cdb658b22cf8@0%`. The user explicitly requested this release; this record activates its guarded continuation only, without a new upload.
+
+The guarded one-shot workflow `.github/workflows/magnetra-resume-anime-mikan-one-shot.yml` triggers solely from a new main commit changing this specific activation file and including exact marker `[magnetra-resume-anime-mikan-20261021]`. It checks exact current 9bbb100/6dad0 and both 3-binding identities, reviewed stage JS/CSS/HTML/API catalog 46; canary 5%, then candidate 100%. On final HTML only, it tolerates bounded HTTP200 content mismatch while checking deployment stability; never retries 429/504. Known-state rollback occurs once on failure; unknown split is never overwritten.
+
+No torrent searches, unauthorized downloads, DNS, tunnels, gateway code, Cloudflare token mutation, or Flud transfer. This file is approval, NOT proof of successful production. Only full Actions postflight PASS with exact new100/old0 and public asset hashes establishes release success.
