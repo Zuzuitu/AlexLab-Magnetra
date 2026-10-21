@@ -1740,3 +1740,15 @@ Dovezi log final live: `RESUME_PREFLIGHT_PASS: 9bbb100 / 6dad0`, `RESUME_STAGED_
 
 ---
 
+
+
+## 2026-10-21 — 12 SOURCES VISIBLE, 34 USER-HIDDEN + ONLY ROMANIAN/ITALIAN
+
+Owner specified **15 more original indexers to hide** (retaining original adapters/API IDs): BangumiMoe `bangumimoe`, Btsow `btsow`, Dmhy `dmhy`, LinuxTracker `linuxtracker`, MyPornClub `mypornclub`, NekoBT `nekobt`, Sukebei `sukebeinyaa`, YTS `ytsmx`, AniLibria `anilibria`, BlueRoms `blueroms`, EpubLibre `epublibre`, MegaPeer `megapeer`, Rutor `rutorinfo`, XXXTracker `xxxtracker`, FitGirl Repacks `fitgirlrepacks`. With 19 previously hidden, **34 hidden, 12 selectable**, BTDigg/Torrent9/OxTorrent prioritized; default selection BTDigg plus backup sources. Hidden IDs must not appear in PWA picker, legacy localStorage selections, select-all, alternatives or errors. Original 46 backend/Android adapters remain unchanged.
+
+Owner requested PWA interface **only Romanian (default) and Italian**, select RO/IT from header, persist chosen language in browser storage, no external translation APIs. Static and dynamic text/notifications/Flud pairing/error categories localize. Historical source audit labels, user-visible `TEST`/developer-diagnostic text, old 46-provider debugging summaries and misleading EZTV help removed from public UI. Actual CI tests and safe error reporting remain; no API/Flud/Worker backend changes.
+
+Code branch `ui/magnetra-ro-it-curated-12-20261021`, UI `web/app.js`, `web/index.html`, new offline `web/i18n.js`, `web/manifest.webmanifest`, `web/sw.js`, tests `worker/test/ro-it-localization.test.mjs`, `worker/test/indexer-curation.test.mjs`, invariants and checkpoint. **Do not confuse branch/PR with live Cloudflare publication**. Latest *proven* prior live split `6dadc612-9660-4195-aeed-cdb658b22cf8@100` with `9bbb227f-7f2a-4a9b-acac-ce8cae620c51@0`. Any new deployment needs own exact gated version upload / immutable override static integrity checks including `i18n.js` / 0%, 5%, 100% release and guarded rollback, with no secrets shown, no Rock64/Flud/Tunnel changes. No new costs.
+
+---
+
