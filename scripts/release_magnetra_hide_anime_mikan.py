@@ -168,7 +168,7 @@ def rollback_if_safe(new: str | None):
             print("ROLLBACK_UNVERIFIED: Wrangler deployment rejected")
             return
         wait_for(current_record, shares, slot, ok)
-        print("ROLLBACK_POSTFLIGHT_PASS: known c86c100 / curated0")
+        print("ROLLBACK_POSTFLIGHT_PASS: prior active version 100%, uploaded candidate 0%")
     except (Stop, ValueError, TypeError, KeyError, OSError):
         print("ROLLBACK_UNVERIFIED: inspect immutable traffic split manually")
 
@@ -180,7 +180,7 @@ def publish():
     bindings(OLDER_ROLLBACK)
     active_asset_guard()
     stable(first, INITIAL)
-    print("BASELINE_PASS: c86c100 136c0, 3 required bindings each")
+    print("BASELINE_PASS: 9bbb100/c86c0, 3 required bindings each")
 
     candidate = None
     try:
