@@ -59,7 +59,7 @@ test("completed search pauses failures persistently without touching bookmarks o
  h.storage.set("magnetra.companion.v1",JSON.stringify({deviceId:"unchanged"}));
  const n=h.pauseFailedSources(providers,[{provider:"torrent9",code:"TIMEOUT"}]);
  assert.equal(n,1);
- assert.deepEqual([...h.state.selected].sort(),["knaben","torrentscsv","internetarchive"]);
+ assert.deepEqual([...h.state.selected].sort(),["internetarchive","knaben","torrentscsv"]);
  assert.equal(h.storage.get("magnetra.providers.v1"),JSON.stringify(["knaben","torrentscsv","internetarchive"]));
  assert.equal(h.storage.get("magnetra.paused-indexers.v1"),JSON.stringify(["torrent9"]));
  assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer\(s\) paused/);
