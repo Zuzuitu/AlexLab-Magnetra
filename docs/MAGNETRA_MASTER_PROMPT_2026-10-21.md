@@ -1,5 +1,16 @@
 # CONTINUARE PROIECT REAL — ALEXLAB MAGNETRA
 
+## UPDATE 21 OCTOMBRIE 2026 — CURATED 12 SURSE + RO/IT: LANSARE SECURIZATĂ PREGĂTITĂ
+
+**Ultima cerere explicită a proprietarului:** ascunde suplimentar BangumiMoe, Btsow, Dmhy, LinuxTracker, MyPornClub, NekoBT, Sukebei, YTS, AniLibria, BlueRoms, EpubLibre, MegaPeer, Rutor, XXXTracker și FitGirl Repacks; în total 34 ID-uri ascunse și 12 surse rămase în selector, BTDigg/Torrent9/OxTorrent primele. Întreaga interfață publică PWA este română implicită sau italiană la alegere (limba salvată în browser), fără badge-uri de audit/test. Sunt păstrate toate cele 46 adaptoare Worker și Android, fără modificări Flud, Rock64, secrete, DNS sau Tunnel. Cod UI este în PR #119; testele de regresie pentru traducere și selecții salvate iPhone.
+
+**Lansare pregătită, NU executată de acest PR:** `scripts/release_magnetra_ro_it_12.py`, `.github/workflows/magnetra-ro-it-12-one-shot.yml`, `scripts/test_release_magnetra_ro_it_12.py`. Un viitor commit separat, unic, care modifică numai `docs/release-events/magnetra-ro-it-12-20261021.md` și conține marker `[magnetra-ro-it-12-publish-20261021]` declanșează workflow-ul numai după CI. Preflight fail-closed pe starea `6dadc612-9660-4195-aeed-cdb658b22cf8@100% / 9bbb227f-7f2a-4a9b-acac-ce8cae620c51@0%` și hash live app.js `85969467f08d21ee`. Urmează upload imutabil `--keep-vars`, verificare a JS/CSS/HTML **și i18n.js**, catalog 46 și 3 bindinguri, 0% staging → 5% canary → 100%, 6dad păstrat la 0% pentru rollback. Nu folosi workflow-urile de publicare vechi.
+
+**IMPORTANT:** Faptul că pregătim workflow și că trece CI NU înseamnă publicare. Numai un run de release efectiv cu `PRODUCTION_100_PASS` și verificări de versiune justifică statusul LIVE.
+
+---
+
+
 ## 2026-10-21 — 12 SOURCES VISIBLE, 34 USER-HIDDEN + ONLY ROMANIAN/ITALIAN
 
 Owner specified **15 more original indexers to hide** (retaining original adapters/API IDs): BangumiMoe `bangumimoe`, Btsow `btsow`, Dmhy `dmhy`, LinuxTracker `linuxtracker`, MyPornClub `mypornclub`, NekoBT `nekobt`, Sukebei `sukebeinyaa`, YTS `ytsmx`, AniLibria `anilibria`, BlueRoms `blueroms`, EpubLibre `epublibre`, MegaPeer `megapeer`, Rutor `rutorinfo`, XXXTracker `xxxtracker`, FitGirl Repacks `fitgirlrepacks`. With 19 previously hidden, **34 hidden, 12 selectable**, BTDigg/Torrent9/OxTorrent prioritized; default selection BTDigg plus backup sources. Hidden IDs must not appear in PWA picker, legacy localStorage selections, select-all, alternatives or errors. Original 46 backend/Android adapters remain unchanged.
