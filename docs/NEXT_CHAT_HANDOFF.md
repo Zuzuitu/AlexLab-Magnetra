@@ -1,5 +1,16 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 2026-10-21 — OWNER-APPROVED PWA SOURCE CURATION (PR pending; not live until separately published)
+
+Owner asked the iPhone PWA to **hide 17 specific consistently failing indexers so they cannot be seen or selected**, including bulk actions and stale browser saved preferences. UI-only exclusion; **all original 46 adapters and source IDs remain in Worker API and Android**; no provider data is deleted. Names and exact IDs: AniRena=anirena, BT4G=bt4g, BitSearch=bitsearch, Ext=extdotto, Eztv=eztvx, FileMood=filemood, LimeTorrents=limetorrents, Nyaa=nyaasi, 1337x=1337x, TokyoToshokan=tokyotoshokan, TorrentDatabase=torrentdatabase, TorrentDownload=torrentdownloadinfo, TorrentDownloads=torrentdownloads, TorrentKitty=torrentkitty, UIndex=uindex, XXXClub=xxxclub, Torrentz=torrentz. Torrentz remains retained in original code for possible later restoration if genuinely functional. These error observations are not a claim that the websites are permanently offline.
+
+Display first: **BTDigg → Torrent9 → OxTorrent → Knaben → TorrentsCSV → ThePirateBay → Internet Archive**; thereafter other nonhidden original sources sorted by saved audit/session observations. BTDigg already defaults selected for new devices; retain four default backups and existing custom selected visible IDs. Saved hidden IDs are silently removed on load; missing all active IDs falls back to safe defaults. The bulk buttons and error recovery flow cannot resurrect hidden IDs. Picker total becomes **29 selectable of original 46 retained**. Historical 46-entry audit and public API remain unchanged. Never weaken Cloudflare provider redirects, anti-bot protections, source attribution, Flud pairing or BTDigg Rock64.
+
+**Deployment boundary:** This UI feature remains only in branch/PR until 4/4 CI and an explicitly safe Cloudflare rollout with immutable version checks; do not trigger old historical promotion workflows or assume a merge is live. Latest validated previous production split c86c100/136c0; no production update yet proven for this UI change.
+
+---
+
+
 ## UPDATE 21 OCTOMBRIE 2026 — BTDigg ORIGINAL: ROCK64 LOCAL HTTP 200 CU 10 MAGNETURI BTIH CONFIRMAT
 
 **Local Rock64: HTTP 200 confirmat, cu 10 rezultate originale și 10 magneturi BTIH.** După instalarea fizică verificată în PR #107, utilizatorul a rulat o singură dată `sudo python3 /opt/magnetra-btdigg/check-btdigg.py` și a trimis dovada: `Local Rock64 HTTP: 200`, `Real BTDigg search page rows: 10`, `Magnet links found: 10`, `PASS: real BTDigg result HTML reached Rock64 gateway.` Logul **aceluiași proces gateway instalat**: `total_ms=1094`, `dns_ms=430`, `tcp_ms=483` (cumulativ; TCP ≈53 ms), `tls_ms=865` (cumulativ), `open_ms=1013`, `read_ms=80`, `failure=none`, `family=IPv4`. Nu expune tokenuri/IP-uri/magneturi.
