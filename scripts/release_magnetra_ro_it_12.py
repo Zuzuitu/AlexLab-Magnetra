@@ -137,6 +137,24 @@ def verify_all_assets(version, deployment, split):
         time.sleep(8)
 
 
+# Cloudflare may briefly serve previous unversioned HTML after full switch.
+# Only verified HTTP-200 reviewed-source mismatch may wait; never retry 429/504.
+HTML_200_MISMATCH = "HTML_NOT_REVIEWED_SOURCE_OR_KNOWN_CLOUDFLARE_BEACON"
+
+
+def verify_public_with_html_settle(deployment, full):
+    for attempt in range(6):
+        try:
+            verify_all_assets(None, deployment, full)
+            return
+        except Stop as e:
+            if str(e) != HTML_200_MISMATCH or attempt == 5:
+                raise
+            stable(deployment,full)
+            print("RO_IT_HTML_PROPAGATION_WAIT:" + str(attempt+1) + "/5")
+            time.sleep(8)
+
+
 def rollback_if_safe(candidate):
     if not candidate or not UUID.fullmatch(candidate):
         return
@@ -199,7 +217,7 @@ def run():
         full={ACTIVE:0,candidate:100}
         ok=_wrangler_deploy([ACTIVE+"@0%",candidate+"@100%"],"Magnetra RO IT 12 indexers: 100% with 6dad rollback")
         full_dep=wait_for(canary_dep,canary,full,ok)
-        verify_all_assets(None,full_dep,full)
+        verify_public_with_html_settle(full_dep,full)
         catalog_guard(None)
         bindings(ACTIVE);bindings(candidate)
         stable(full_dep,full)
