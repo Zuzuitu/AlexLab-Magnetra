@@ -1,12 +1,27 @@
 "use strict";
 const $=id=>document.getElementById(id);
+const currentLanguage=()=>globalThis.MagnetraI18n?.language==="it"?"it-IT":"ro-RO";
+// Only localized strings are shown in the live PWA. Fallback supports offline tests.
+const tr=(key,args={})=>{
+ const translated=globalThis.MagnetraI18n?.t(key,args);
+ return translated||String(key).replace(/\{(\w+)\}/g,(_,name)=>String(args[name]??""));
+};
+const genericError=(failure)=>{
+ const code=String(failure?.code||"").toUpperCase();
+ const msg=String(failure?.message||failure?.error||"").toLowerCase();
+ if(/TIMEOUT/.test(code)||/timed out|timeout/.test(msg))return tr("Provider timed out");
+ if(/RATE_LIMIT|429/.test(code)||/rate.limit|too many requests/.test(msg))return tr("Provider rate limited");
+ if(/REDIRECT/.test(code)||/redirect/.test(msg))return tr("Provider redirected");
+ if(/403|BLOCK|REJECT|FORBIDDEN/.test(code)||/reject|forbidden/.test(msg))return tr("Provider request rejected");
+ return tr("Provider unavailable");
+};
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Owner-curated PWA picker exclusion only: all 46 adapters remain in the API/Android.
 // Excluded IDs cannot be displayed, selected, restored from old localStorage,
 // bulk-selected or queried by the PWA. They are not removed from source code.
-const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject"]);
+const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks"]);
 const BTDIGG_MIN_GAP_MS=5500;
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
 // failed searches; it defers one user-requested search and is abortable.
@@ -18,7 +33,7 @@ function btdiggWaitMs(query,at=Date.now()){
 async function waitForBTDigg(query,signal){
  const wait=btdiggWaitMs(query);
  if(wait){
-  $("notice").textContent="BTDigg: waiting "+Math.ceil(wait/1000)+"s to respect source search limits…";
+  $("notice").textContent=tr("BTDigg: waiting {n}s to respect source search limits…",{n:Math.ceil(wait/1000)});
   await new Promise((resolve,reject)=>{
    if(signal.aborted){reject(new DOMException("Search cancelled","AbortError"));return;}
    let done=false;
@@ -52,8 +67,8 @@ function magnetIdentity(magnet,deviceId){
 const api=async(path,options={})=>{
   const response=await fetch(path,{cache:"no-store",...options});
   let data;
-  try{data=await response.json();}catch{throw Error("Server returned an invalid response");}
-  if(!response.ok)throw Error(data.error||"Request failed ("+response.status+")");
+  try{data=await response.json();}catch{throw Error(tr("Server returned an invalid response"));}
+  if(!response.ok)throw Error(tr("Request failed ({code})",{code:response.status}));
   return data;
 };
 function load(key,fallback){
@@ -87,8 +102,7 @@ function savePausedSources(){
  save(STORAGE.paused,[...state.pausedIds]);
  const visible=[...state.pausedIds].filter(id=>selectableProviders().some(p=>p.id===id));
  $("sourceHealthSummary").textContent=visible.length?
-  visible.length+" failed indexer"+(visible.length===1?"":"s")+
-  " paused automatically. Next searches use the remaining selected sources; tap Indexers to retry.":"";
+  tr("{n} failed indexer(s) paused automatically. Next searches use the remaining selected sources; tap Indexers to retry.",{n:visible.length}):"";
 }
 function unpauseSources(ids){
  for(const id of ids)state.pausedIds.delete(id);
@@ -161,8 +175,7 @@ function renderProviders(){
  const visible=selectableProviders();
  const ported=visible.length;
  const audited=visible.filter(p=>p.lastAudit?.state==="results").length;
- const day=state.audit?.observedAt?new Date(state.audit.observedAt).toLocaleDateString():"unknown date";
- $("catalogSummary").textContent=ported+" selectable indexers · "+audited+" returned results for '"+(state.audit?.query||"test")+"' on "+day+" (historical, not live uptime)";
+ $("catalogSummary").textContent=tr("{n} sources available",{n:ported});
  for(const p of orderedProviders(visible)){
   const row=el("div","provider-row"+(p.ported?"":" missing"));
   const label=el("label");
@@ -170,7 +183,7 @@ function renderProviders(){
   input.type="checkbox";input.value=p.id;input.checked=state.selected.has(p.id);input.disabled=!p.ported;
   input.addEventListener("change",()=>{
     if(input.checked){
-      if(state.selected.size>=selectableProviders().length){input.checked=false;toast("All visible indexers are already selected.");return;}
+      if(state.selected.size>=selectableProviders().length){input.checked=false;toast(tr("All visible indexers are already selected."));return;}
       state.selected.add(p.id);
       unpauseSources([p.id]);
     }else state.selected.delete(p.id);
@@ -178,20 +191,10 @@ function renderProviders(){
   });
   const name=el("strong","",p.name);
   label.append(input,name);
-  const recent=state.sessionAudit[p.id];
-  const audit=recent?.state||p.lastAudit?.state;
-  const auditLabel=recent
-   ?(audit==="results"?"RESULTS THIS SESSION":audit==="error"?"ERROR THIS SESSION":"0 THIS SESSION")
-   :(audit==="results"?"RESULTS IN AUDIT":audit==="empty-unverified"?"0 IN AUDIT":audit==="error"?"ERROR IN AUDIT":"NOT AUDITED");
-  const autoPaused=state.pausedIds.has(p.id)&&!state.selected.has(p.id);
-  const marker=el("small","audit-"+(audit||"unknown"),autoPaused?"PAUSED AFTER ERROR":p.ported?auditLabel:"PORT PENDING");
-  if(recent)marker.title="Search in this browser session at "+recent.at+
-    "; "+recent.count+" results. Not a continuous live status.";
-  else if(audit)marker.title="Historical "+(state.audit?.query||"")+
-    " query on "+(state.audit?.observedAt||"unknown date")+
-    (p.lastAudit?.code?"; "+p.lastAudit.code:"")+
-    (p.lastAudit?.count!=null?"; "+p.lastAudit.count+" results":"");
-  row.append(label,marker);grid.append(row);
+  const paused=state.pausedIds.has(p.id)&&!state.selected.has(p.id);
+  row.append(label);
+  if(paused)row.append(el("small","audit-error",tr("Paused")));
+  grid.append(row);
  }
 }
 function sortItems(items){
@@ -212,10 +215,10 @@ function downloadAction(container,label,url){
  const a=el("a","action",label);a.href=url;a.target="_blank";a.rel="noopener noreferrer";container.append(a);
 }
 async function copyMagnet(magnet) {
- try {await navigator.clipboard.writeText(magnet);toast("Magnet copied");}
+ try {await navigator.clipboard.writeText(magnet);toast(tr("Magnet copied"));}
  catch {
    const t=document.createElement("textarea");t.value=magnet;t.style.position="fixed";t.style.top="-999px";document.body.append(t);t.select();
-   const ok=document.execCommand("copy");t.remove();toast(ok?"Magnet copied":"Copy failed");
+   const ok=document.execCommand("copy");t.remove();toast(tr(ok?"Magnet copied":"Copy failed"));
  }
 }
 async function ensureMagnet(item){
@@ -227,12 +230,12 @@ async function ensureMagnet(item){
  // Keep all other 44 providers' source precedence unchanged.
  const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9";
  const source=preferDetails ? item.details : item.magnetSource||item.details;
- if(!source)throw Error("Provider has no supported magnet or details link.");
+ if(!source)throw Error(tr("Provider has no supported magnet or details link."));
  const res=await api("/api/resolve",{
   method:"POST",headers:{"content-type":"application/json"},
   body:JSON.stringify({provider:item.provider,details:source})
  });
- if(!res.magnet?.startsWith("magnet:?"))throw Error("Provider did not return a valid magnet.");
+ if(!res.magnet?.startsWith("magnet:?"))throw Error(tr("Provider did not return a valid magnet."));
  item.magnet=res.magnet;
  if(state.bookmarks[item.id]){state.bookmarks[item.id]=item;save(STORAGE.bookmarks,state.bookmarks);}
  return item.magnet;
