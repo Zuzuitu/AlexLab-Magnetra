@@ -122,19 +122,32 @@ function chooseProviders(){
  updateProviderCount();
 }
 function updateProviderCount(){$("providerCount").textContent=String(state.selected.size)+"/"+state.providers.length;}
+// Prioritize sources with real AlexLab gateway/resolve work and proved adapters.
+// UI ordering does not affect original provider IDs, source attribution or uptime.
+const priorityIndexerIds=[
+ "btdigg","torrent9","oxtorrent","eztvx",
+ "knaben","torrentscsv","thepiratebay","internetarchive"
+];
 function orderedProviders(providers){
- // Pinned BTDigg always first; then sources proven by the latest dated audit
- // (or by a search in this browser session), then unverified, then errors.
- // This is display order, not a claim of live uptime or automatic probing.
+ const priority=new Map(priorityIndexerIds.map((id,index)=>[id,index]));
+ // Prioritized source IDs remain at the top even if an audit reports an error;
+ // all other visible sources are ordered by actual observed audit status.
  const rank=p=>{
-  if(p.id==="btdigg")return -1;
   if(!p.ported)return 3;
   const status=state.sessionAudit[p.id]?.state||p.lastAudit?.state;
   return status==="results"?0:status==="error"?2:1;
  };
- return [...providers].sort((a,b)=>rank(a)-rank(b)||
-  a.name.localeCompare(b.name,undefined,{sensitivity:"base"})||
-  a.id.localeCompare(b.id));
+ return [...providers].sort((a,b)=>{
+  const aPriority=priority.get(a.id),bPriority=priority.get(b.id);
+  if(aPriority!==undefined||bPriority!==undefined){
+   if(aPriority===undefined)return 1;
+   if(bPriority===undefined)return -1;
+   return aPriority-bPriority;
+  }
+  return rank(a)-rank(b)||
+   a.name.localeCompare(b.name,undefined,{sensitivity:"base"})||
+   a.id.localeCompare(b.id);
+ });
 }
 function renderProviders(){
  const grid=$("providerGrid");grid.replaceChildren();
