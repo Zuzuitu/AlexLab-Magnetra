@@ -28,11 +28,11 @@ class CuratedReleaseSafety(unittest.TestCase):
             read.assert_not_called()
             write.assert_not_called()
 
-    def test_reviewed_identity_config_and_visible_picker_are_present(self):
-        config = m.identity_guard()
-        self.assertEqual(config["name"],"alexlab-magnetra")
-        self.assertEqual(config["assets"]["binding"],"ASSETS")
-        self.assertIn("index.alexlab.media",str(config["routes"]))
+    def test_old_27_picker_release_guard_rejects_new_bilingual_source(self):
+        # Immutable one-shot releases must not silently accept a later
+        # different picker or localization. Assert the gate stays closed.
+        with self.assertRaisesRegex(m.Stop,"REVIEWED_CURATED_SOURCE_NOT_PRESENT"):
+            m.identity_guard()
 
     def test_unexpected_current_distribution_stops_before_upload(self):
         with patch.object(m,"current",side_effect=m.Stop("UNEXPECTED_LIVE_DEPLOYMENT_SPLIT")), \
@@ -48,7 +48,8 @@ class CuratedReleaseSafety(unittest.TestCase):
             return m.main()
 
     def test_full_flow_stage_and_canary_then_full_100(self):
-        with patch.object(m,"current",return_value=FIRST) as current, \
+        with patch.object(m,"identity_guard"), \
+             patch.object(m,"current",return_value=FIRST) as current, \
              patch.object(m,"bindings") as bindings, \
              patch.object(m,"active_asset_guard") as old_hash, \
              patch.object(m,"stable"), \
@@ -76,7 +77,8 @@ class CuratedReleaseSafety(unittest.TestCase):
             self.assertEqual(bindings.call_count,6)
 
     def test_zero_slot_failed_asset_verification_blocks_canary(self):
-        with patch.object(m,"current",return_value=FIRST), \
+        with patch.object(m,"identity_guard"), \
+             patch.object(m,"current",return_value=FIRST), \
              patch.object(m,"bindings"), \
              patch.object(m,"active_asset_guard"), \
              patch.object(m,"stable"), \
