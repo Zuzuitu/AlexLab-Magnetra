@@ -785,7 +785,7 @@
     "adapter_id_catalog_unchanged": 46,
     "deprecated_audit_test_labels_removed_from_public_ui": true,
     "previous_cloudflare_6dad_version": "6dadc612-9660-4195-aeed-cdb658b22cf8",
-    "current_rollout_verified": false,
+    "current_rollout_verified": true,
     "iphone_visual_acceptance_verified": false,
     "release_prepared_with_immutable_0_5_100": true,
     "owner_unique_activation_file": "docs/release-events/magnetra-ro-it-12-20261021.md",
@@ -798,6 +798,23 @@
     "expected_previous_app_js_sha_prefix": "85969467f08d21ee",
     "required_language_asset_sha_postflight": true,
     "single_known_state_rollback_to_6dad": true,
-    "actual_release_workflow_run_id": null
+    "actual_release_workflow_run_id": 39637878742,
+    "actual_release_conclusion": "success",
+    "public_version_id": "60112a3d-b478-4071-b087-ab793fbdfd60",
+    "public_version_traffic_percent": 100,
+    "previous_6dad_rollback_percent": 0,
+    "public_split_verified": {
+      "60112a3d-b478-4071-b087-ab793fbdfd60": 100,
+      "6dadc612-9660-4195-aeed-cdb658b22cf8": 0
+    },
+    "release_activation_main_commit": "78a5f72895413b4edd3d7a7926cbae1e292d35bb",
+    "public_app_js_sha_prefix": "44f1eac85e8550a7",
+    "public_styles_css_sha_prefix": "71ea60a9eaf7c03e",
+    "public_html_source_sha_prefix": "37865e2eb60ee9f0",
+    "public_i18n_js_sha_prefix": "3ca52c9b10d49502",
+    "public_api_original_adapter_count_verified": 46,
+    "release_stage_0_percent_verified": true,
+    "release_canary_5_percent_verified": true,
+    "release_full_100_percent_verified": true
   }
 }
