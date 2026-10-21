@@ -1,6 +1,6 @@
-const CACHE="alexlab-magnetra-v5";
-const ASSETS=["/","/index.html","/styles.css","/app.js","/icon.svg","/manifest.webmanifest"];
-const FRESH_ASSETS=new Set(["/app.js","/styles.css","/manifest.webmanifest"]);
+const CACHE="alexlab-magnetra-v6";
+const ASSETS=["/","/index.html","/styles.css","/app.js","/i18n.js","/icon.svg","/manifest.webmanifest"];
+const FRESH_ASSETS=new Set(["/app.js","/i18n.js","/styles.css","/manifest.webmanifest"]);
 self.addEventListener("install",event=>
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))
 );
