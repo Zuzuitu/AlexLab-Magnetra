@@ -1,5 +1,16 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 2026-10-21 — 27-PICKER INITIAL FULL RELEASE STOPPED; VERIFIED ROLLBACK; BOUNDED RESUME READY
+
+Initial launch [run #39610721257](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39610721257) FAILED on unversioned HTML postflight immediately after 100% promotion, **not** at source code build, JS, CSS or catalog. New immutable version **`6dadc612-9660-4195-aeed-cdb658b22cf8`** uploaded with all 3 correct bindings. At 0% and 5%, reviewed JS `85969467f08d21ee`, CSS `1c7080d499b00207`, HTML source `717d75204dafdc9e` (Cloudflare beacon allowed), provider catalog 46, all PASS. Immediately after 100% JS/CSS PASS then HTML NOT VERIFIED. Safe rollback output `ROLLBACK_POSTFLIGHT_PASS` verified **actual target `9bbb227f…@100% / 6dadc612…@0%`** in guard code; inherited print text `c86c100` was stale/wrong and has been corrected in source. Do NOT claim new 27-picker live while rollback remains.
+
+Prepared **version-only resume** (no new upload) `scripts/resume_magnetra_hide_anime_mikan.py`; if owner-action workflow finds exactly `9bbb@100/6dad@0`, verify both 3 binding types and candidate JS/CSS/HTML+46 provider catalog via immutable override GET, move to 5% and then 100%. For final public `/index.html`-equivalent root HTML, allow bounded wait **only for valid HTTP 200 HTML SHA/beacon mismatch**, checking no concurrent Cloudflare deployment and sleeping 8s, up to 5 waits. Other failures, 429/504, network errors NEVER retried. A failed known-state canary/full resumes safe rollback to 9bbb@100/6dad@0; unknown split aborts without destructive writes. Guard workflow `.github/workflows/magnetra-resume-anime-mikan-one-shot.yml` triggers only after future explicit unique approval marker `[magnetra-resume-anime-mikan-20261021]` and file `docs/release-events/resume-anime-mikan-20261021.md` on main. No Rock64, Tunnel, Flud, DNS, providers or secret mutation.
+
+**Status:** initial first release FAILED + rollback PASS; resume PR pending, not executed; iPhone visual acceptance pending. Never repeatedly rerun old upload job.
+
+---
+
+
 ## 2026-10-21 — PREPARED SAFE DEPLOY FOR 27-VISIBLE CURATED INDEXERS (pending)
 
 The owner requested hiding AnimeTosho and Mikan as well as the earlier 17 problematic sources, bringing the PWA to 27 visible / 19 hidden, all original 46 Worker adapter IDs retained. The PWA errors banner filters hidden sources, but continues showing real failures from still-selectable providers.
