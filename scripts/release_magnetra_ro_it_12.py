@@ -52,7 +52,7 @@ def guard_source():
         or not {"bangumimoe", "ytsmx", "fitgirlrepacks", "mikanproject"}.issubset(picker["hidden_ids"])
         or picker["priority_visible_ids"][:3] != ["btdigg", "torrent9", "oxtorrent"]
         or locale["default_language"] != "ro" or locale["ui_languages"] != ["ro", "it"]
-        or '"lang="ro"' not in html or 'id="languageSelect"' not in html
+        or 'lang="ro"' not in html or 'id="languageSelect"' not in html
         or 'src="/i18n.js"' not in html
         or 'const hiddenIndexerIds=new Set([' not in app
         or 'const visibleFailures=failures.filter(f=>!hiddenIndexerIds.has(f.provider))' not in app
