@@ -1,5 +1,18 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 21 OCTOMBRIE 2026 — CURATED PICKER PUBLICAT: CLOUDflare 100% PASS
+
+**Release efectiv executat:** [GitHub Actions #39605883294](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39605883294), `SUCCESS`, din `main` commit `6a832487dc75cc8694f324dfbb24a9764e503369`. Versiunea nouă Cloudflare `9bbb227f-7f2a-4a9b-acac-ce8cae620c51` la **100%**, versiunea anterioară stabilă `c86c9a32-31fd-4952-86ed-b35f1763b342` la **0% (rollback disponibil)**. Nu mai presupune că c86c@100% este live: aceea e stare istorică. Versiunea 136c a rămas disponibilă în istoricul Cloudflare, nu în actualul split.
+
+**Verificare efectivă prin API și origin:** preflight live c86c100/136c0 și hash public `9998e0130b19ece9` PASS; new version uploaded cu `--keep-vars` și trei bindinguri autentificate nume/tip PASS; 0% stage, 5% canary, 100% full PASS; hash public/override `/app.js` `0945914b2f7bf266`, CSS `1c7080d499b00207`, HTML sursă `9658b96cf24f27f2` cu doar beacon Cloudflare permis PASS; original `/api/providers` încă **46 identități** PASS. Nu s-au făcut interogări torrent, schimbări secrete, Rock64, DNS, Tunnel, Flud sau costuri noi.
+
+**Comportament PWA publicat:** 17 indexere expres numite de proprietar ascunse și ne-selectabile în interfață; 29 vizibile; BTDigg, Torrent9, OxTorrent primele, BTDigg selectat implicit alături de fallback-urile existente pentru instalările noi; selecțiile salvate pe iPhone care conțineau indexere ascunse se filtrează la load. Toate 46 adaptoare Worker/Android intacte. Torrentz este doar ascuns, nu șters. **Acceptarea vizuală pe iPhone a pickerului nou încă nu e confirmată**; solicită o captură cu `Indexers` și `29` vizibile, nu revendica asta ca test de iPhone realizat.
+
+**În continuare:** test iPhone doar Indexers/default și funcționare căutare obișnuită; Flud Companion manual E2E separat, fără auto-download. BTDigg poate rămâne intermitent deși E2E pozitiv pe iPhone a fost raportat explicit de proprietar înainte de acest rollout.
+
+---
+
+
 ## 21 OCTOMBRIE 2026 — PUBLICARE CURATED PICKER AUTORIZATĂ; GATE 0% → 5% → 100% (ÎN PREGĂTIRE)
 
 Utilizatorul a autorizat explicit publicarea pe `index.alexlab.media` a selectorului din PR #109 (17 ascunse, 29 vizibile, BTDigg implicit primul, Torrent9 și OxTorrent prioritare; 46 ID-uri originale păstrate în API). A fost pregătit un **workflow nou, unic, activat exclusiv prin commit-ul marker `[magnetra-curated-publish-20261021]` pe fișierul `docs/release-events/curated-picker-20261021.md`**; merge-ul PR-ului de infrastructură nu publică nimic.
