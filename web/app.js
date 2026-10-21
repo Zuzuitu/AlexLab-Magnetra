@@ -241,7 +241,7 @@ async function ensureMagnet(item){
  return item.magnet;
 }
 async function verifyCompanionReceipt(commandId) {
- if(!commandId||!state.pairing)return "Queued ✓";
+ if(!commandId||!state.pairing)return tr("Queued ✓");
  // Relay acceptance, Shield acknowledgement, and torrent download are distinct states.
  for(let attempt=0;attempt<4;attempt++){
   await new Promise(resolve=>setTimeout(resolve,2000));
@@ -250,29 +250,29 @@ async function verifyCompanionReceipt(commandId) {
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(state.pairing)
    });
    if(data.lastResult?.id===commandId){
-    if(data.lastResult.ok){toast("Shield acknowledged the magnet command.");return "Shield ✓";}
-    toast("Shield rejected magnet: "+(data.lastResult.message||"Unknown error"));
-    return "Retry send";
+    if(data.lastResult.ok){toast(tr("Shield acknowledged the magnet command."));return tr("Shield ✓");}
+    toast(tr("Shield rejected magnet: {reason}",{reason:tr("Unknown error")}));
+    return tr("Retry send");
    }
-  }catch{return "Queued ✓";}
+  }catch{return tr("Queued ✓");}
  }
- toast("Queued; waiting for Shield confirmation.");
- return "Queued ✓";
+ toast(tr("Queued; waiting for Shield confirmation."));
+ return tr("Queued ✓");
 }
 async function sendMagnet(item,button){
- if(!state.pairing?.deviceId||!state.pairing?.token){openDialog("settingsDialog");toast("Pair Flud Companion first.");return;}
+ if(!state.pairing?.deviceId||!state.pairing?.token){openDialog("settingsDialog");toast(tr("Pair Flud Companion first."));return;}
  const itemKey=item.id||item.magnet;
- if(activeCompanionItems.has(itemKey)){toast("This magnet is already being sent.");return;}
+ if(activeCompanionItems.has(itemKey)){toast(tr("This magnet is already being sent."));return;}
  const original=button.textContent;
  let activeKey=null;
  activeCompanionItems.add(itemKey);
- if(item.id)companionLabels.set(itemKey,"Sending…");
- button.disabled=true;button.textContent="Sending…";
+ if(item.id)companionLabels.set(itemKey,tr("Sending…"));
+ button.disabled=true;button.textContent=tr("Sending…");
  try{
    const magnet=await ensureMagnet(item);
    const key=magnetIdentity(magnet,state.pairing.deviceId);
    if(activeCompanionMagnets.has(key)){
-     toast("This magnet is already being sent.");return;
+     toast(tr("This magnet is already being sent."));return;
    }
    activeCompanionMagnets.add(key);activeKey=key;
    const previous=recentCompanionCommands.get(key);
@@ -283,17 +283,17 @@ async function sendMagnet(item,button){
    const result=await api("/api/companion/magnet",{
      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)
    });
-   if(!result.ok||result.queued!==true)throw Error("Relay did not confirm a queued command.");
-   if(typeof result.id!=="string"||!result.id)throw Error("Relay returned no command receipt ID.");
-   toast(result.duplicate?"Already queued in Companion.":"Magnet queued; awaiting Shield acknowledgement.");
-   button.textContent="Queued ✓";
-   if(item.id)companionLabels.set(itemKey,"Queued ✓");
+   if(!result.ok||result.queued!==true)throw Error(tr("Relay did not confirm a queued command."));
+   if(typeof result.id!=="string"||!result.id)throw Error(tr("Relay returned no command receipt ID."));
+   toast(tr(result.duplicate?"Already queued in Companion.":"Magnet queued; awaiting Shield acknowledgement."));
+   button.textContent=tr("Queued ✓");
+   if(item.id)companionLabels.set(itemKey,tr("Queued ✓"));
    const label=await verifyCompanionReceipt(result.id);
    button.textContent=label;
    if(item.id)companionLabels.set(itemKey,label);
  }catch(e){
-   toast(e.message);button.title=e.message;
-   if(item.id)companionLabels.set(itemKey,"Retry send");
+   toast(genericError(e));button.title=genericError(e);
+   if(item.id)companionLabels.set(itemKey,tr("Retry send"));
  }finally{
    if(activeKey)activeCompanionMagnets.delete(activeKey);
    activeCompanionItems.delete(itemKey);
@@ -305,13 +305,13 @@ async function sendMagnet(item,button){
 function renderResults(){
  const root=$("results");root.replaceChildren();
  const items=state.bookmarksMode?Object.values(state.bookmarks):state.items;
- const sorted=sortItems(items);$("resultCount").textContent=sorted.length+(state.bookmarksMode?" SAVED":" MATCHES");
- $("resultsTitle").textContent=state.bookmarksMode?"Saved bookmarks":"Search results";
+ const sorted=sortItems(items);$("resultCount").textContent=tr(state.bookmarksMode?"{n} SAVED":"{n} MATCHES",{n:sorted.length});
+ $("resultsTitle").textContent=tr(state.bookmarksMode?"Saved bookmarks":"Search results");
  $("searchQuality").textContent=state.bookmarksMode?"":state.excludedOffTopic?
-  state.excludedOffTopic+" unrelated source results excluded from this search. Only title-matching entries are shown.":"";
+  tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}):"";
  if(!sorted.length){
-   if(state.bookmarksMode)$("notice").textContent="No bookmarks saved yet.";
-   else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent="No matching titles. Try another title, fewer keywords or different indexers.";
+   if(state.bookmarksMode)$("notice").textContent=tr("No bookmarks saved yet.");
+   else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent=tr("No matching titles. Try another title, fewer keywords or different indexers.");
    return;
  }
  $("notice").textContent="";
@@ -319,15 +319,15 @@ function renderResults(){
    const card=el("article","result");
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
    info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
-   for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?item.seeders+" seeders":null,item.peers!==null&&item.peers!==undefined?item.peers+" peers":null,item.date?String(item.date).slice(0,10):null]){
+   for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?tr("{n} seeders",{n:item.seeders}):null,item.peers!==null&&item.peers!==undefined?tr("{n} peers",{n:item.peers}):null,item.date?String(item.date).slice(0,10):null]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));
    }
    body.append(title,info);
    const actions=el("div","result-actions");
-   const sendButton=addAction(actions,companionLabels.get(item.id)||"Send to Flud",function(){sendMagnet(item,this)},"send");
+   const sendButton=addAction(actions,companionLabels.get(item.id)||tr("Send to Flud"),function(){sendMagnet(item,this)},"send");
    sendButton.disabled=activeCompanionItems.has(item.id);
-   addAction(actions,"Copy",async()=>{try{await copyMagnet(await ensureMagnet(item));}catch(e){toast(e.message);}});
-   addAction(actions,"Share",async()=>{
+   addAction(actions,tr("Copy"),async()=>{try{await copyMagnet(await ensureMagnet(item));}catch(e){toast(e.message);}});
+   addAction(actions,tr("Share"),async()=>{
      try{
        const magnet=await ensureMagnet(item);
        if(navigator.share){
@@ -337,16 +337,16 @@ function renderResults(){
      }catch(e){toast(e.message);}
    });
    if(item.magnet){
-     const magnet=el("a","action","Magnet");magnet.href=item.magnet;magnet.rel="noopener noreferrer";magnet.title="Open in your installed torrent client";actions.append(magnet);
+     const magnet=el("a","action","Magnet");magnet.href=item.magnet;magnet.rel="noopener noreferrer";magnet.title=tr("Open in your installed torrent client");actions.append(magnet);
    }else{
-     addAction(actions,"Resolve",async function(){
-       const old=this.textContent;this.disabled=true;this.textContent="Resolving…";
-       try{await ensureMagnet(item);toast("Magnet resolved.");renderResults();}
-       catch(e){toast(e.message);this.textContent=old;this.disabled=false;}
+     addAction(actions,tr("Resolve"),async function(){
+       const old=this.textContent;this.disabled=true;this.textContent=tr("Resolving…");
+       try{await ensureMagnet(item);toast(tr("Magnet resolved."));renderResults();}
+       catch(e){toast(genericError(e));this.textContent=old;this.disabled=false;}
      });
    }
    if(item.torrentFile)downloadAction(actions,".torrent ↗",item.torrentFile);
-   if(item.details)downloadAction(actions,"Details ↗",item.details);
+   if(item.details)downloadAction(actions,tr("Details ↗"),item.details);
    const saved=Boolean(state.bookmarks[item.id]);
    addAction(actions,saved?"★":"☆",()=>{
      if(state.bookmarks[item.id])delete state.bookmarks[item.id];else state.bookmarks[item.id]=item;
@@ -536,7 +536,7 @@ function init(){
  $("settingsButton").addEventListener("click",()=>openDialog("settingsDialog"));
  $("companionChip").addEventListener("click",()=>openDialog("settingsDialog"));
  $("pasteMagnetButton").addEventListener("click",async function(){
-  if(!state.pairing){openDialog("settingsDialog");toast("Pair Flud Companion first.");return;}
+  if(!state.pairing){openDialog("settingsDialog");toast(tr("Pair Flud Companion first."));return;}
   try{
     const copied=(await navigator.clipboard.readText()).trim();
     if(copied.startsWith("magnet:?") && copied.length<=12000){
