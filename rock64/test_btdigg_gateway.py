@@ -153,26 +153,159 @@ class GatewayTests(unittest.TestCase):
         self.assertFalse(empty._cache, "empty or challenge-like HTML cannot be cached")
 
 
-    def test_upstream_diagnostics_are_sanitized_and_classified(self):
-        class FailingOpener:
-            def open(self, request, timeout):
-                raise URLError(socket.gaierror(-2, "sensitive DNS detail"))
+    @staticmethod
+    def _simulated_connection(status=200, body=b'<div class="one_result">ok</div>',
+                              tcp_error=None, tls_error=None, header_error=None):
+        """All tests remain offline; no real source/DNS/network use."""
+        actions = []
+        class Socket:
+            def __enter__(self): return self
+            def __exit__(self, *_): self.close()
+            def close(self): actions.append(("close",))
+            def settimeout(self, seconds):
+                actions.append(("timeout", round(seconds, 3)))
+            def connect(self, address):
+                actions.append(("tcp_connect", address))
+                if tcp_error: raise tcp_error
+        sock = Socket()
+        class Context:
+            def set_alpn_protocols(self, values):
+                actions.append(("alpn", tuple(values)))
+            def wrap_socket(self, raw, server_hostname):
+                actions.append(("tls", server_hostname))
+                assert raw is sock
+                if tls_error: raise tls_error
+                return sock
+        class Reply:
+            def __init__(self):
+                self.status = status
+                self.headers = {"content-type": "text/html"}
+            def read(self, length):
+                actions.append(("read", length))
+                return body
+        class Connection:
+            sock = None
+            def request(self, method, path, headers):
+                actions.append(("request", method, path, dict(headers)))
+            def getresponse(self):
+                actions.append(("headers",))
+                if header_error: raise header_error
+                return Reply()
+            def close(self): actions.append(("http_close",))
+        patches = [
+            patch.object(gateway.socket, "getaddrinfo",
+                return_value=[
+                    (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP,
+                     "", ("192.0.2.15", 443)),
+                    (socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP,
+                     "", ("2001:db8::5", 443, 0, 0))]),
+            patch.object(gateway.socket, "socket", return_value=sock),
+            patch.object(gateway.ssl, "create_default_context", return_value=Context()),
+            patch.object(gateway.http.client, "HTTPConnection", return_value=Connection()),
+        ]
+        return patches, actions
 
+    def _one_upstream(self, query="ubuntu", **kwargs):
+        patches, actions = self._simulated_connection(**kwargs)
         output = io.StringIO()
-        with patch.object(gateway, "build_opener", return_value=FailingOpener()):
+        with patches[0], patches[1], patches[2], patches[3]:
             with redirect_stdout(output):
+                status, body = gateway.SearchProvider.fetch(query)
+        return status, body, actions, json.loads(output.getvalue())
+
+    def test_single_ipv4_tls_verified_http_request_bounded_and_private(self):
+        status, body, events, record = self._one_upstream(
+            "private search phrase")
+        self.assertEqual((status, body),
+                         (200, b'<div class="one_result">ok</div>'))
+        tcp = [x for x in events if x[0] == "tcp_connect"]
+        self.assertEqual(tcp, [("tcp_connect", ("192.0.2.15", 443))],
+                         "one TCP connection only, IPv4 only, no IP hopping")
+        self.assertIn(("tls", "btdig.com"), events, "SNI/hostname must stay fixed")
+        self.assertIn(("alpn", ("http/1.1",)), events)
+        requests = [x for x in events if x[0] == "request"]
+        self.assertEqual(len(requests), 1, "never retry upstream search")
+        self.assertEqual(requests[0][:2], ("request", "GET"))
+        self.assertEqual(requests[0][2], "/search?q=private%20search%20phrase")
+        self.assertEqual(requests[0][3]["Accept-Encoding"], "identity")
+        self.assertIn(("read", gateway.SIZE_LIMIT + 1), events)
+        self.assertTrue(all(0 < x[1] <= gateway.TIMEOUT_SECONDS
+                            for x in events if x[0] == "timeout"))
+        self.assertEqual(record["family"], "IPv4")
+        self.assertEqual(record["failure"], "none")
+        self.assertIsInstance(record["dns_ms"], int)
+        self.assertIsInstance(record["tcp_ms"], int)
+        self.assertIsInstance(record["tls_ms"], int)
+        self.assertIsInstance(record["open_ms"], int)
+        serialized = json.dumps(record)
+        for secret in ("private search phrase", "192.0.2.15",
+                       "btdig.com", "2001:db8::5", "magnet"):
+            self.assertNotIn(secret, serialized)
+
+    def test_dns_failure_remains_sanitized_and_never_connects(self):
+        actions = []
+        out = io.StringIO()
+        with patch.object(gateway.socket, "getaddrinfo",
+                          side_effect=socket.gaierror(-2, "sensitive DNS detail")), \\
+             patch.object(gateway.socket, "socket",
+                          side_effect=lambda *a: actions.append(a)):
+            with redirect_stdout(out):
                 status, body = gateway.SearchProvider.fetch("private search phrase")
         self.assertEqual((status, body), (504, b""))
-        log = output.getvalue()
-        self.assertNotIn("private search phrase", log)
-        self.assertNotIn("sensitive DNS detail", log)
-        self.assertNotIn("btdig.com/search", log)
-        record = json.loads(log)
-        self.assertEqual(record["event"], "btdigg_upstream_timing")
+        record = json.loads(out.getvalue())
         self.assertEqual(record["failure"], "dns")
         self.assertIsNone(record["open_ms"])
         self.assertIsNone(record["read_ms"])
-        self.assertGreaterEqual(record["total_ms"], 0)
+        self.assertEqual(actions, [])
+        self.assertNotIn("private search phrase", out.getvalue())
+        self.assertNotIn("sensitive DNS detail", out.getvalue())
+
+    def test_tcp_timeout_stops_before_tls_and_http(self):
+        status, body, events, rec = self._one_upstream(
+            tcp_error=socket.timeout("TCP secret address error"))
+        self.assertEqual((status, body), (504, b""))
+        self.assertEqual(rec["failure"], "tcp_timeout")
+        self.assertFalse(any(x[0] in ("tls", "request", "headers") for x in events))
+        self.assertIsNone(rec["open_ms"])
+
+    def test_tls_verification_failure_stops_before_http(self):
+        status, body, events, rec = self._one_upstream(
+            tls_error=gateway.ssl.SSLCertVerificationError(
+                "invalid CA; sensitive details"))
+        self.assertEqual((status, body), (504, b""))
+        self.assertEqual(rec["failure"], "tls")
+        self.assertFalse(any(x[0] == "request" for x in events))
+        self.assertIsNone(rec["open_ms"])
+
+    def test_response_header_timeout_is_bounded_and_classified(self):
+        status, body, events, rec = self._one_upstream(
+            header_error=socket.timeout("no response headers"))
+        self.assertEqual((status, body), (504, b""))
+        self.assertEqual(rec["failure"], "headers_timeout")
+        self.assertEqual(sum(x[0] == "request" for x in events), 1)
+        self.assertIsNone(rec["open_ms"])
+
+    def test_http_429_and_redirect_are_never_followed_or_hidden(self):
+        for source_status, expected in ((429,429), (302,503), (403,503)):
+            with self.subTest(status=source_status):
+                code, body, events, rec = self._one_upstream(
+                    status=source_status)
+                self.assertEqual((code, body), (expected, b""))
+                self.assertEqual(sum(x[0] == "request" for x in events), 1)
+                self.assertEqual(sum(x[0] == "read" for x in events), 0)
+                self.assertEqual(rec["failure"],
+                                 "http_429" if source_status == 429
+                                 else "http_upstream")
+
+    def test_challenge_and_oversized_html_never_enter_success_cache(self):
+        for body, expected in (
+            (b"<html>Just a moment</html>", 503),
+            (b"x" * (gateway.SIZE_LIMIT + 1), 502),
+        ):
+            with self.subTest(length=len(body)):
+                status, content, events, record = self._one_upstream(body=body)
+                self.assertEqual((status, content), (expected, b""))
+                self.assertNotEqual(record["failure"], "none")
 
     def test_real_fetch_url_is_fixed(self):
         # A static contract check: arbitrary URLs cannot be influenced by request.
