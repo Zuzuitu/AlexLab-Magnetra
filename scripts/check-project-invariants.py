@@ -665,7 +665,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
                        "46", "PR #105",
                        "9c3930f406078ee744e0473b2093ded9b91cead7",
                        "c86c9a32-31fd-4952-86ed-b35f1763b342",
-                       "ROCK64 NU ESTE CONFIRMATĂ",
+                       "Instalat pe Rock64: NECONFIRMAT",
                        "rock64/update-btdigg.sh",
                        "9c3930f406078ee744e0473b2093ded9b91cead7"):
             if marker not in prompt_text:
@@ -1338,7 +1338,7 @@ def check_btdigg_residential_gateway(config: dict) -> None:
     prompt = ROOT / "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md"
     if prompt.is_file():
         content = prompt.read_text(encoding="utf8")
-        for marker in ("ROCK64 NU ESTE CONFIRMATĂ", "patch_rock64",
+        for marker in ("Instalat pe Rock64: NECONFIRMAT",
                        "PR #105", "9c3930f406078ee744e0473b2093ded9b91cead7"):
             if marker not in content:
                 fail("BTDigg physical-install handoff loses explicit unverified state: " + marker)
