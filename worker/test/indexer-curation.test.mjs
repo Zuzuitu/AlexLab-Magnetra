@@ -11,7 +11,9 @@ const excluded=[
  "anirena","bt4g","bitsearch","extdotto","eztvx","filemood",
  "limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase",
  "torrentdownloadinfo","torrentdownloads","torrentkitty","uindex",
- "xxxclub","torrentz","animetosho","mikanproject"
+ "xxxclub","torrentz","animetosho","mikanproject",
+ "bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx",
+ "anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks"
 ];
 function runPicker(saved){
  const storage=new Map(Object.entries(saved||{}).map(([key,value])=>[key,JSON.stringify(value)]));
@@ -41,31 +43,31 @@ function runPicker(saved){
  ui.chooseProviders();
  return {ui,elements,storage};
 }
-test("catalog keeps all 46 real adapter IDs; exactly 19 owner-named indexers hidden",()=>{
+test("catalog keeps all 46 real adapter IDs; exactly 34 owner-named indexers hidden",()=>{
  assert.equal(PROVIDERS.length,46);
  const {ui,elements}=runPicker();
  assert.deepEqual([...ui.hiddenIndexerIds].sort(),excluded.slice().sort());
- assert.equal(ui.selectableProviders().length,27);
+ assert.equal(ui.selectableProviders().length,12);
  ui.renderProviders();
  const rows=elements.get("providerGrid").children;
  const ids=rows.map(row=>row.children[0].children[0].value);
- assert.equal(ids.length,27);
+ assert.equal(ids.length,12);
  for(const id of excluded)assert.ok(!ids.includes(id),id+" must not be selectable");
  assert.deepEqual(ids.slice(0,3),["btdigg","torrent9","oxtorrent"]);
  assert.ok(!ui.priorityIndexerIds.includes("eztvx"));
- assert.match(elements.get("catalogSummary").textContent,/27 selectable indexers/);
- assert.equal(elements.get("providerCount").textContent,"5/27");
+ assert.match(elements.get("catalogSummary").textContent,/12 sources available/);
+ assert.equal(elements.get("providerCount").textContent,"5/12");
 });
 test("hidden IDs in iPhone localStorage are scrubbed, visible custom choices retained",()=>{
- const before=["btdigg","torrent9","anirena","eztvx","torrentz","torrentdownloadinfo","animetosho","mikanproject"];
+ const before=["btdigg","torrent9","anirena","eztvx","torrentz","torrentdownloadinfo","animetosho","mikanproject","fitgirlrepacks","ytsmx","bangumimoe","megapeer"];
  const {ui,storage,elements}=runPicker({
   "magnetra.providers.v1":before,
-  "magnetra.paused-indexers.v1":["bt4g","nyaasi","knaben","mikanproject"]
+  "magnetra.paused-indexers.v1":["bt4g","nyaasi","knaben","mikanproject","fitgirlrepacks"]
  });
  assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
  assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
  assert.deepEqual([...ui.state.pausedIds],["knaben"]);
- assert.equal(elements.get("providerCount").textContent,"2/27");
+ assert.equal(elements.get("providerCount").textContent,"2/12");
  assert.doesNotMatch(elements.get("sourceHealthSummary").textContent,/3 failed/);
 });
 test("old all-hidden saved selection falls back to BTDigg plus usable defaults",()=>{
@@ -79,7 +81,7 @@ test("bulk actions, fallback and UI copy only reference selectable indexers",()=
  assert.match(app,/const live=orderedProviders\(selectableProviders\(\)\)/);
  assert.match(html,/id="selectAllProviders">Select all available/);
  assert.doesNotMatch(html,/Select all 46/);
- assert.match(html,/19 repeatedly failing sources are hidden/);
+ assert.match(html,/Sources that return errors are unchecked/);
 });
 
 test("unavailable panel excludes AnimeTosho and Mikan and disappears if only they failed",()=>{
@@ -98,8 +100,20 @@ test("unavailable panel excludes AnimeTosho and Mikan and disappears if only the
  const parent=elements.get("providerErrors");
  assert.equal(parent.children.length,1);
  const details=parent.children[0];
- assert.match(details.children[0].textContent,/1 indexer unavailable/);
+ assert.match(details.children[0].textContent,/1 source\(s\) unavailable/);
  const text=JSON.stringify(details);
- assert.doesNotMatch(text,/AnimeTosho|Mikan|animetosho|mikanproject/);
+ assert.doesNotMatch(text,/AnimeTosho|Mikan|animetosho|mikanproject|FitGirl|YTS|ytsmx|fitgirlrepacks/);
  assert.match(text,/BTDigg/);
+});
+
+test("all owner removed sources stay out of the 12-picker even with stale phone preferences",()=>{
+ const {ui,elements,storage}=runPicker({"magnetra.providers.v1":["btdigg","bangumimoe","ytsmx","fitgirlrepacks","torrent9"]});
+ assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
+ assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
+ ui.renderProviders();
+ const rows=elements.get("providerGrid").children;
+ assert.equal(rows.length,12);
+ assert.deepEqual(rows.slice(0,3).map(row=>row.children[0].children[0].value),["btdigg","torrent9","oxtorrent"]);
+ for(const id of excluded)assert.equal(rows.some(row=>row.children[0].children[0].value===id),false);
+ assert.doesNotMatch(app,/RESULTS THIS SESSION|RESULTS IN AUDIT|0 THIS SESSION|PORT PENDING|Diagnostic: /);
 });
