@@ -1666,3 +1666,15 @@ Display first: **BTDigg → Torrent9 → OxTorrent → Knaben → TorrentsCSV �
 
 ---
 
+
+
+## 21 OCTOMBRIE 2026 — PUBLICARE CURATED PICKER AUTORIZATĂ; GATE 0% → 5% → 100% (ÎN PREGĂTIRE)
+
+Utilizatorul a autorizat explicit publicarea pe `index.alexlab.media` a selectorului din PR #109 (17 ascunse, 29 vizibile, BTDigg implicit primul, Torrent9 și OxTorrent prioritare; 46 ID-uri originale păstrate în API). A fost pregătit un **workflow nou, unic, activat exclusiv prin commit-ul marker `[magnetra-curated-publish-20261021]` pe fișierul `docs/release-events/curated-picker-20261021.md`**; merge-ul PR-ului de infrastructură nu publică nimic.
+
+Safety: preflight versiuni c86c@100/136c@0 (doar ultima stare confirmată istoric), hash SHA256 JS live verificat `9998e0130b19ece9`, trei bindinguri nume/tip pentru versiunile vechi/noi, protecție nume/route/assets, upload versiune numai cu `--keep-vars` și verificare exactă la 0% a JS/CSS/HTML Cloudflare beacon și catalog 46; canary 5%, apoi 100% numai dacă toate gates trec. Versiunea c86c rămâne rollback la 0%; rollback automat permis numai din procentaj cunoscut 95/5 sau 0/100, cu verificare. Nu se fac căutări torrent în release, nu se modifică Rock64, tunel, DNS, tokenuri sau Flud.
+
+**Status: publicarea NU este încă dovedită.** Actualizează numai după workflow PASS și controlul live. Un rezultat STOP poate lăsa 0%-slot sau produce rollback; nu declara site-ul actualizat fără dovadă.
+
+---
+
