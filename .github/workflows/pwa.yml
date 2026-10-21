@@ -34,6 +34,8 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_auto_pause_release.py'
       - name: Offline existing zero-share resume and Cloudflare HTML beacon safety gates
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_auto_pause_resume.py'
+      - name: Offline owner-approved curated PWA immutable release and rollback gates
+        run: python3 -m unittest discover -s scripts -p 'test_magnetra_curated_ui_release.py' -v
       - name: Verify offline 46-provider recovery strategy report
         run: node scripts/recovery-plan.mjs --summary
       - name: Test Rock64 BTDigg gateway (loopback only, no external requests)
