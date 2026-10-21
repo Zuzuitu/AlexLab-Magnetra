@@ -362,12 +362,12 @@ function renderProviderErrors(failures){
  if(!visibleFailures.length)return;
  const details=el("details","failed-sources");
  if(visibleFailures.length<=2)details.open=true;
- const summary=el("summary","failed-sources-title",visibleFailures.length+" indexer"+(visibleFailures.length===1?"":"s")+" unavailable · See alternatives");
+ const summary=el("summary","failed-sources-title",tr("{n} source(s) unavailable · See alternatives",{n:visibleFailures.length}));
  details.append(summary);
  const onlyBTDigg=visibleFailures.every(f=>f.provider==="btdigg");
- const message=el("p","failed-sources-note",onlyBTDigg
+ const message=el("p","failed-sources-note",tr(onlyBTDigg
   ?"BTDigg searches run from Rock64 at home, not from your phone. A temporary upstream limit, timeout or tunnel issue does not mean this indexer is permanently offline."
-  :"Some external sites restrict searches from Cloudflare. Magnetra cannot bypass their verification. You can open a source directly or search independently through other indexers.");
+  :"Some external sites restrict searches from Cloudflare. Magnetra cannot bypass their verification. You can open a source directly or search independently through other indexers."));
  details.append(message);
  for(const failure of visibleFailures){
   const entry=el("div","source-failure");
@@ -375,40 +375,36 @@ function renderProviderErrors(failures){
   const provider=state.providers.find(p=>p.id===failure.provider);
   line.append(el("strong","",provider?.name||failure.provider));
   const message=failure.provider==="btdigg"&&failure.code==="RATE_LIMIT"
-   ?"BTDigg is limiting requests. Wait a few seconds before another search."
-   :failure.message||failure.error||"Provider unavailable";
+   ?tr("BTDigg is limiting requests. Wait a few seconds before another search.")
+   :genericError(failure);
   const why=el("span","",message);
-  if(failure.error)why.title=failure.error;
   line.append(why);
-  // Expose safe categorical diagnostics on iPhone, without URL/token details.
-  if(failure.provider==="btdigg"&&/^BTDIGG_(?:SOURCE_TIMEOUT|TUNNEL_TIMEOUT|TUNNEL_ERROR|TUNNEL_1042)$/.test(failure.code||""))
-   line.append(el("small","diagnostic-code","Diagnostic: "+failure.code));
   entry.append(line);
   const link=failure.provider==="btdigg"?null:(failure.openUrl || provider?.url);
   if(/^https:\/\//.test(link||"")){
-   const a=el("a","source-open",failure.openUrl?"Open source search ↗":"Visit source ↗");
+   const a=el("a","source-open",tr(failure.openUrl?"Open source search ↗":"Visit source ↗"));
    a.href=link;a.target="_blank";a.rel="noopener noreferrer";
    entry.append(a);
   }
   details.append(entry);
  }
- const alternatives=el("button","source-alt","Search with available indexers →");
+ const alternatives=el("button","source-alt",tr("Search with available indexers →"));
  alternatives.type="button";
  alternatives.addEventListener("click",()=>{
   // Use successful observations from THIS session, not obsolete dated audit
   // or hardcoded providers that may currently be blocked.
   const live=orderedProviders(selectableProviders()).filter(p=>p.ported&&
    ["results","empty-unverified"].includes(state.sessionAudit[p.id]?.state)).map(p=>p.id);
-  const ids=live.length?live:["knaben","torrentscsv","ytsmx"].filter(id=>
+  const ids=live.length?live:["knaben","torrentscsv","thepiratebay"].filter(id=>
    selectableProviders().some(p=>p.id===id));
-  if(!ids.length){toast("No alternative indexers are available.");return;}
+  if(!ids.length){toast(tr("No alternative indexers are available."));return;}
   state.selected=new Set(ids);
   unpauseSources(ids);
   save(STORAGE.selected,ids);updateProviderCount();renderProviders();
   if(state.searching){
     state.pendingAlternativeSearch=true;
     state.searchAbort?.abort();
-    toast("Cancelling the current search and starting alternatives.");
+    toast(tr("Cancelling the current search and starting alternatives."));
   }else search();
  });
  details.append(alternatives);
@@ -417,17 +413,17 @@ function renderProviderErrors(failures){
 async function search(){
  if(state.searching){
   state.searchAbort?.abort();
-  $("notice").textContent="Cancelling search; keeping results already found…";
+  $("notice").textContent=tr("Cancelling search; keeping results already found…");
   return;
  }
  const query=$("query").value.trim();
- if(query.length<2){toast("Enter at least two characters");return;}
- if(!state.selected.size){openDialog("providersDialog");toast("Select at least one indexer.");return;}
+ if(query.length<2){toast(tr("Enter at least two characters"));return;}
+ if(!state.selected.size){openDialog("providersDialog");toast(tr("Select at least one indexer."));return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
  state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];state.excludedOffTopic=0;
- $("searchButton").disabled=false;$("searchButton").textContent="Cancel search ×";
- $("notice").textContent="Searching "+ids.length+" indexers…";$("providerErrors").replaceChildren();renderResults();
+ $("searchButton").disabled=false;$("searchButton").textContent=tr("Cancel search ×");
+ $("notice").textContent=tr("Searching {n} indexers…",{n:ids.length});$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
  try{
   // Sliding pool: a slow provider never blocks the next queued provider.
@@ -455,7 +451,7 @@ async function search(){
      const observed=(data.stats||[]).find(s=>s.provider===id);
      if(observed)state.sessionAudit[id]={
       state:observed.ok?(observed.count>0?"results":"empty-unverified"):"error",
-      count:observed.count||0,at:new Date().toLocaleString()
+      count:observed.count||0,at:new Date().toLocaleString(currentLanguage())
      };
      if(id==="btdigg"){
       // Only a real positive result is reused by Rock64's 20-minute cache.
@@ -471,35 +467,35 @@ async function search(){
        Math.max(btdiggPacing.nextAllowedAt,Date.now()+BTDIGG_MIN_GAP_MS);
       return;
      }
-     failures.push({provider:id,error:e.message,message:"Magnetra could not reach this provider through the API."});
-     state.sessionAudit[id]={state:"error",count:0,at:new Date().toLocaleString()};
+     failures.push({provider:id,error:e.message,message:tr("Magnetra could not reach this provider through the API.")});
+     state.sessionAudit[id]={state:"error",count:0,at:new Date().toLocaleString(currentLanguage())};
      if(id==="btdigg")btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
     }
     if(controller.signal.aborted)return;
     completed++;
     renderResults();
     renderProviders(); // Update session-only observations; no extra provider calls.
-    $("notice").textContent="Searched "+completed+"/"+ids.length+" indexers · "+state.items.length+" relevant matches.";
+    $("notice").textContent=tr("Searched {done}/{all} indexers · {n} relevant matches.",{done:completed,all:ids.length,n:state.items.length});
     renderProviderErrors(failures);
    }
   }));
   if(!controller.signal.aborted){
    const paused=pauseFailedSources(ids,failures);
-   if(!state.items.length)$("notice").textContent=failures.length?"No matching results; some indexers failed.":"No matching titles in selected indexers.";
+   if(!state.items.length)$("notice").textContent=tr(failures.length?"No matching results; some indexers failed.":"No matching titles in selected indexers.");
    else $("notice").textContent="";
-   if(paused)toast(paused+" failing indexer"+(paused===1?"":"s")+" paused for future searches.");
+   if(paused)toast(tr("{n} failing indexer(s) paused for future searches.",{n:paused}));
   }
  }finally{
   const cancelled=controller.signal.aborted;
   state.searchAbort=null;state.searching=false;
-  $("searchButton").disabled=false;$("searchButton").textContent="Search →";
+  $("searchButton").disabled=false;$("searchButton").textContent=tr("Search →");
   renderResults();
   if(state.pendingAlternativeSearch){
    state.pendingAlternativeSearch=false;
    search();
    return;
   }
-  if(cancelled)$("notice").textContent="Search cancelled. Results already found are preserved.";
+  if(cancelled)$("notice").textContent=tr("Search cancelled. Results already found are preserved.");
   else $("resultsTitle").scrollIntoView({block:"nearest",behavior:"smooth"});
  }
 }
