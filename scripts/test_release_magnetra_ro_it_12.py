@@ -101,8 +101,8 @@ class ReleaseGuards(unittest.TestCase):
             write.assert_not_called()
 
     def test_http_200_html_settle_only_after_exact_mismatch(self):
-        with patch.object(m,"verify_all_assets",side_effect=[m.Stop(m.HTML_200_MISMATCH),None]) as assets, \\
-             patch.object(m,"stable") as stable, \\
+        with patch.object(m,"verify_all_assets",side_effect=[m.Stop(m.HTML_200_MISMATCH),None]) as assets, \
+             patch.object(m,"stable") as stable, \
              patch.object(m.time,"sleep") as sleep:
             m.verify_public_with_html_settle(DEP100,FULL)
             self.assertEqual(assets.call_count,2)
@@ -111,8 +111,8 @@ class ReleaseGuards(unittest.TestCase):
 
     def test_transport_error_never_retries(self):
         for reason in ("HTML_ROOT_TRANSPORT_NO_RETRY","TRANSLATION_ASSET_TRANSPORT_NO_RETRY","ASSET_SHA_MISMATCH_/app.js"):
-            with self.subTest(reason=reason), \\
-                 patch.object(m,"verify_all_assets",side_effect=m.Stop(reason)) as assets, \\
+            with self.subTest(reason=reason), \
+                 patch.object(m,"verify_all_assets",side_effect=m.Stop(reason)) as assets, \
                  patch.object(m.time,"sleep") as sleep:
                 with self.assertRaises(m.Stop):
                     m.verify_public_with_html_settle(DEP100,FULL)
@@ -120,8 +120,8 @@ class ReleaseGuards(unittest.TestCase):
                 sleep.assert_not_called()
 
     def test_full_html_settle_has_five_waits_then_stops(self):
-        with patch.object(m,"verify_all_assets",side_effect=m.Stop(m.HTML_200_MISMATCH)) as assets, \\
-             patch.object(m,"stable") as stable, \\
+        with patch.object(m,"verify_all_assets",side_effect=m.Stop(m.HTML_200_MISMATCH)) as assets, \
+             patch.object(m,"stable") as stable, \
              patch.object(m.time,"sleep") as sleep:
             with self.assertRaises(m.Stop):
                 m.verify_public_with_html_settle(DEP100,FULL)
