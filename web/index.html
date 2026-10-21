@@ -7,12 +7,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Magnetra">
-<meta name="description" content="AlexLab Magnetra — torrent metasearch and Flud Companion handoff.">
+<meta name="description" content="AlexLab Magnetra — caută torrente și trimite magneturi în Flud Companion.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
 <link rel="stylesheet" href="/styles.css">
-<title>AlexLab Magnetra — Search. Magnet. Done.</title>
+<title>AlexLab Magnetra — Caută. Magnet. Gata.</title>
 <script src="/i18n.js"></script>
 <script src="/app.js" defer></script>
 </head>
@@ -21,58 +21,58 @@
 <header class="masthead">
   <div class="brand">
     <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 13v13a12 12 0 0 0 24 0V13" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M12 10h9m6 0h9M12 10v8m24-8v8" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div>
-    <div><div class="brand-eyebrow">ALEXLAB / SEARCH SYSTEM</div><div class="brand-title">Magnetra<span class="brand-period">.</span></div></div>
+    <div><div class="brand-eyebrow">ALEXLAB / CĂUTARE</div><div class="brand-title">Magnetra<span class="brand-period">.</span></div></div>
   </div>
-  <div class="header-actions"><label class="language-picker"><span class="sr-only">Language</span><select id="languageSelect" aria-label="Language"><option value="ro">RO</option><option value="it">IT</option></select></label><button class="icon-btn" id="settingsButton" aria-label="Configure Flud Companion" title="Flud Companion settings"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-2.76 2.76-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.1 1.57V21H10v-.03a1.7 1.7 0 0 0-1.1-1.57 1.7 1.7 0 0 0-1.88.34l-.06.06-2.76-2.76.06-.06a1.7 1.7 0 0 0 .34-1.88A1.7 1.7 0 0 0 3.03 14H3v-4h.03a1.7 1.7 0 0 0 1.57-1.1 1.7 1.7 0 0 0-.34-1.88L4.2 6.96 6.96 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.03V3h4v.03a1.7 1.7 0 0 0 1.1 1.57 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.76 2.76-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.97 10H21v4h-.03a1.7 1.7 0 0 0-1.57 1.1Z"/></svg></button></div>
+  <div class="header-actions"><label class="language-picker"><span class="sr-only">Limbă</span><select id="languageSelect" aria-label="Limbă"><option value="ro">RO</option><option value="it">IT</option></select></label><button class="icon-btn" id="settingsButton" aria-label="Configurează Flud Companion" title="Setări Flud Companion"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-2.76 2.76-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.1 1.57V21H10v-.03a1.7 1.7 0 0 0-1.1-1.57 1.7 1.7 0 0 0-1.88.34l-.06.06-2.76-2.76.06-.06a1.7 1.7 0 0 0 .34-1.88A1.7 1.7 0 0 0 3.03 14H3v-4h.03a1.7 1.7 0 0 0 1.57-1.1 1.7 1.7 0 0 0-.34-1.88L4.2 6.96 6.96 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.03V3h4v.03a1.7 1.7 0 0 0 1.1 1.57 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.76 2.76-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.97 10H21v4h-.03a1.7 1.7 0 0 0-1.57 1.1Z"/></svg></button></div>
 </header>
 <main>
   <div class="hero">
-    <div class="eyebrow"><span class="pulse"></span> METASEARCH ENGINE <span class="eyebrow-divider">/</span> ALEXLAB</div>
-    <h1>Find what you need.<br><em>Send it anywhere.</em></h1>
-    <p class="hero-copy">One search, multiple indexers. Discover magnet links and send them straight to your Flud Companion.</p>
+    <div class="eyebrow"><span class="pulse"></span> MOTOR DE CĂUTARE <span class="eyebrow-divider">/</span> ALEXLAB</div>
+    <h1>Găsește ce cauți.<br><em>Trimite oriunde.</em></h1>
+    <p class="hero-copy">O singură căutare, mai multe surse. Găsește linkuri magnet și trimite-le către Flud Companion.</p>
   </div>
-  <section class="search-panel" aria-label="Search torrents">
+  <section class="search-panel" aria-label="Căutare torrente">
     <form id="searchForm">
-      <div class="search-line"><span class="search-glyph" aria-hidden="true">⌕</span><input id="query" name="query" type="search" minlength="2" maxlength="180" placeholder="Search torrents..." aria-label="Search torrents" autocomplete="off" required><button type="submit" id="searchButton">Search <span aria-hidden="true">→</span></button></div>
-      <div class="search-options"><div class="field"><label for="category">CATEGORY</label><select id="category"><option value="all">All categories</option><option value="movies">Movies</option><option value="series">Series</option><option value="apps">Apps</option><option value="games">Games</option><option value="anime">Anime</option><option value="music">Music</option><option value="books">Books</option><option value="other">Other</option><option value="porn">Adult</option></select></div>
-      <div class="field"><label for="sort">SORT BY</label><select id="sort"><option value="seeders">Most seeders</option><option value="date">Newest first</option><option value="size">Largest first</option><option value="name">Name A–Z</option></select></div>
-      <button type="button" class="providers-trigger" id="providersButton">Indexers <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
+      <div class="search-line"><span class="search-glyph" aria-hidden="true">⌕</span><input id="query" name="query" type="search" minlength="2" maxlength="180" placeholder="Caută torrente..." aria-label="Căutare torrente" autocomplete="off" required><button type="submit" id="searchButton">Caută <span aria-hidden="true">→</span></button></div>
+      <div class="search-options"><div class="field"><label for="category">CATEGORIE</label><select id="category"><option value="all">Toate categoriile</option><option value="movies">Filme</option><option value="series">Seriale</option><option value="apps">Aplicații</option><option value="games">Jocuri</option><option value="anime">Anime</option><option value="music">Muzică</option><option value="books">Cărți</option><option value="other">Altele</option><option value="porn">Adulți</option></select></div>
+      <div class="field"><label for="sort">SORTEAZĂ DUPĂ</label><select id="sort"><option value="seeders">Cele mai multe surse</option><option value="date">Cele mai noi</option><option value="size">Cele mai mari</option><option value="name">Nume A–Z</option></select></div>
+      <button type="button" class="providers-trigger" id="providersButton">Surse <span id="providerCount">—</span> <span aria-hidden="true">⌄</span></button></div>
       <p id="sourceHealthSummary" class="source-health-summary" role="status" aria-live="polite"></p>
     </form>
   </section>
-  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Not paired</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Paste magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Bookmarks <span id="bookmarkCount">0</span></button></div>
-  <section class="results-section"><div class="section-top"><div><div class="section-overline">DISCOVERY</div><h2 id="resultsTitle">Search results</h2></div><div class="result-count" id="resultCount">READY</div></div><div id="searchQuality" class="search-quality" role="status" aria-live="polite"></div><div class="notice" id="notice" role="status" aria-live="polite">Enter a search to see results from your enabled indexers.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
+  <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Neconectat</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Lipește magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Favorite <span id="bookmarkCount">0</span></button></div>
+  <section class="results-section"><div class="section-top"><div><div class="section-overline">REZULTATE</div><h2 id="resultsTitle">Rezultatele căutării</h2></div><div class="result-count" id="resultCount">PREGĂTIT</div></div><div id="searchQuality" class="search-quality" role="status" aria-live="polite"></div><div class="notice" id="notice" role="status" aria-live="polite">Introdu o căutare pentru rezultatele surselor selectate.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
 </main>
-<footer class="footer"><span>© AlexLab · Magnetra</span><span>Search. Magnet. Done.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Based on TorrentSearch (MIT) ↗</a><small class="metadata-credit">Date TV: <a href="https://www.tvmaze.com" target="_blank" rel="noopener noreferrer">TVmaze</a></small></footer>
+<footer class="footer"><span>© AlexLab · Magnetra</span><span>Caută. Magnet. Gata.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Bazat pe TorrentSearch (MIT) ↗</a><small class="metadata-credit">Date TV: <a href="https://www.tvmaze.com" target="_blank" rel="noopener noreferrer">TVmaze</a></small></footer>
 </div>
 
 <dialog id="providersDialog" class="sheet">
-  <div class="sheet-head"><div><div class="section-overline">SEARCH SOURCES</div><h2>Indexers</h2><p id="catalogSummary" class="muted">Loading source catalog…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Close">×</button></div>
-  <p class="muted">Sources that return errors are unchecked after a completed search. You can reactivate them at any time.</p>
+  <div class="sheet-head"><div><div class="section-overline">SURSE DE CĂUTARE</div><h2>Surse</h2><p id="catalogSummary" class="muted">Se încarcă sursele…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Închide">×</button></div>
+  <p class="muted">Sursele cu erori se dezactivează automat după căutare. Le poți reactiva oricând.</p>
   <div class="provider-grid" id="providerGrid"></div>
-  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select verified sources</button><button type="button" class="secondary" id="selectAllProviders">Select all available</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>
+  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Selectează sursele verificate</button><button type="button" class="secondary" id="selectAllProviders">Selectează toate</button><button type="button" class="primary" data-close="providersDialog">Gata</button></div>
 </dialog>
 
 <dialog id="settingsDialog" class="sheet">
-  <div class="sheet-head"><div><div class="section-overline">DIRECT HANDOFF</div><h2>Flud Companion</h2><p class="muted">Send a magnet directly to your NVIDIA Shield via your existing Remote relay.</p></div><button class="close-btn" data-close="settingsDialog" aria-label="Close">×</button></div>
+  <div class="sheet-head"><div><div class="section-overline">TRIMITERE DIRECTĂ</div><h2>Flud Companion</h2><p class="muted">Trimite un magnet către NVIDIA Shield prin conexiunea ta Flud Remote.</p></div><button class="close-btn" data-close="settingsDialog" aria-label="Închide">×</button></div>
   <form id="companionForm">
-    <label class="setting-label">Quick pairing (Remote QR link)<input id="pairLink" spellcheck="false" autocomplete="off" placeholder="Paste the Remote QR URL here"></label>
-    <button type="button" class="secondary" id="importPairing">Import QR pairing</button>
-    <label class="setting-label">Device ID<input id="companionDevice" spellcheck="false" autocomplete="off" placeholder="Remote Device ID" required></label>
-    <label class="setting-label">Remote token<input id="companionToken" type="password" spellcheck="false" autocomplete="off" placeholder="Remote bearer token" required></label>
-    <label class="switch-row"><span><strong>Auto-start in Flud</strong><small>Only send automatically when the Companion accessibility helper is ready.</small></span><input type="checkbox" id="companionAuto"></label>
-    <p class="muted">Pair once. Credentials stay in this browser's local storage and are sent only to the fixed Flud Companion relay through our same-origin API. Never put them in a URL.</p>
-    <div class="sheet-actions"><button type="button" class="secondary" id="forgetCompanion">Forget pairing</button><button class="primary" type="submit">Save pairing</button></div>
+    <label class="setting-label">Asociere rapidă (link QR Remote)<input id="pairLink" spellcheck="false" autocomplete="off" placeholder="Lipește aici linkul QR Remote"></label>
+    <button type="button" class="secondary" id="importPairing">Importă asocierea QR</button>
+    <label class="setting-label">ID dispozitiv<input id="companionDevice" spellcheck="false" autocomplete="off" placeholder="ID dispozitiv Remote" required></label>
+    <label class="setting-label">Token Remote<input id="companionToken" type="password" spellcheck="false" autocomplete="off" placeholder="Token de acces Remote" required></label>
+    <label class="switch-row"><span><strong>Pornire automată în Flud</strong><small>Trimite automat numai când funcția de accesibilitate Companion este pregătită.</small></span><input type="checkbox" id="companionAuto"></label>
+    <p class="muted">Datele de asociere rămân în acest browser și sunt transmise doar către serviciul Flud Companion. Nu le introduce în linkuri publice.</p>
+    <div class="sheet-actions"><button type="button" class="secondary" id="forgetCompanion">Elimină asocierea</button><button class="primary" type="submit">Salvează asocierea</button></div>
   </form>
-  <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Check Shield connection</button>
+  <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Verifică legătura Shield</button>
   <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
-  <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
+  <p class="muted">Pentru utilizare locală sau de rezervă, copiază magnetul și deschide <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
 </dialog>
 <dialog id="manualMagnetDialog" class="sheet">
-  <div class="sheet-head"><div><div class="section-overline">DIRECT TO FLUD COMPANION</div><h2>Send a magnet</h2><p class="muted">Paste a magnet copied from BTDigg or another website. It will be sent through your paired Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Close">×</button></div>
+  <div class="sheet-head"><div><div class="section-overline">DIRECT CĂTRE FLUD COMPANION</div><h2>Trimite un magnet</h2><p class="muted">Lipește un magnet copiat de pe BTDigg sau alt site. Acesta va fi trimis prin Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Închide">×</button></div>
   <form id="manualMagnetForm">
-    <label class="setting-label">Magnet link<input id="manualMagnetInput" type="text" placeholder="magnet:?xt=urn:btih:..." autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
-    <div class="sheet-actions"><button class="primary" type="submit" id="manualMagnetSend">Send to Flud →</button></div>
+    <label class="setting-label">Link magnet<input id="manualMagnetInput" type="text" placeholder="magnet:?xt=urn:btih:..." autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+    <div class="sheet-actions"><button class="primary" type="submit" id="manualMagnetSend">Trimite în Flud →</button></div>
   </form>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
