@@ -1752,3 +1752,15 @@ Code branch `ui/magnetra-ro-it-curated-12-20261021`, UI `web/app.js`, `web/index
 
 ---
 
+
+
+## UPDATE 21 OCTOMBRIE 2026 — CURATED 12 SURSE + RO/IT: LANSARE SECURIZATĂ PREGĂTITĂ
+
+**Ultima cerere explicită a proprietarului:** ascunde suplimentar BangumiMoe, Btsow, Dmhy, LinuxTracker, MyPornClub, NekoBT, Sukebei, YTS, AniLibria, BlueRoms, EpubLibre, MegaPeer, Rutor, XXXTracker și FitGirl Repacks; în total 34 ID-uri ascunse și 12 surse rămase în selector, BTDigg/Torrent9/OxTorrent primele. Întreaga interfață publică PWA este română implicită sau italiană la alegere (limba salvată în browser), fără badge-uri de audit/test. Sunt păstrate toate cele 46 adaptoare Worker și Android, fără modificări Flud, Rock64, secrete, DNS sau Tunnel. Cod UI este în PR #119; testele de regresie pentru traducere și selecții salvate iPhone.
+
+**Lansare pregătită, NU executată de acest PR:** `scripts/release_magnetra_ro_it_12.py`, `.github/workflows/magnetra-ro-it-12-one-shot.yml`, `scripts/test_release_magnetra_ro_it_12.py`. Un viitor commit separat, unic, care modifică numai `docs/release-events/magnetra-ro-it-12-20261021.md` și conține marker `[magnetra-ro-it-12-publish-20261021]` declanșează workflow-ul numai după CI. Preflight fail-closed pe starea `6dadc612-9660-4195-aeed-cdb658b22cf8@100% / 9bbb227f-7f2a-4a9b-acac-ce8cae620c51@0%` și hash live app.js `85969467f08d21ee`. Urmează upload imutabil `--keep-vars`, verificare a JS/CSS/HTML **și i18n.js**, catalog 46 și 3 bindinguri, 0% staging → 5% canary → 100%, 6dad păstrat la 0% pentru rollback. Nu folosi workflow-urile de publicare vechi.
+
+**IMPORTANT:** Faptul că pregătim workflow și că trece CI NU înseamnă publicare. Numai un run de release efectiv cu `PRODUCTION_100_PASS` și verificări de versiune justifică statusul LIVE.
+
+---
+
