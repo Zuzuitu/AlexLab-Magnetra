@@ -79,9 +79,9 @@ test("bulk actions, fallback and UI copy only reference selectable indexers",()=
  assert.match(app,/\$\("selectAllProviders"\)\.addEventListener\("click",\(\)=>\{\s*const ids=selectableProviders\(\)\.map\(p=>p\.id\)/);
  assert.match(app,/\$\("selectWorking"\)\.addEventListener\("click",\(\)=>\{\s*const ids=orderedProviders\(selectableProviders\(\)\)/);
  assert.match(app,/const live=orderedProviders\(selectableProviders\(\)\)/);
- assert.match(html,/id="selectAllProviders">Select all available/);
+ assert.match(html,/id="selectAllProviders">Selectează toate/);
  assert.doesNotMatch(html,/Select all 46/);
- assert.match(html,/Sources that return errors are unchecked/);
+ assert.match(html,/Sursele cu erori se dezactivează automat/);
 });
 
 test("unavailable panel excludes AnimeTosho and Mikan and disappears if only they failed",()=>{
