@@ -1210,11 +1210,11 @@ def check_web_parity_and_companion(config: dict) -> None:
     if curation:
         hidden_ids = curation.get("hidden_ids", [])
         priority_ids = curation.get("priority_visible_ids", [])
-        if (len(hidden_ids) != 17 or len(set(hidden_ids)) != 17
-                or curation.get("visible_picker_count") != 29
+        if (len(hidden_ids) != 19 or len(set(hidden_ids)) != 19
+                or curation.get("visible_picker_count") != 27
                 or curation.get("original_adapter_ids_retained") != 46
                 or priority_ids[:3] != ["btdigg", "torrent9", "oxtorrent"]
-                or "btdigg" in hidden_ids or "eztvx" not in hidden_ids):
+                or "btdigg" in hidden_ids or not {"eztvx","animetosho","mikanproject"}.issubset(hidden_ids)):
             fail("PWA curated indexers lost owner-approved exclusions/defaults")
         picker_text = frontend.read_text(encoding="utf-8")
         html_text = (ROOT / "web/index.html").read_text(encoding="utf-8")
@@ -1222,7 +1222,8 @@ def check_web_parity_and_companion(config: dict) -> None:
                        'function selectableProviders()',
                        'const valid=new Set(selectableProviders().map(p=>p.id))',
                        'const ids=selectableProviders().map(p=>p.id);',
-                       'orderedProviders(selectableProviders())'):
+                       'orderedProviders(selectableProviders())',
+                       'const visibleFailures=failures.filter(f=>!hiddenIndexerIds.has(f.provider))'):
             if marker not in picker_text:
                 fail("PWA picker must reject hidden sources at every entry point: " + marker)
         for id_ in hidden_ids:
