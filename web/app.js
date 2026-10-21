@@ -6,7 +6,7 @@ const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"
 // Owner-curated PWA picker exclusion only: all 46 adapters remain in the API/Android.
 // Excluded IDs cannot be displayed, selected, restored from old localStorage,
 // bulk-selected or queried by the PWA. They are not removed from source code.
-const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz"]);
+const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject"]);
 const BTDIGG_MIN_GAP_MS=5500;
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
 // failed searches; it defers one user-requested search and is abortable.
@@ -354,17 +354,19 @@ function renderResults(){
 }
 function renderProviderErrors(failures){
  const root=$("providerErrors");root.replaceChildren();
- if(!failures.length)return;
+ // Hidden indexers never appear in the failure/alternative panel either.
+ const visibleFailures=failures.filter(f=>!hiddenIndexerIds.has(f.provider));
+ if(!visibleFailures.length)return;
  const details=el("details","failed-sources");
- if(failures.length<=2)details.open=true;
- const summary=el("summary","failed-sources-title",failures.length+" indexer"+(failures.length===1?"":"s")+" unavailable · See alternatives");
+ if(visibleFailures.length<=2)details.open=true;
+ const summary=el("summary","failed-sources-title",visibleFailures.length+" indexer"+(visibleFailures.length===1?"":"s")+" unavailable · See alternatives");
  details.append(summary);
- const onlyBTDigg=failures.every(f=>f.provider==="btdigg");
+ const onlyBTDigg=visibleFailures.every(f=>f.provider==="btdigg");
  const message=el("p","failed-sources-note",onlyBTDigg
   ?"BTDigg searches run from Rock64 at home, not from your phone. A temporary upstream limit, timeout or tunnel issue does not mean this indexer is permanently offline."
   :"Some external sites restrict searches from Cloudflare. Magnetra cannot bypass their verification. You can open a source directly or search independently through other indexers.");
  details.append(message);
- for(const failure of failures){
+ for(const failure of visibleFailures){
   const entry=el("div","source-failure");
   const line=el("div","source-failure-content");
   const provider=state.providers.find(p=>p.id===failure.provider);

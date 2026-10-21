@@ -313,9 +313,9 @@
   "pwa_indexer_curation": {
     "owner_approved_visible_only": true,
     "original_adapter_ids_retained": 46,
-    "hidden_from_picker_and_pwa_search_count": 17,
-    "visible_picker_count": 29,
-    "hidden_ids": ["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz"],
+    "hidden_from_picker_and_pwa_search_count": 19,
+    "visible_picker_count": 27,
+    "hidden_ids": ["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject"],
     "priority_visible_ids": ["btdigg","torrent9","oxtorrent","knaben","torrentscsv","thepiratebay","internetarchive"],
     "btdigg_is_first_and_new_install_default": true,
     "existing_selected_hidden_ids_scrubbed_on_page_load": true,

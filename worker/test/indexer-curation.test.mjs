@@ -11,7 +11,7 @@ const excluded=[
  "anirena","bt4g","bitsearch","extdotto","eztvx","filemood",
  "limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase",
  "torrentdownloadinfo","torrentdownloads","torrentkitty","uindex",
- "xxxclub","torrentz"
+ "xxxclub","torrentz","animetosho","mikanproject"
 ];
 function runPicker(saved){
  const storage=new Map(Object.entries(saved||{}).map(([key,value])=>[key,JSON.stringify(value)]));
@@ -35,37 +35,37 @@ function runPicker(saved){
   removeItem:key=>storage.delete(key)
  };
  const context=vm.createContext({document,localStorage});
- vm.runInContext(app+"\nglobalThis.__picker={state,hiddenIndexerIds,preferred,priorityIndexerIds,chooseProviders,selectableProviders,orderedProviders,renderProviders};",context,{filename:"web/app.js"});
+ vm.runInContext(app+"\nglobalThis.__picker={state,hiddenIndexerIds,preferred,priorityIndexerIds,chooseProviders,selectableProviders,orderedProviders,renderProviders,renderProviderErrors};",context,{filename:"web/app.js"});
  const ui=context.__picker;
  ui.state.providers=PROVIDERS;
  ui.chooseProviders();
  return {ui,elements,storage};
 }
-test("catalog keeps all 46 real adapter IDs; exactly 17 owner-named indexers hidden",()=>{
+test("catalog keeps all 46 real adapter IDs; exactly 19 owner-named indexers hidden",()=>{
  assert.equal(PROVIDERS.length,46);
  const {ui,elements}=runPicker();
  assert.deepEqual([...ui.hiddenIndexerIds].sort(),excluded.slice().sort());
- assert.equal(ui.selectableProviders().length,29);
+ assert.equal(ui.selectableProviders().length,27);
  ui.renderProviders();
  const rows=elements.get("providerGrid").children;
  const ids=rows.map(row=>row.children[0].children[0].value);
- assert.equal(ids.length,29);
+ assert.equal(ids.length,27);
  for(const id of excluded)assert.ok(!ids.includes(id),id+" must not be selectable");
  assert.deepEqual(ids.slice(0,3),["btdigg","torrent9","oxtorrent"]);
  assert.ok(!ui.priorityIndexerIds.includes("eztvx"));
- assert.match(elements.get("catalogSummary").textContent,/29 selectable indexers/);
- assert.equal(elements.get("providerCount").textContent,"5/29");
+ assert.match(elements.get("catalogSummary").textContent,/27 selectable indexers/);
+ assert.equal(elements.get("providerCount").textContent,"5/27");
 });
 test("hidden IDs in iPhone localStorage are scrubbed, visible custom choices retained",()=>{
- const before=["btdigg","torrent9","anirena","eztvx","torrentz","torrentdownloadinfo"];
+ const before=["btdigg","torrent9","anirena","eztvx","torrentz","torrentdownloadinfo","animetosho","mikanproject"];
  const {ui,storage,elements}=runPicker({
   "magnetra.providers.v1":before,
-  "magnetra.paused-indexers.v1":["bt4g","nyaasi","knaben"]
+  "magnetra.paused-indexers.v1":["bt4g","nyaasi","knaben","mikanproject"]
  });
  assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
  assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
  assert.deepEqual([...ui.state.pausedIds],["knaben"]);
- assert.equal(elements.get("providerCount").textContent,"2/29");
+ assert.equal(elements.get("providerCount").textContent,"2/27");
  assert.doesNotMatch(elements.get("sourceHealthSummary").textContent,/3 failed/);
 });
 test("old all-hidden saved selection falls back to BTDigg plus usable defaults",()=>{
@@ -79,5 +79,27 @@ test("bulk actions, fallback and UI copy only reference selectable indexers",()=
  assert.match(app,/const live=orderedProviders\(selectableProviders\(\)\)/);
  assert.match(html,/id="selectAllProviders">Select all available/);
  assert.doesNotMatch(html,/Select all 46/);
- assert.match(html,/17 repeatedly failing sources are hidden/);
+ assert.match(html,/19 repeatedly failing sources are hidden/);
+});
+
+test("unavailable panel excludes AnimeTosho and Mikan and disappears if only they failed",()=>{
+ const {ui,elements}=runPicker();
+ ui.renderProviderErrors([
+  {provider:"animetosho",message:"Upstream unavailable"},
+  {provider:"mikanproject",message:"Provider could not complete search"}
+ ]);
+ assert.equal(elements.get("providerErrors").children.length,0,
+  "no warning or alternatives panel if only hidden indexers failed");
+ ui.renderProviderErrors([
+  {provider:"animetosho",message:"Upstream unavailable"},
+  {provider:"mikanproject",message:"Provider could not complete search"},
+  {provider:"btdigg",message:"Temporary BTDigg timeout"}
+ ]);
+ const parent=elements.get("providerErrors");
+ assert.equal(parent.children.length,1);
+ const details=parent.children[0];
+ assert.match(details.children[0].textContent,/1 indexer unavailable/);
+ const text=JSON.stringify(details);
+ assert.doesNotMatch(text,/AnimeTosho|Mikan|animetosho|mikanproject/);
+ assert.match(text,/BTDigg/);
 });
