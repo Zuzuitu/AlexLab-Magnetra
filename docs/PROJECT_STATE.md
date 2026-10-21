@@ -1704,3 +1704,15 @@ Filtrare inclusiv a selecțiilor vechi și a pauzelor persistate, comenzilor bul
 
 ---
 
+
+
+## 2026-10-21 — PREPARED SAFE DEPLOY FOR 27-VISIBLE CURATED INDEXERS (pending)
+
+The owner requested hiding AnimeTosho and Mikan as well as the earlier 17 problematic sources, bringing the PWA to 27 visible / 19 hidden, all original 46 Worker adapter IDs retained. The PWA errors banner filters hidden sources, but continues showing real failures from still-selectable providers.
+
+Prepared a separate one-shot immutable Cloudflare release guard: `scripts/release_magnetra_hide_anime_mikan.py`, workflow `.github/workflows/magnetra-hide-anime-mikan-one-shot.yml` gated by a future **new activation-only** push to `docs/release-events/hide-anime-mikan-20261021.md` and exact marker `[magnetra-hide-anime-mikan-publish-20261021]`. Release must start from exact verified split `9bbb227f...@100%` / `c86c9a32...@0%`, verify live old JS SHA prefix `0945914b2f7bf266`, both existing binding name/types, original domain/ASSETS, then immutable upload with `--keep-vars`, 0% version-override JS/CSS/HTML SHA, catalog 46, canary 5%, full 100% only after checks. Previous 9bbb version retained at 0% as rollback. No Worker backend or Rock64/Flud changes. No torrent search during release.
+
+**Unmerged deployment source or GitHub PR is not a live release.** Wait for 4/4 CI and activation workflow result and hash postflight. If an unexpected traffic split or SHA is found, STOP without blind retries.
+
+---
+
