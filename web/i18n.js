@@ -2,6 +2,7 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
+  "Date TV:": {"ro":"Date TV:","it":"Dati TV:"},
   "Sources that return errors are unchecked after a completed search. You can reactivate them at any time.": {"ro":"Sursele cu erori se dezactivează automat după căutare. Le poți reactiva oricând.","it":"Le fonti con errori vengono disattivate automaticamente dopo la ricerca. Puoi riattivarle in qualsiasi momento."},
   "Select verified sources": {"ro":"Selectează sursele verificate","it":"Seleziona fonti verificate"},
   "Check Shield connection": {"ro":"Verifică legătura Shield","it":"Verifica connessione Shield"},
