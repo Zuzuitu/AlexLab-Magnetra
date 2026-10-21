@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="/icon.svg">
 <link rel="stylesheet" href="/styles.css">
 <title>AlexLab Magnetra — Search. Magnet. Done.</title>
+<script src="/i18n.js"></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
@@ -22,7 +23,7 @@
     <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 13v13a12 12 0 0 0 24 0V13" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M12 10h9m6 0h9M12 10v8m24-8v8" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div>
     <div><div class="brand-eyebrow">ALEXLAB / SEARCH SYSTEM</div><div class="brand-title">Magnetra<span class="brand-period">.</span></div></div>
   </div>
-  <button class="icon-btn" id="settingsButton" aria-label="Configure Flud Companion" title="Flud Companion settings"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-2.76 2.76-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.1 1.57V21H10v-.03a1.7 1.7 0 0 0-1.1-1.57 1.7 1.7 0 0 0-1.88.34l-.06.06-2.76-2.76.06-.06a1.7 1.7 0 0 0 .34-1.88A1.7 1.7 0 0 0 3.03 14H3v-4h.03a1.7 1.7 0 0 0 1.57-1.1 1.7 1.7 0 0 0-.34-1.88L4.2 6.96 6.96 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.03V3h4v.03a1.7 1.7 0 0 0 1.1 1.57 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.76 2.76-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.97 10H21v4h-.03a1.7 1.7 0 0 0-1.57 1.1Z"/></svg></button>
+  <div class="header-actions"><label class="language-picker"><span class="sr-only">Language</span><select id="languageSelect" aria-label="Language"><option value="ro">RO</option><option value="it">IT</option></select></label><button class="icon-btn" id="settingsButton" aria-label="Configure Flud Companion" title="Flud Companion settings"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-2.76 2.76-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.1 1.57V21H10v-.03a1.7 1.7 0 0 0-1.1-1.57 1.7 1.7 0 0 0-1.88.34l-.06.06-2.76-2.76.06-.06a1.7 1.7 0 0 0 .34-1.88A1.7 1.7 0 0 0 3.03 14H3v-4h.03a1.7 1.7 0 0 0 1.57-1.1 1.7 1.7 0 0 0-.34-1.88L4.2 6.96 6.96 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.03V3h4v.03a1.7 1.7 0 0 0 1.1 1.57 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.76 2.76-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.97 10H21v4h-.03a1.7 1.7 0 0 0-1.57 1.1Z"/></svg></button></div>
 </header>
 <main>
   <div class="hero">
@@ -47,10 +48,9 @@
 
 <dialog id="providersDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">SEARCH SOURCES</div><h2>Indexers</h2><p id="catalogSummary" class="muted">Loading source catalog…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Close">×</button></div>
-  <p class="muted">After each completed search, indexers that returned errors are automatically unchecked for future searches on this device. Indexers that return zero matching titles without an error stay enabled. You can re-enable a visible source manually or select all available indexers. Per your saved interface preferences, 19 repeatedly failing sources are hidden and cannot be selected here. All original 46 source adapters remain in the backend for compatibility; no provider is deleted. Statuses are historical observations, not live uptime.</p>
-  <p class="muted">EZTV series-name lookup uses <a href="https://www.tvmaze.com" rel="noopener noreferrer" target="_blank">TVmaze</a> metadata to identify a show by IMDb ID; torrent results come only from EZTV.</p>
+  <p class="muted">Sources that return errors are unchecked after a completed search. You can reactivate them at any time.</p>
   <div class="provider-grid" id="providerGrid"></div>
-  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select last-audit results</button><button type="button" class="secondary" id="selectAllProviders">Select all available</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>
+  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Select verified sources</button><button type="button" class="secondary" id="selectAllProviders">Select all available</button><button type="button" class="primary" data-close="providersDialog">Done</button></div>
 </dialog>
 
 <dialog id="settingsDialog" class="sheet">
@@ -64,7 +64,7 @@
     <p class="muted">Pair once. Credentials stay in this browser's local storage and are sent only to the fixed Flud Companion relay through our same-origin API. Never put them in a URL.</p>
     <div class="sheet-actions"><button type="button" class="secondary" id="forgetCompanion">Forget pairing</button><button class="primary" type="submit">Save pairing</button></div>
   </form>
-  <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Test Shield connection</button>
+  <button class="secondary" type="button" id="checkCompanion" style="margin-top:12px">Check Shield connection</button>
   <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
   <p class="muted">For local-only use or as a fallback, use “Copy magnet” and open your existing <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
 </dialog>
