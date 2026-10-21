@@ -81,7 +81,7 @@ All Worker provider fetches must retain the protected Android `NetworkClient.USE
 
 ## Audit status provenance
 
-`worker/src/source-audit.mjs` is the historical complete 46-entry production audit snapshot, not live reachability. Update its entries only from a recorded complete production audit and synchronize `docs/PROJECT_STATE.md`, `config/project-invariants.json` and regression tests. Do not equate `ported: true` with online status. The last-audit results selection must remain distinct from Select all 46; allow every source to be selected individually.
+`worker/src/source-audit.mjs` is the historical complete 46-entry production audit snapshot, not live reachability. Update its entries only from a recorded complete production audit and synchronize `docs/PROJECT_STATE.md`, `config/project-invariants.json` and regression tests. Do not equate `ported: true` with online status. The last-audit results selection must remain distinct from Select all *visible* indexers. With explicit owner approval on 2026-10-21, the PWA hides 17 user-identified unavailable sources and prevents selecting them by any UI action or saved browser preference. Preserve all 46 original adapters/IDs in API and Android; do not turn hiding into deletion or a claim of permanent unavailability.
 
 ## Provider recovery requirements
 
