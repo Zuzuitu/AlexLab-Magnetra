@@ -47,6 +47,7 @@
       ".github/workflows/release_build.yml",
       ".github/workflows/pwa.yml",
       ".github/workflows/deploy-pwa.yml",
+      ".github/workflows/magnetra-curated-picker-one-shot-release.yml",
       ".github/workflows/production-smoke.yml",
       ".github/workflows/stage-magnetra-worker.yml",
       ".github/workflows/inspect-magnetra-cloudflare-version.yml",
@@ -276,6 +277,25 @@
       "oxtorrent",
       "torrent9"
     ]
+  },
+  "curated_picker_release": {
+    "owner_approved_on": "2026-10-21",
+    "original_46_worker_adapters_retained": true,
+    "hidden_17_visible_29_after_publication": true,
+    "rollout_authorized": true,
+    "rollout_completed_verified": false,
+    "rollout_uses_immutable_versions": true,
+    "rollout_stage_zero_then_canary_5_then_full_100": true,
+    "rollout_exact_baseline": {
+      "c86c9a32-31fd-4952-86ed-b35f1763b342": 100,
+      "136c1425-0070-48db-b995-5708bd35bb75": 0
+    },
+    "old_public_js_sha_prefix": "9998e0130b19ece9",
+    "previous_100_percent_version_preserved_as_rollback": true,
+    "workflow": ".github/workflows/magnetra-curated-picker-one-shot-release.yml",
+    "owner_release_marker": "[magnetra-curated-publish-20261021]",
+    "activation_requires_separate_main_push": true,
+    "worker_and_rock64_code_unchanged": true
   },
   "pwa_indexer_curation": {
     "owner_approved_visible_only": true,
