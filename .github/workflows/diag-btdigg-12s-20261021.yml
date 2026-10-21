@@ -1,0 +1,24 @@
+# One-shot source diagnostic, no BTDigg retry, no Rock64 or Cloudflare mutation.
+name: BTDigg Real 12s Timeout Cause (READ ONLY)
+on:
+  push:
+    branches:
+      - diagnostics/btdigg-12s-timeout-one-shot-20261021
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout protected production source without persistence
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify repository invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Exactly one benign original BTDigg query
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/diag_btdigg_12s_one_shot_20261021.py
