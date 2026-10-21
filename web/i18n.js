@@ -2,6 +2,11 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
+  "Sources that return errors are unchecked after a completed search. You can reactivate them at any time.": {"ro":"Sursele cu erori se dezactivează automat după căutare. Le poți reactiva oricând.","it":"Le fonti con errori vengono disattivate automaticamente dopo la ricerca. Puoi riattivarle in qualsiasi momento."},
+  "Select verified sources": {"ro":"Selectează sursele verificate","it":"Seleziona fonti verificate"},
+  "Check Shield connection": {"ro":"Verifică legătura Shield","it":"Verifica connessione Shield"},
+  "AlexLab Magnetra — torrent metasearch and Flud Companion handoff.": {"ro":"AlexLab Magnetra — caută torrente și trimite magneturi în Flud Companion.","it":"AlexLab Magnetra — cerca torrent e invia magnet a Flud Companion."},
+
   "Search...": {
     "ro": "Caută...",
     "it": "Cerca..."
@@ -663,18 +668,17 @@ const KEY="magnetra.language.v1";
 const languages=["ro","it"];
 let current="ro";
 try{current=localStorage.getItem(KEY)==="it"?"it":"ro";}catch{}
-const initial=new WeakMap();
 const savedNodes=[];
 const savedAttrs=[];
 const attrs=["placeholder","aria-label","title","content"];
-function template(text,args){return String(text).replace(/\\{(\\w+)\\}/g,(_,key)=>String(args?.[key]??""));}
+function template(text,args){return String(text).replace(/\{(\w+)\}/g,(_,key)=>String(args?.[key]??""));}
 function t(key,args){return template(DICTIONARY[key]?.[current]||key,args);}
 function capture(){
  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
  for(let n; (n=walker.nextNode());){
   const k=n.textContent.trim();
   if(!DICTIONARY[k])continue;
-  const spaces=n.textContent.match(/^(\\s*)(.*?)(\\s*)$/s);
+  const spaces=n.textContent.match(/^(\s*)(.*?)(\s*)$/s);
   savedNodes.push([n,k,spaces?.[1]||"",spaces?.[3]||""]);
  }
  for(const el of document.querySelectorAll("[placeholder],[aria-label],[title],[content]")){
