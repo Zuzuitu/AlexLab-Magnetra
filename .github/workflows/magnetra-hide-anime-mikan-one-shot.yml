@@ -1,0 +1,62 @@
+# New dedicated 2026-10-21 owner-authorized curated-picker release.
+# No auto deploy on ordinary main pushes; single unique activation-file + marker.
+# Never reuse historical 136c/540b staging/promotion workflows.
+name: Magnetra Hide AnimeTosho Mikan Immutable Release (ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/hide-anime-mikan-20261021.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-hide-anime-mikan-publish-20261021]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - name: Checkout exactly the approved main push
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require the reviewed source and explicit publication marker
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          case "$COMMIT_MESSAGE" in
+            *'[magnetra-hide-anime-mikan-publish-20261021]'*) ;;
+            *) echo "::error::Owner release marker missing"; exit 2;;
+          esac
+          test -s docs/release-events/hide-anime-mikan-20261021.md
+          echo "OWNER_RELEASE_MARKER_PASS"
+      - name: Check project source invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Regression tests for guarded release and picker safety
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_magnetra_hide_anime_mikan_release.py' -v
+          node --check web/app.js
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check full provider and UI contracts
+        run: node --test worker/test/*.test.mjs
+      - name: Validate Worker binding, custom origin and static assets WITHOUT upload
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Run guarded immutable 0 / 5 / 100 release, safe restore on failure
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_CURATED_RELEASE_ACTION: CONFIRM_OWNER_HIDE_ANIME_MIKAN_RELEASE_20261021
+        run: |
+          set -euo pipefail
+          python3 scripts/release_magnetra_hide_anime_mikan.py
