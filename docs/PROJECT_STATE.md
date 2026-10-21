@@ -1628,3 +1628,15 @@ The existing guarded update script `rock64/update-btdigg.sh` already backs up/re
 
 **Files:** \`docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md\`, \`docs/NEXT_CHAT_HANDOFF.md\`, \`docs/PROJECT_STATE.md\`, \`config/project-invariants.json\`, \`scripts/check-project-invariants.py\`; current application implementation \`rock64/btdigg_gateway.py\`, \`rock64/update-btdigg.sh\`, \`worker/src/btdigg-rock64.mjs\`, \`web/app.js\`.
 
+
+
+## LATEST RUNTIME UPDATE 21 OCTOMBRIE 2026 — CONFIRMAT PRIN SSH: BTDigg Rock64 PATCH INSTALAT
+
+**Instalat pe Rock64: CONFIRMAT.** Proprietarul a executat updaterul `rock64/update-btdigg.sh` din checkout-ul imutabil `9c3930f406078ee744e0473b2093ded9b91cead7` și a furnizat outputul terminalului: `Ran 99 tests in 11.187s — OK`; `PASS: Magnetra gateway responded to authenticated localhost health check.`; `PASS: Magnetra gateway upgraded; existing tunnel and secrets untouched.` Instalarea fizică și pornirea/health local sunt astfel dovedite; NU repeta updaterul.
+
+**Distincție critică:** Nu există încă o căutare reală post-instalare în BTDigg și nici loguri noi DNS/TCP/TLS din procesul actual. Nu declara disponibilitate stabilă sau timeout rezolvat permanent. Următorul pas P0: pe iPhone la https://index.alexlab.media, reactivează *numai BTDigg* în Indexers dacă a fost auto-paused; fă o singură căutare normală până la final și observă rezultatele/erorile BTDigg. Fără loop de retry 429/504. Dacă persistă eroarea, citește o singură intrare sanitizată `btdigg_upstream_timing` din jurnalul dedicat și clasifică faza. P1: confirmă apoi că după o căutare completă indexerele cu erori rămân deselectate la a doua căutare. Nu confunda bannerul de erori al primei căutări cu lista activă pentru a doua.
+
+**Restul neschimbat:** Worker Cloudflare c86c@100% / 136c@0% (ultima confirmare reală run #39516593949), 46 de adaptere originale păstrate, Flud manual și neconfirmat E2E, fără alte redeploy-uri/proiecte/tuneluri/tokenuri modificate. PR #105 și #106 MERGED. Secțiunile istorice cu „instalare neconfirmată” de mai jos descriu starea ÎNAINTE de acest output SSH și sunt depășite.
+
+---
+
