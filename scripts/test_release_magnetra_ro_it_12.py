@@ -50,6 +50,7 @@ class ReleaseGuards(unittest.TestCase):
              patch.object(m,"_wrangler_deploy",side_effect=[True,True,True]) as writes, \
              patch.object(m,"wait_for",side_effect=[DEP1,DEP5,DEP100]), \
              patch.object(m,"verify_all_assets") as assets, \
+             patch.object(m,"verify_public_with_html_settle") as settled, \
              patch.object(m,"catalog_guard") as catalog:
             self.assertEqual(self.approved(),0)
             current.assert_called_once_with(m.INITIAL)
@@ -60,8 +61,9 @@ class ReleaseGuards(unittest.TestCase):
                 [m.ACTIVE+"@0%", NEW+"@100%"]
             ])
             self.assertEqual([c.args for c in assets.call_args_list],[
-                (NEW,DEP1,SLOT),(NEW,DEP5,CANARY),(None,DEP100,FULL)
+                (NEW,DEP1,SLOT),(NEW,DEP5,CANARY)
             ])
+            settled.assert_called_once_with(DEP100,FULL)
             self.assertEqual([c.args[0] for c in catalog.call_args_list],[NEW,None])
 
     def test_new_assets_mismatch_ends_before_canary(self):
@@ -97,6 +99,35 @@ class ReleaseGuards(unittest.TestCase):
              patch.object(m,"_wrangler_deploy") as write:
             m.rollback_if_safe(NEW)
             write.assert_not_called()
+
+    def test_http_200_html_settle_only_after_exact_mismatch(self):
+        with patch.object(m,"verify_all_assets",side_effect=[m.Stop(m.HTML_200_MISMATCH),None]) as assets, \\
+             patch.object(m,"stable") as stable, \\
+             patch.object(m.time,"sleep") as sleep:
+            m.verify_public_with_html_settle(DEP100,FULL)
+            self.assertEqual(assets.call_count,2)
+            stable.assert_called_once_with(DEP100,FULL)
+            sleep.assert_called_once_with(8)
+
+    def test_transport_error_never_retries(self):
+        for reason in ("HTML_ROOT_TRANSPORT_NO_RETRY","TRANSLATION_ASSET_TRANSPORT_NO_RETRY","ASSET_SHA_MISMATCH_/app.js"):
+            with self.subTest(reason=reason), \\
+                 patch.object(m,"verify_all_assets",side_effect=m.Stop(reason)) as assets, \\
+                 patch.object(m.time,"sleep") as sleep:
+                with self.assertRaises(m.Stop):
+                    m.verify_public_with_html_settle(DEP100,FULL)
+                assets.assert_called_once()
+                sleep.assert_not_called()
+
+    def test_full_html_settle_has_five_waits_then_stops(self):
+        with patch.object(m,"verify_all_assets",side_effect=m.Stop(m.HTML_200_MISMATCH)) as assets, \\
+             patch.object(m,"stable") as stable, \\
+             patch.object(m.time,"sleep") as sleep:
+            with self.assertRaises(m.Stop):
+                m.verify_public_with_html_settle(DEP100,FULL)
+            self.assertEqual(assets.call_count,6)
+            self.assertEqual(stable.call_count,5)
+            self.assertEqual(sleep.call_count,5)
 
     def test_i18n_override_must_have_valid_immutable_version_id(self):
         with patch.object(m.urllib.request,"build_opener") as opener:
