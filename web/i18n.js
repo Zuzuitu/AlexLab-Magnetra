@@ -2,12 +2,26 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
-  "Date TV:": {"ro":"Date TV:","it":"Dati TV:"},
-  "Sources that return errors are unchecked after a completed search. You can reactivate them at any time.": {"ro":"Sursele cu erori se dezactivează automat după căutare. Le poți reactiva oricând.","it":"Le fonti con errori vengono disattivate automaticamente dopo la ricerca. Puoi riattivarle in qualsiasi momento."},
-  "Select verified sources": {"ro":"Selectează sursele verificate","it":"Seleziona fonti verificate"},
-  "Check Shield connection": {"ro":"Verifică legătura Shield","it":"Verifica connessione Shield"},
-  "AlexLab Magnetra — torrent metasearch and Flud Companion handoff.": {"ro":"AlexLab Magnetra — caută torrente și trimite magneturi în Flud Companion.","it":"AlexLab Magnetra — cerca torrent e invia magnet a Flud Companion."},
-
+  "Date TV:": {
+    "ro": "Date TV:",
+    "it": "Dati TV:"
+  },
+  "Sources that return errors are unchecked after a completed search. You can reactivate them at any time.": {
+    "ro": "Sursele cu erori se dezactivează automat după căutare. Le poți reactiva oricând.",
+    "it": "Le fonti con errori vengono disattivate automaticamente dopo la ricerca. Puoi riattivarle in qualsiasi momento."
+  },
+  "Select verified sources": {
+    "ro": "Selectează sursele verificate",
+    "it": "Seleziona fonti verificate"
+  },
+  "Check Shield connection": {
+    "ro": "Verifică legătura Shield",
+    "it": "Verifica connessione Shield"
+  },
+  "AlexLab Magnetra — torrent metasearch and Flud Companion handoff.": {
+    "ro": "AlexLab Magnetra — caută torrente și trimite magneturi în Flud Companion.",
+    "it": "AlexLab Magnetra — cerca torrent e invia magnet a Flud Companion."
+  },
   "Search...": {
     "ro": "Caută...",
     "it": "Cerca..."
@@ -663,6 +677,10 @@ const DICTIONARY={
   "AlexLab Magnetra — Search. Magnet. Done.": {
     "ro": "AlexLab Magnetra — Caută. Magnet. Gata.",
     "it": "AlexLab Magnetra — Cerca. Magnet. Fatto."
+  },
+  "TheRarBg could not provide this magnet. Open Details to try it on the source site.": {
+    "ro": "TheRarBg nu a putut furniza magnetul. Deschide „Detalii” pentru a încerca direct pe site.",
+    "it": "TheRarBg non ha fornito il magnet. Apri «Dettagli» per provare direttamente sul sito."
   }
 };
 const KEY="magnetra.language.v1";
