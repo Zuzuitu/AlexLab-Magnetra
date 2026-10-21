@@ -191,7 +191,9 @@
     "2026_10_21_transport_patch_single_ipv4_tcp": true,
     "2026_10_21_transport_patch_tls_ca_sni_verified": true,
     "2026_10_21_transport_patch_no_retry_or_redirect": true,
-    "2026_10_21_transport_patch_rock64_installed": false,
+    "2026_10_21_transport_patch_rock64_installed": true,
+    "2026_10_21_transport_patch_local_authenticated_health_pass": true,
+    "2026_10_21_transport_patch_local_offline_tests_passed": 99,
     "2026_10_21_transport_patch_real_postinstall_verified": false,
     "2026_10_21_transport_timeout_permanent_fix_proven": false,
     "2026_10_21_previous_rock64_errors_ms": [
@@ -625,6 +627,6 @@
     "btdigg_last_public_one_shot_raw_rows": 10,
     "btdigg_last_public_one_shot_elapsed_ms": 6465,
     "btdigg_patch_pr_105_main_sha": "9c3930f406078ee744e0473b2093ded9b91cead7",
-    "btdigg_patch_rock64_install_user_output_received": false
+    "btdigg_patch_rock64_install_user_output_received": true
   }
 }
