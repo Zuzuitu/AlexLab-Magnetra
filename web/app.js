@@ -500,17 +500,29 @@ async function search(){
  }
 }
 async function status(){
- if(!state.pairing){updatePairChip("Flud Companion · Not paired");return;}
+ if(!state.pairing){updatePairChip(tr("Flud Companion · Not paired"));return;}
  try{
    const data=await api("/api/companion/status",{
      method:"POST",headers:{"content-type":"application/json"},
      body:JSON.stringify(state.pairing)
    });
    const online=data.online===true;
-   updatePairChip("Flud Companion · "+(online?"Online":"Offline"),online);
-   $("pairStatus").textContent=online?"Shield online · Auto-start "+(data.autoStartReady?"ready":"not ready"):"Shield offline";
+   updatePairChip(tr(online?"Flud Companion · Online":"Flud Companion · Offline"),online);
+   $("pairStatus").textContent=tr(online?(data.autoStartReady?"Shield online · Auto-start ready":"Shield online · Auto-start not ready"):"Shield offline");
    return online;
- }catch(e){updatePairChip("Flud Companion · Unavailable");$("pairStatus").textContent=e.message;return false;}
+ }catch(e){updatePairChip(tr("Flud Companion · Unavailable"));$("pairStatus").textContent=genericError(e);return false;}
+}
+function switchLanguage(locale){
+ if(!globalThis.MagnetraI18n?.set(locale))return;
+ renderProviders();renderResults();savePausedSources();
+ if(!state.searching)$("searchButton").textContent=tr("Search →");
+ else $("searchButton").textContent=tr("Cancel search ×");
+ const chip=$("companionChip");
+ const online=chip.classList.contains?.("online")===true;
+ updatePairChip(tr(!state.pairing?"Flud Companion · Not paired":online?"Flud Companion · Online":"Flud Companion · Offline"),online);
+ if(state.pairing)$("pairStatus").textContent=tr(online?"Shield online.":"Shield offline");
+ $("viewBookmarks").firstChild.textContent=state.bookmarksMode?tr("Back to search")+" ":tr("☆ Bookmarks")+" ";
+ if(!state.items.length&&!state.bookmarksMode&&!state.searching)$("notice").textContent=tr("Ready. {n} sources available.",{n:selectableProviders().length});
 }
 function init(){
  // Previously shared import links may contain magnet URI metadata.
@@ -527,6 +539,7 @@ function init(){
   $("companionAuto").checked=state.pairing.autoStart===true;
  }
  updateBookmarkCount();
+ $("languageSelect").addEventListener("change",e=>switchLanguage(e.target.value));
  $("searchForm").addEventListener("submit",e=>{e.preventDefault();search();});
  $("sort").addEventListener("change",renderResults);
  $("settingsButton").addEventListener("click",()=>openDialog("settingsDialog"));
@@ -547,7 +560,7 @@ function init(){
   e.preventDefault();
   const magnet=$("manualMagnetInput").value.trim();
   if(!magnet.startsWith("magnet:?")||magnet.length>12000){
-    toast("Paste a valid magnet link.");return;
+    toast(tr("Paste a valid magnet link."));return;
   }
   closeDialog("manualMagnetDialog");
   sendMagnet({magnet},$("pasteMagnetButton"));
@@ -557,61 +570,60 @@ function init(){
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{
   state.bookmarksMode=!state.bookmarksMode;
-  $("viewBookmarks").firstChild.textContent=state.bookmarksMode?"← Back to search ":"☆ Bookmarks ";
+  $("viewBookmarks").firstChild.textContent=state.bookmarksMode?tr("Back to search")+" ":tr("☆ Bookmarks")+" ";
   renderResults();
  });
  $("selectWorking").addEventListener("click",()=>{
   const ids=orderedProviders(selectableProviders()).filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
-  if(!ids.length){toast("No tested sources with results in the saved audit.");return;}
+  if(!ids.length){toast(tr("No tested sources with results in the saved audit."));return;}
   state.selected=new Set(ids);
   unpauseSources(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
-  toast("Selected "+ids.length+" sources with results in the last audit (not guaranteed online).");
+  toast(tr("Selected {n} verified sources.",{n:ids.length}));
  });
  $("selectAllProviders").addEventListener("click",()=>{
   const ids=selectableProviders().map(p=>p.id);
   state.selected=new Set(ids);
   unpauseSources(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
-  toast("Selected all "+ids.length+" visible indexers; hidden sources stay excluded.");
+  toast(tr("Selected all {n} visible indexers; hidden sources stay excluded.",{n:ids.length}));
  });
  $("importPairing").addEventListener("click",()=>{
   try{
    const u=new URL($("pairLink").value.trim());
-   if(u.origin!=="https://flud-remote.alexlab.media")throw Error("Only the approved Flud Companion relay is supported.");
+   if(u.origin!=="https://flud-remote.alexlab.media")throw Error(tr("Only the approved Flud Companion relay is supported."));
    const params=new URLSearchParams(u.hash.replace(/^#/,""));
    const device=params.get("device")||"",token=params.get("token")||"";
-   if(!/^[A-Za-z0-9_-]{16,128}$/.test(device)||token.length<20)throw Error("Remote QR link has no valid pairing credentials.");
+   if(!/^[A-Za-z0-9_-]{16,128}$/.test(device)||token.length<20)throw Error(tr("Remote QR link has no valid pairing credentials."));
    $("companionDevice").value=device;$("companionToken").value=token;
    $("pairLink").value="";
-   toast("QR pairing imported. Tap Save pairing.");
-  }catch(e){toast(e.message||"Invalid Remote QR URL");}
+   toast(tr("QR pairing imported. Tap Save pairing."));
+  }catch(e){toast(tr("Invalid Remote QR URL"));}
  });
  $("companionForm").addEventListener("submit",e=>{
   e.preventDefault();
   const deviceId=$("companionDevice").value.trim(),token=$("companionToken").value.trim();
-  if(!/^[A-Za-z0-9_-]{16,128}$/.test(deviceId)||token.length<20){toast("Check Device ID and Remote token.");return;}
+  if(!/^[A-Za-z0-9_-]{16,128}$/.test(deviceId)||token.length<20){toast(tr("Check Device ID and Remote token."));return;}
   state.pairing={deviceId,token,autoStart:$("companionAuto").checked};
-  save(STORAGE.pairing,state.pairing);closeDialog("settingsDialog");toast("Companion paired in this browser.");status();
+  save(STORAGE.pairing,state.pairing);closeDialog("settingsDialog");toast(tr("Companion paired in this browser."));status();
  });
  $("checkCompanion").addEventListener("click",async function(){
-   if(!state.pairing){toast("Save Remote QR pairing first.");return;}
-   this.disabled=true;const label=this.textContent;this.textContent="Checking…";
-   try{const online=await status();toast(online?"Shield online.":"Shield offline or unavailable; see pairing status.");}
+   if(!state.pairing){toast(tr("Save Remote QR pairing first."));return;}
+   this.disabled=true;const label=this.textContent;this.textContent=tr("Checking…");
+   try{const online=await status();toast(tr(online?"Shield online.":"Shield offline or unavailable; see pairing status."));}
    finally{this.disabled=false;this.textContent=label;}
  });
  $("forgetCompanion").addEventListener("click",()=>{
    state.pairing=null;localStorage.removeItem(STORAGE.pairing);
    $("companionDevice").value="";$("companionToken").value="";$("companionAuto").checked=false;
-   updatePairChip("Flud Companion · Not paired");toast("Pairing removed from this browser.");
+   updatePairChip(tr("Flud Companion · Not paired"));toast(tr("Pairing removed from this browser."));
  });
  api("/api/providers").then(({providers,audit})=>{
   state.providers=providers;state.audit=audit||null;
   chooseProviders();renderProviders();
-  const tested=providers.filter(p=>p.lastAudit?.state==="results").length;
-  $("notice").textContent=("Ready. "+selectableProviders().length+" selectable indexers; "+tested+" of the 46 original adapters returned results in the last recorded test. Availability may change.");
+  $("notice").textContent=tr("Ready. {n} sources available.",{n:selectableProviders().length});
   if(state.items.length)renderResults();
- }).catch(e=>$("notice").textContent="API unavailable: "+e.message);
+ }).catch(e=>$("notice").textContent=tr("API unavailable"));
  status();
  if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 }
