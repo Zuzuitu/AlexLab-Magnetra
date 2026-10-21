@@ -3,6 +3,10 @@ const $=id=>document.getElementById(id);
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
+// Owner-curated PWA picker exclusion only: all 46 adapters remain in the API/Android.
+// Excluded IDs cannot be displayed, selected, restored from old localStorage,
+// bulk-selected or queried by the PWA. They are not removed from source code.
+const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz"]);
 const BTDIGG_MIN_GAP_MS=5500;
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
 // failed searches; it defers one user-requested search and is abortable.
@@ -81,7 +85,7 @@ function pausedFromFailures(ids,failures,selected){
 }
 function savePausedSources(){
  save(STORAGE.paused,[...state.pausedIds]);
- const visible=[...state.pausedIds].filter(id=>state.providers.some(p=>p.id===id));
+ const visible=[...state.pausedIds].filter(id=>selectableProviders().some(p=>p.id===id));
  $("sourceHealthSummary").textContent=visible.length?
   visible.length+" failed indexer"+(visible.length===1?"":"s")+
   " paused automatically. Next searches use the remaining selected sources; tap Indexers to retry.":"";
@@ -102,6 +106,9 @@ function pauseFailedSources(ids,failures){
  updateProviderCount();renderProviders();
  return paused.length;
 }
+function selectableProviders(){
+ return state.providers.filter(p=>p.ported&&!hiddenIndexerIds.has(p.id));
+}
 function chooseProviders(){
  const stored=load(STORAGE.selected,null);
  if(Array.isArray(stored)){
@@ -111,7 +118,7 @@ function chooseProviders(){
     previousPreferred.every(id=>stored.includes(id));
   state.selected=new Set(wasOldDefault?preferred:stored);
  }
- const valid=new Set(state.providers.filter(x=>x.ported).map(x=>x.id));
+ const valid=new Set(selectableProviders().map(p=>p.id));
  state.selected=new Set([...state.selected].filter(x=>valid.has(x)));
  if(!state.selected.size)state.selected=new Set(preferred.filter(x=>valid.has(x)));
  const recorded=load(STORAGE.paused,[]);
@@ -121,11 +128,11 @@ function chooseProviders(){
  savePausedSources();
  updateProviderCount();
 }
-function updateProviderCount(){$("providerCount").textContent=String(state.selected.size)+"/"+state.providers.length;}
+function updateProviderCount(){$("providerCount").textContent=String(state.selected.size)+"/"+selectableProviders().length;}
 // Prioritize sources with real AlexLab gateway/resolve work and proved adapters.
 // UI ordering does not affect original provider IDs, source attribution or uptime.
 const priorityIndexerIds=[
- "btdigg","torrent9","oxtorrent","eztvx",
+ "btdigg","torrent9","oxtorrent",
  "knaben","torrentscsv","thepiratebay","internetarchive"
 ];
 function orderedProviders(providers){
@@ -137,7 +144,7 @@ function orderedProviders(providers){
   const status=state.sessionAudit[p.id]?.state||p.lastAudit?.state;
   return status==="results"?0:status==="error"?2:1;
  };
- return [...providers].sort((a,b)=>{
+ return [...providers].filter(p=>!hiddenIndexerIds.has(p.id)).sort((a,b)=>{
   const aPriority=priority.get(a.id),bPriority=priority.get(b.id);
   if(aPriority!==undefined||bPriority!==undefined){
    if(aPriority===undefined)return 1;
@@ -151,18 +158,19 @@ function orderedProviders(providers){
 }
 function renderProviders(){
  const grid=$("providerGrid");grid.replaceChildren();
- const ported=state.providers.filter(p=>p.ported).length;
- const audited=state.providers.filter(p=>p.lastAudit?.state==="results").length;
+ const visible=selectableProviders();
+ const ported=visible.length;
+ const audited=visible.filter(p=>p.lastAudit?.state==="results").length;
  const day=state.audit?.observedAt?new Date(state.audit.observedAt).toLocaleDateString():"unknown date";
- $("catalogSummary").textContent=ported+" adapters · "+audited+" returned results for '"+(state.audit?.query||"test")+"' on "+day+" (not live status)";
- for(const p of orderedProviders(state.providers)){
+ $("catalogSummary").textContent=ported+" selectable indexers · "+audited+" returned results for '"+(state.audit?.query||"test")+"' on "+day+" (historical, not live uptime)";
+ for(const p of orderedProviders(visible)){
   const row=el("div","provider-row"+(p.ported?"":" missing"));
   const label=el("label");
   const input=document.createElement("input");
   input.type="checkbox";input.value=p.id;input.checked=state.selected.has(p.id);input.disabled=!p.ported;
   input.addEventListener("change",()=>{
     if(input.checked){
-      if(state.selected.size>=state.providers.length){input.checked=false;toast("All available indexers are already selected.");return;}
+      if(state.selected.size>=selectableProviders().length){input.checked=false;toast("All visible indexers are already selected.");return;}
       state.selected.add(p.id);
       unpauseSources([p.id]);
     }else state.selected.delete(p.id);
@@ -384,10 +392,10 @@ function renderProviderErrors(failures){
  alternatives.addEventListener("click",()=>{
   // Use successful observations from THIS session, not obsolete dated audit
   // or hardcoded providers that may currently be blocked.
-  const live=orderedProviders(state.providers).filter(p=>p.ported&&
+  const live=orderedProviders(selectableProviders()).filter(p=>p.ported&&
    ["results","empty-unverified"].includes(state.sessionAudit[p.id]?.state)).map(p=>p.id);
   const ids=live.length?live:["knaben","torrentscsv","ytsmx"].filter(id=>
-   state.providers.some(p=>p.id===id&&p.ported));
+   selectableProviders().some(p=>p.id===id));
   if(!ids.length){toast("No alternative indexers are available.");return;}
   state.selected=new Set(ids);
   unpauseSources(ids);
@@ -552,7 +560,7 @@ function init(){
   renderResults();
  });
  $("selectWorking").addEventListener("click",()=>{
-  const ids=orderedProviders(state.providers).filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
+  const ids=orderedProviders(selectableProviders()).filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
   if(!ids.length){toast("No tested sources with results in the saved audit.");return;}
   state.selected=new Set(ids);
   unpauseSources(ids);
@@ -560,11 +568,11 @@ function init(){
   toast("Selected "+ids.length+" sources with results in the last audit (not guaranteed online).");
  });
  $("selectAllProviders").addEventListener("click",()=>{
-  const ids=state.providers.filter(p=>p.ported).map(p=>p.id);
+  const ids=selectableProviders().map(p=>p.id);
   state.selected=new Set(ids);
   unpauseSources(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
-  toast("Selected all "+ids.length+" indexers, including sources that may fail.");
+  toast("Selected all "+ids.length+" visible indexers; hidden sources stay excluded.");
  });
  $("importPairing").addEventListener("click",()=>{
   try{
@@ -600,7 +608,7 @@ function init(){
   state.providers=providers;state.audit=audit||null;
   chooseProviders();renderProviders();
   const tested=providers.filter(p=>p.lastAudit?.state==="results").length;
-  $("notice").textContent=("Ready. "+providers.length+" source adapters; "+tested+" returned results in the last recorded test. Availability may change.");
+  $("notice").textContent=("Ready. "+selectableProviders().length+" selectable indexers; "+tested+" of the 46 original adapters returned results in the last recorded test. Availability may change.");
   if(state.items.length)renderResults();
  }).catch(e=>$("notice").textContent="API unavailable: "+e.message);
  status();
