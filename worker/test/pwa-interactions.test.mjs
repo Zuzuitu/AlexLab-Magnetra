@@ -137,7 +137,7 @@ test("provider picker uses current browser-session outcomes without triggering a
 });
 
 
-test("BTDigg is pinned; actual latest audit positives precede unknowns then source errors",()=>{
+test("owner-pinned sources outrank audit, while unpinned latest results precede unknowns/errors",()=>{
  const {api,element}=harness(async()=>json({}));
  const p=(id,name,category)=>({id,name,ported:true,lastAudit:{state:category}});
  api.state.providers=[
@@ -152,8 +152,8 @@ test("BTDigg is pinned; actual latest audit positives precede unknowns then sour
   ["btdigg","knaben","torrentscsv","unknown","alpha","zeta"]);
  api.state.sessionAudit.alpha={state:"results",count:1,at:"now"};
  assert.deepEqual(Array.from(api.orderedProviders(api.state.providers),p=>p.id),
-  ["btdigg","alpha","knaben","torrentscsv","unknown","zeta"],
-  "a successful in-session search can improve a stale error label");
+  ["btdigg","knaben","torrentscsv","alpha","unknown","zeta"],
+  "a successful in-session search improves unpinned ordering without outranking owner-pinned sources");
  api.renderProviders();
  assert.equal(element("providerGrid").children.length,6);
  assert.equal(element("providerGrid").children[0].children[0].children[1].textContent,"BTDigg");
