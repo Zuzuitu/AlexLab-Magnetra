@@ -287,7 +287,7 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
         "btdigg_next_diagnostic": "DNS/TCP/TLS/TTFB",
         "btdigg_next_diagnostic_executed": False,
         "btdigg_next_diagnostic_requires_owner_approval": True,
-        "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-19.md",
+        "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md",
 
         "candidate_btdigg_last_diagnostic_run": 39134428856,
         "candidate_e2e_verified_provider_ids": ["btdigg", "eztvx", "oxtorrent", "torrent9"],
@@ -661,9 +661,13 @@ def check_manual_magnetra_worker_staging(config: dict) -> None:
     require_file(prompt_file)
     if prompt_file.is_file():
         prompt_text = prompt_file.read_text(encoding="utf8")
-        for marker in ("BTDIGG_SOURCE_TIMEOUT", "12 secunde", "aproximativ un minut",
-                       "MAGNETRA_GATEWAY_TOKEN", "46", "PR #77",
-                       "READ_ONLY_ROCK64_DNS_TCP_TLS_TTFB_BODY_TIMING"):
+        for marker in ("BTDIGG_SOURCE_TIMEOUT", "MAGNETRA_GATEWAY_TOKEN",
+                       "46", "PR #105",
+                       "9c3930f406078ee744e0473b2093ded9b91cead7",
+                       "c86c9a32-31fd-4952-86ed-b35f1763b342",
+                       "Instalat pe Rock64: NECONFIRMAT",
+                       "rock64/update-btdigg.sh",
+                       "9c3930f406078ee744e0473b2093ded9b91cead7"):
             if marker not in prompt_text:
                 fail("Current complete handoff prompt lacks critical evidence: " + marker)
 
@@ -1307,9 +1311,38 @@ def check_btdigg_residential_gateway(config: dict) -> None:
         "auto_retry_429_forbidden": True,
         "must_not_modify_companion_or_other_providers": True,
         "requires_real_rock64_probe_before_production_activation": True,
+        "2026_10_21_transport_patch_pr": 105,
+        "2026_10_21_transport_patch_source_merged": True,
+        "2026_10_21_transport_patch_merged_sha": "9c3930f406078ee744e0473b2093ded9b91cead7",
+        "2026_10_21_transport_patch_ci_four_pass": True,
+        "2026_10_21_transport_patch_only_rock64": True,
+        "2026_10_21_transport_patch_single_ipv4_tcp": True,
+        "2026_10_21_transport_patch_tls_ca_sni_verified": True,
+        "2026_10_21_transport_patch_no_retry_or_redirect": True,
+        "2026_10_21_transport_patch_rock64_installed": False,
+        "2026_10_21_transport_patch_real_postinstall_verified": False,
+        "2026_10_21_transport_timeout_permanent_fix_proven": False,
+        "2026_10_21_previous_rock64_errors_ms": [12852,12753],
+        "2026_10_21_previous_rock64_success_ms": 5734,
+        "2026_10_21_curl_http200_total_ms": 1135,
+        "2026_10_21_python_ipv4_connect_ms": 56,
+        "2026_10_21_ipv6_unreachable_caused_timeout_proven": False,
+        "2026_10_21_install_script": "rock64/update-btdigg.sh",
+        "2026_10_21_rollback_available": True,
     }
     for key, value in expected.items():
         require_equal(gateway.get(key), value, "btdigg_residential_gateway." + key)
+    # The new source patch is merged, but no physical installer output exists.
+    # A later checkpoint may update these booleans only with owner-run proof.
+    require_file(ROOT / "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md")
+    prompt = ROOT / "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md"
+    if prompt.is_file():
+        content = prompt.read_text(encoding="utf8")
+        for marker in ("Instalat pe Rock64: NECONFIRMAT",
+                       "PR #105", "9c3930f406078ee744e0473b2093ded9b91cead7"):
+            if marker not in content:
+                fail("BTDigg physical-install handoff loses explicit unverified state: " + marker)
+
     files = [
         ROOT / "worker" / "src" / "btdigg-rock64.mjs",
         ROOT / "rock64" / "btdigg_gateway.py",

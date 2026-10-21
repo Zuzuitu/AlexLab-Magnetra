@@ -182,7 +182,28 @@
     "provider_substitution_forbidden": true,
     "auto_retry_429_forbidden": true,
     "must_not_modify_companion_or_other_providers": true,
-    "requires_real_rock64_probe_before_production_activation": true
+    "requires_real_rock64_probe_before_production_activation": true,
+    "2026_10_21_transport_patch_pr": 105,
+    "2026_10_21_transport_patch_source_merged": true,
+    "2026_10_21_transport_patch_merged_sha": "9c3930f406078ee744e0473b2093ded9b91cead7",
+    "2026_10_21_transport_patch_ci_four_pass": true,
+    "2026_10_21_transport_patch_only_rock64": true,
+    "2026_10_21_transport_patch_single_ipv4_tcp": true,
+    "2026_10_21_transport_patch_tls_ca_sni_verified": true,
+    "2026_10_21_transport_patch_no_retry_or_redirect": true,
+    "2026_10_21_transport_patch_rock64_installed": false,
+    "2026_10_21_transport_patch_real_postinstall_verified": false,
+    "2026_10_21_transport_timeout_permanent_fix_proven": false,
+    "2026_10_21_previous_rock64_errors_ms": [
+      12852,
+      12753
+    ],
+    "2026_10_21_previous_rock64_success_ms": 5734,
+    "2026_10_21_curl_http200_total_ms": 1135,
+    "2026_10_21_python_ipv4_connect_ms": 56,
+    "2026_10_21_ipv6_unreachable_caused_timeout_proven": false,
+    "2026_10_21_install_script": "rock64/update-btdigg.sh",
+    "2026_10_21_rollback_available": true
   },
   "eztv_residential_gateway": {
     "upstream_api": "https://eztvx.to/api/get-torrents",
@@ -370,7 +391,7 @@
     "btdigg_next_diagnostic": "DNS/TCP/TLS/TTFB",
     "btdigg_next_diagnostic_executed": false,
     "btdigg_next_diagnostic_requires_owner_approval": true,
-    "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-19.md",
+    "current_master_prompt": "docs/MAGNETRA_MASTER_PROMPT_2026-10-21.md",
     "canary_approval_date": "2026-10-19",
     "canary_approval_target_percent": 5,
     "canary_rollout_manual_workflow": ".github/workflows/deploy-magnetra-canary-5.yml",
@@ -598,6 +619,12 @@
     "auto_pause_public_css_sha_prefix": "1c7080d499b00207",
     "auto_pause_public_html_source_sha_prefix": "6e6e2ca3388a5ce7",
     "auto_pause_public_html_cf_beacon_verified": true,
-    "auto_pause_new_app_iphone_acceptance_confirmed": false
+    "auto_pause_new_app_iphone_acceptance_confirmed": false,
+    "btdigg_last_public_one_shot_diagnostic_run": 39529234338,
+    "btdigg_last_public_one_shot_valid_relevant_rows": 7,
+    "btdigg_last_public_one_shot_raw_rows": 10,
+    "btdigg_last_public_one_shot_elapsed_ms": 6465,
+    "btdigg_patch_pr_105_main_sha": "9c3930f406078ee744e0473b2093ded9b91cead7",
+    "btdigg_patch_rock64_install_user_output_received": false
   }
 }
