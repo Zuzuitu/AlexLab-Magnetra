@@ -1,4 +1,14 @@
 # CONTINUARE PROIECT REAL — ALEXLAB MAGNETRA
+## 21 OCTOMBRIE 2026 — ANIMETOSHO / MIKAN ASCUNSE, 27 SELECTABILE: RELEASE FINAL CONFIRMAT
+
+**Stare nouă, autoritativă:** [GitHub Actions #39619753243](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39619753243), `SUCCESS`, activat prin commit `f1a09311e76bb241fd8c8bb28d144d474549f5d7`. Versiunea imutabilă `6dadc612-9660-4195-aeed-cdb658b22cf8@100%` este noua producție; `9bbb227f-7f2a-4a9b-acac-ce8cae620c51@0%` rămâne rollback. **Nu considerați 9bbb@100 sau statusul primei tentative drept actual**. Prima lansare #39610721257 a eșuat pe HTML postflight și a revenit corect la 9bbb@100/6dad@0; reluarea reușită din #39619753243 este verdictul ulterior.
+
+Dovezi log final live: `RESUME_PREFLIGHT_PASS: 9bbb100 / 6dad0`, `RESUME_STAGED_SOURCE_PASS`, `RESUME_CANARY_PASS`, `RESUME_FULL_100`, `REVIEWED_ASSET_PASS /app.js sha=85969467f08d21ee`, `/styles.css sha=1c7080d499b00207`, `REVIEWED_HTML_PASS EXACT_PLUS_CLOUDFLARE_BEACON source_sha=717d75204dafdc9e`, `ORIGINAL_PROVIDER_CATALOG_PASS:46`, `RESUME_CURATED_PUBLIC_PASS: 6dad100/9bbb0`. Testele CI 4/4 PASS, rollback disponibil, nu s-a făcut upload nou și nu s-a modificat Rock64, DNS, Tunnel, tokenuri, API provideri sau Flud.
+
+**PWA acum publicat:** 19 indexere ascunse complet din picker, bulk, selecții persistente, paused și mesajul `indexers unavailable`: sunt incluse AnimeTosho (`animetosho`) și Mikan (`mikanproject`). Sunt 27 selectabile, BTDigg/Torrent9/OxTorrent primele, BTDigg implicit selectat cu surse backup; toate 46 adaptoare încă în cod/API și Android. Avertismentul rămâne vizibil pentru erorile surselor încă selectabile. **Acceptarea vizuală pe iPhone a noului selector încă așteaptă confirmarea proprietarului**, distinct de postflight Cloudflare confirmat.
+
+---
+
 
 ## 2026-10-21 — 27-PICKER INITIAL FULL RELEASE STOPPED; VERIFIED ROLLBACK; BOUNDED RESUME READY
 
