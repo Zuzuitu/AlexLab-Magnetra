@@ -128,13 +128,13 @@ export async function legacySearch(id,query,category,fetcher=fetch){
 export function magnetFromTheRarBgInfoHash(html){
   if(typeof html!=="string"||!html||html.length>MAX_HTML)return null;
   const clean=html
-    .replace(/<(script|style|noscript)\\b[^>]*>[\\s\\S]*?<\\/\\1\\s*>/gi," ")
-    .replace(/<!--[\\s\\S]*?-->/g," ")
+    .replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi," ")
+    .replace(/<!--[\s\S]*?-->/g," ")
     .replace(/<[^>]*>/g," ")
     .replace(/&nbsp;|&#(?:160|xA0);/gi," ")
     .replace(/&colon;|&#(?:58|x3A);/gi,":")
-    .replace(/\\s+/g," ");
-  const matches=[...clean.matchAll(/\\bInfo\\s*Hash\\s*:\\s*([a-f0-9]{40})\\b/gi)];
+    .replace(/\s+/g," ");
+  const matches=[...clean.matchAll(/\bInfo\s*Hash\s*:\s*([a-f0-9]{40})\b/gi)];
   if(matches.length!==1)return null;
   return "magnet:?xt=urn:btih:"+matches[0][1].toLowerCase();
 }
