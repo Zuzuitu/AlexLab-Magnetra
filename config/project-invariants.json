@@ -68,7 +68,8 @@
       ".github/workflows/verify-magnetra-fix-zero-e2e.yml",
       ".github/workflows/magnetra-resolve-fix-canary-5.yml",
       ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml",
-      ".github/workflows/magnetra-resolve-fix-full-100.yml"
+      ".github/workflows/magnetra-resolve-fix-full-100.yml",
+      ".github/workflows/magnetra-therarbag-magnet-one-shot.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -816,5 +817,27 @@
     "release_stage_0_percent_verified": true,
     "release_canary_5_percent_verified": true,
     "release_full_100_percent_verified": true
+  },
+  "therarbag_source_owned_resolution_release": {
+    "owner_reported_iphone_2026_10_21": true,
+    "failing_operation": "Obține magnet",
+    "source_provider_id": "therarbag",
+    "error_seen": "HTTP 502 on /api/resolve",
+    "api_worker_502_may_wrap_source_or_parser_failure": true,
+    "old_worker_original_provider_count": 46,
+    "strict_source_owned_info_hash_fallback_only_on_successful_html": true,
+    "prevents_off_origin_redirects_and_hash_guessing": true,
+    "does_not_bypass_real_source_502": true,
+    "romanian_italian_source_error_message": true,
+    "previous_cloudflare_immutable_version": "60112a3d-b478-4071-b087-ab793fbdfd60",
+    "previous_cloudflare_rollback_version": "6dadc612-9660-4195-aeed-cdb658b22cf8",
+    "previous_public_app_js_sha_prefix": "44f1eac85e8550a7",
+    "workflow": ".github/workflows/magnetra-therarbag-magnet-one-shot.yml",
+    "activation_marker": "[magnetra-therarbag-magnet-publish-20261021]",
+    "activation_file": "docs/release-events/therarbag-magnet-20261021.md",
+    "immutable_0_5_100_guarded_release_prepared": true,
+    "public_release_verified": false,
+    "real_iphone_the_rarbg_magnet_resolve_verified": false,
+    "rock64_btdigg_unmodified": true
   }
 }
