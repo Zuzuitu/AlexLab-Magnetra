@@ -15,6 +15,14 @@ const genericError=(failure)=>{
  if(/403|BLOCK|REJECT|FORBIDDEN/.test(code)||/reject|forbidden/.test(msg))return tr("Provider request rejected");
  return tr("Provider unavailable");
 };
+// A 502 from the provider itself cannot be repaired in the browser.
+ // Keep the existing Details action as a manual, source-owned fallback.
+function magnetFailureText(item,error){
+ if(item?.provider==="therarbag"){
+  return tr("TheRarBg could not provide this magnet. Open Details to try it on the source site.");
+ }
+ return genericError(error);
+}
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
@@ -292,7 +300,7 @@ async function sendMagnet(item,button){
    button.textContent=label;
    if(item.id)companionLabels.set(itemKey,label);
  }catch(e){
-   toast(genericError(e));button.title=genericError(e);
+   toast(magnetFailureText(item,e));button.title=magnetFailureText(item,e);
    if(item.id)companionLabels.set(itemKey,tr("Retry send"));
  }finally{
    if(activeKey)activeCompanionMagnets.delete(activeKey);
@@ -326,7 +334,7 @@ function renderResults(){
    const actions=el("div","result-actions");
    const sendButton=addAction(actions,companionLabels.get(item.id)||tr("Send to Flud"),function(){sendMagnet(item,this)},"send");
    sendButton.disabled=activeCompanionItems.has(item.id);
-   addAction(actions,tr("Copy"),async()=>{try{await copyMagnet(await ensureMagnet(item));}catch(e){toast(e.message);}});
+   addAction(actions,tr("Copy"),async()=>{try{await copyMagnet(await ensureMagnet(item));}catch(e){toast(magnetFailureText(item,e));}});
    addAction(actions,tr("Share"),async()=>{
      try{
        const magnet=await ensureMagnet(item);
@@ -334,7 +342,7 @@ function renderResults(){
          try{await navigator.share({title:item.name,text:magnet});}
          catch(e){if(e?.name!=="AbortError")await copyMagnet(magnet);}
        }else await copyMagnet(magnet);
-     }catch(e){toast(e.message);}
+     }catch(e){toast(magnetFailureText(item,e));}
    });
    if(item.magnet){
      const magnet=el("a","action","Magnet");magnet.href=item.magnet;magnet.rel="noopener noreferrer";magnet.title=tr("Open in your installed torrent client");actions.append(magnet);
@@ -342,7 +350,7 @@ function renderResults(){
      addAction(actions,tr("Resolve"),async function(){
        const old=this.textContent;this.disabled=true;this.textContent=tr("Resolving…");
        try{await ensureMagnet(item);toast(tr("Magnet resolved."));renderResults();}
-       catch(e){toast(genericError(e));this.textContent=old;this.disabled=false;}
+       catch(e){toast(magnetFailureText(item,e));this.textContent=old;this.disabled=false;}
      });
    }
    if(item.torrentFile)downloadAction(actions,".torrent ↗",item.torrentFile);
