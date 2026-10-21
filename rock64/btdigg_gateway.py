@@ -12,22 +12,28 @@ from __future__ import annotations
 
 from collections import OrderedDict
 import hmac
+import http.client
 import json
 import os
 import re
 import socket
+import ssl
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 BIND = "127.0.0.1"
 PORT = 8796
 HOST = "https://btdig.com"
+HOSTNAME = "btdig.com"
 SIZE_LIMIT = 3_000_000
 TIMEOUT_SECONDS = 12
+# One IPv4 TLS connection for this gateway ONLY; not a system/network override.
+# These are per-stage caps, all bounded by the original overall 12s budget.
+TCP_CONNECT_SECONDS = 3
+TLS_HANDSHAKE_SECONDS = 3
+HTTP_IO_SECONDS = 6
 # Fresh successful source HTML only. Small, bounded, in-memory LRU (no disk writes).
 CACHE_SECONDS = 20 * 60
 CACHE_MAX_ENTRIES = 4
@@ -39,11 +45,6 @@ SOURCE_UA = (
     "(KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
 )
 QUERY_INVALID = re.compile(r"[\x00-\x1f\x7f]")
-
-
-class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
 
 
 class SearchProvider:
@@ -60,65 +61,134 @@ class SearchProvider:
 
     @staticmethod
     def fetch(query: str) -> tuple[int, bytes]:
-        url = HOST + "/search?q=" + quote(query, safe="")
-        request = Request(
-            url,
-            headers={
-                "User-Agent": SOURCE_UA,
-                "Accept": "text/html,application/xhtml+xml",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept-Encoding": "identity",
-            },
-            method="GET",
-        )
+        """Single genuine HTTPS request: IPv4 TCP, verified TLS, HTTP/1.1.
+
+        The old urllib opener could spend ~12s before returning even response
+        headers, reported only as 'transport'. Here every stage has a small
+        ceiling AND shares the original 12s deadline. IPv6 is unreachable on
+        this Rock64, but its observed immediate error alone did not prove the
+        old timeout's cause; this is a narrowly-scoped transport improvement,
+        not a claim that upstream reliability is guaranteed.
+
+        No per-address retries, additional requests, challenge bypass, proxy,
+        redirects, suppressed certificate checks or changes to global DNS.
+        """
         started = time.monotonic()
-        opened = None
+        deadline = started + TIMEOUT_SECONDS
+        phase = "dns"
+        stages = {}
         status = 504
         failure = "none"
+
+        def budget(max_seconds):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("original source deadline reached")
+            return min(max_seconds, remaining)
+
         try:
-            # Explicitly stop redirects: not an open proxy, no off-origin hops.
-            with build_opener(ProxyHandler({}), NoRedirect()).open(request, timeout=TIMEOUT_SECONDS) as res:
-                opened = time.monotonic()
-                if res.status != 200:
-                    return res.status, b""
-                if int(res.headers.get("content-length") or 0) > SIZE_LIMIT:
-                    return 502, b""
-                if "text/html" not in res.headers.get("content-type", "").lower():
-                    return 502, b""
-                raw = res.read(SIZE_LIMIT + 1)
-                if len(raw) > SIZE_LIMIT:
-                    return 502, b""
-                if any(x in raw[:2400].lower() for x in
-                       (b"cf-mitigated", b"just a moment", b"checking your browser")):
-                    return 503, b""
-                return 200, raw
-        except HTTPError as e:
-            failure = "http_upstream"
-            status = 429 if e.code == 429 else 503
-            return status, b""
+            # Resolve *only* IPv4 for this one fixed BTDigg hostname.
+            # Python's generic urllib/create_connection tries address families
+            # using a per-address timeout. We explicitly use one socket and
+            # NEVER iterate DNS answers to evade upstream blocks or limits.
+            addresses = socket.getaddrinfo(
+                HOSTNAME, 443, socket.AF_INET, socket.SOCK_STREAM,
+                socket.IPPROTO_TCP)
+            stages["dns_ms"] = round((time.monotonic() - started) * 1000)
+            if not addresses:
+                failure = "dns"
+                return 504, b""
+
+            phase = "tcp"
+            family, kind, proto, _, address = addresses[0]
+            with socket.socket(family, kind, proto) as plain:
+                plain.settimeout(budget(TCP_CONNECT_SECONDS))
+                plain.connect(address)
+                stages["tcp_ms"] = round((time.monotonic() - started) * 1000)
+
+                phase = "tls"
+                context = ssl.create_default_context()  # verified CA + SNI
+                context.set_alpn_protocols(["http/1.1"])
+                plain.settimeout(budget(TLS_HANDSHAKE_SECONDS))
+                with context.wrap_socket(plain, server_hostname=HOSTNAME) as secure:
+                    stages["tls_ms"] = round((time.monotonic() - started) * 1000)
+
+                    # http.client does not reconnect because the validated
+                    # TLS socket is already attached; the origin stays fixed.
+                    conn = http.client.HTTPConnection(HOSTNAME, 443)
+                    conn.sock = secure
+                    try:
+                        phase = "headers"
+                        secure.settimeout(budget(HTTP_IO_SECONDS))
+                        conn.request(
+                            "GET", "/search?q=" + quote(query, safe=""),
+                            headers={
+                                "User-Agent": SOURCE_UA,
+                                "Accept": "text/html,application/xhtml+xml",
+                                "Accept-Language": "en-US,en;q=0.9",
+                                "Accept-Encoding": "identity",
+                                "Connection": "close",
+                            })
+                        response = conn.getresponse()
+                        stages["open_ms"] = round((time.monotonic() - started) * 1000)
+
+                        if response.status != 200:
+                            # The source's 429 is preserved; other upstream
+                            # 3xx/4xx/5xx fail closed without redirect.
+                            failure = ("http_429" if response.status == 429
+                                       else "http_upstream")
+                            return (429 if response.status == 429 else 503), b""
+                        if int(response.headers.get("content-length") or 0) > SIZE_LIMIT:
+                            failure = "body_size"
+                            return 502, b""
+                        if "text/html" not in response.headers.get("content-type", "").lower():
+                            failure = "content_type"
+                            return 502, b""
+
+                        phase = "read"
+                        secure.settimeout(budget(HTTP_IO_SECONDS))
+                        raw = response.read(SIZE_LIMIT + 1)
+                        stages["read_ms"] = round(
+                            (time.monotonic() - started) * 1000) - stages["open_ms"]
+                        if len(raw) > SIZE_LIMIT:
+                            failure = "body_size"
+                            return 502, b""
+                        if any(x in raw[:2400].lower() for x in
+                               (b"cf-mitigated", b"just a moment", b"checking your browser")):
+                            failure = "source_challenge"
+                            return 503, b""
+                        status = 200
+                        return status, raw
+                    finally:
+                        # Closing only a dedicated BTDigg connection; not any
+                        # process-global networking facility or another service.
+                        conn.close()
         except (TimeoutError, socket.timeout):
-            failure = "timeout"
+            failure = phase + "_timeout"
             return 504, b""
-        except URLError as e:
-            reason = e.reason
-            failure = ("timeout" if isinstance(reason, TimeoutError)
-                       else "dns" if isinstance(reason, socket.gaierror)
-                       else "transport")
+        except socket.gaierror:
+            failure = "dns"
             return 504, b""
-        except OSError as e:
-            failure = ("dns" if isinstance(e, socket.gaierror)
-                       else "transport")
+        except ssl.SSLError:
+            failure = "tls"
+            return 504, b""
+        except (OSError, ValueError, http.client.HTTPException):
+            failure = phase + "_transport"
             return 504, b""
         finally:
-            end = time.monotonic()
-            # Deliberately excludes query, URL, response HTML, token and exception text.
-            # urllib exposes open-to-headers and body-read phases, not DNS/TCP/TLS individually.
+            # No query/URL/IP/token/certificate/exceptions in logs. Phase
+            # timings are elapsed from start (except body read duration).
+            # Used for read-only before/after diagnosis on the physical host.
             print(json.dumps({
                 "event": "btdigg_upstream_timing",
-                "total_ms": round((end - started) * 1000),
-                "open_ms": round((opened - started) * 1000) if opened else None,
-                "read_ms": round((end - opened) * 1000) if opened else None,
+                "total_ms": round((time.monotonic() - started) * 1000),
+                "open_ms": stages.get("open_ms"),
+                "read_ms": stages.get("read_ms"),
                 "failure": failure,
+                "dns_ms": stages.get("dns_ms"),
+                "tcp_ms": stages.get("tcp_ms"),
+                "tls_ms": stages.get("tls_ms"),
+                "family": "IPv4",
             }), flush=True)
 
     def _prune(self, now):
