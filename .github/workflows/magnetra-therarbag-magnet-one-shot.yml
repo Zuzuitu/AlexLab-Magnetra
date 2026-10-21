@@ -1,0 +1,60 @@
+# Unique marker activation only. Ordinary pushes/PR merges cannot deploy to Cloudflare.
+name: Magnetra TheRarBg Magnet Immutable Release (ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-magnet-20261021.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-therarbag-magnet-publish-20261021]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact activation commit
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Enforce sole owner-approved trigger
+        shell: bash
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          case "$MESSAGE" in
+            *'[magnetra-therarbag-magnet-publish-20261021]'*) ;;
+            *) echo "::error::Reviewed activation marker missing"; exit 2;;
+          esac
+          test -s docs/release-events/therarbag-magnet-20261021.md
+      - name: Verify repository invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Verify offline guarded stage and rollback
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_therarbag_magnet.py' -v
+          node --check web/app.js
+          node --check web/i18n.js
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify all PWA contracts and original provider catalog
+        run: node --test worker/test/*.test.mjs
+      - name: Wrangler bindings / assets dry-run only
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Run guarded RO IT immutable 0% / 5% / 100% release
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_THERARBG_RELEASE_ACTION: CONFIRM_MAGNETRA_THERARBG_MAGNET_20261021
+        run: |
+          set -euo pipefail
+          python3 scripts/release_magnetra_therarbag_magnet.py

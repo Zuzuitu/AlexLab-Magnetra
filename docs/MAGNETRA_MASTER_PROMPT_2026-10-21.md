@@ -1,5 +1,16 @@
 # CONTINUARE PROIECT REAL — ALEXLAB MAGNETRA
 
+## UPDATE 21 OCTOMBRIE 2026 — THE RARBG MAGNET 502: FIX PARSER PREGĂTIT, NU CONFUNDA CU BTDIGG
+
+Utilizatorul a furnizat captură iPhone PWA română unde în cadrul rezultatului **TheRarBg** era butonul „Obține magnet” și toast „Cererea a eșuat (502)”. A clarificat expres că eroarea provine de la **TheRarBg** și este separată de eventualele timeouturi BTDigg. `/api/resolve` este endpointul Worker care întoarce HTTP 502 pentru orice excepție a resolverului, inclusiv parser/no-magnet, deci numai 502 nu dovedește HTTP 502 de la domeniul sursă.
+
+Investigație: adaptorul `therarbag` din `worker/src/legacy-specs.mjs` extrage implicit doar `a[href^='magnet:']`. Pagina TheRarBg, în observare externă, prezintă și `Info Hash: <40 hex>` drept text propriu. Patch izolat în `worker/src/legacy-adapters.mjs`: după încărcarea reușită, validată prin same-origin allowlist/TLS/antibot/size, dacă nu apare ancoră magnet, transformă **numai** un unic infohash cu etichetă `Info Hash:` în `magnet:?xt=urn:btih:<hash>`; niciun retry, torrent download, bypass, redirect, combinație cu alte surse sau hash ghicit. HTTP 502/403 reale rămân erori. Teste noi `worker/test/therarbag-source-owned-hash-resolve.test.mjs`. Pentru un eșec real, interfața PWA afișează RO/IT mesaj specific și indică „Detalii” în locul unui toast 502 generic. All 46 adapters intacte; BTDigg/Rock64/Flud neatins.
+
+Planul de release este separat de parser: workflow unic `.github/workflows/magnetra-therarbag-magnet-one-shot.yml` cu marker `[magnetra-therarbag-magnet-publish-20261021]`, preflight `60112a3d-b478-4071-b087-ab793fbdfd60@100% / 6dadc612-9660-4195-aeed-cdb658b22cf8@0%`, app.js hash vechi `44f1eac85e8550a7`; upload --keep-vars versiune imutabilă nouă, verificare 0%/5%/100% a app.js, i18n.js, CSS, HTML și 46 API IDs, rollback numai pe split cunoscut. **Publicarea și fixul E2E pe iPhone încă nu sunt probate**, până la un run succes și o acțiune efectivă pe iPhone.
+
+---
+
+
 ## 21 OCTOMBRIE 2026 — RO/IT + 12 INDEXERE: PRODUCȚIE 100% CONFIRMATĂ
 
 **Noua stare operațională autoritativă**: [GitHub Actions run #39637878742](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39637878742) = `SUCCESS`. Commit de activare `78a5f72895413b4edd3d7a7926cbae1e292d35bb`. Versiunea Cloudflare Worker+assets `60112a3d-b478-4071-b087-ab793fbdfd60@100%`, versiunea anterioară `6dadc612-9660-4195-aeed-cdb658b22cf8@0%` păstrată pentru rollback. **Nu mai considerați 6dad@100 / 9bbb@0 drept distribuție curentă**; este istoric.
