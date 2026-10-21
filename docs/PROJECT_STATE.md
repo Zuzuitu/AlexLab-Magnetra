@@ -1640,3 +1640,17 @@ The existing guarded update script `rock64/update-btdigg.sh` already backs up/re
 
 ---
 
+
+
+## LATEST VERIFIED RUNTIME 21 OCTOMBRIE 2026 — BTDigg ORIGINAL: ROCK64 LOCAL HTTP 200 CU 10 MAGNETURI BTIH CONFIRMAT
+
+**Local Rock64: HTTP 200 confirmat, cu 10 rezultate originale și 10 magneturi BTIH.** După instalarea fizică verificată în PR #107, utilizatorul a rulat o singură dată `sudo python3 /opt/magnetra-btdigg/check-btdigg.py` și a trimis dovada: `Local Rock64 HTTP: 200`, `Real BTDigg search page rows: 10`, `Magnet links found: 10`, `PASS: real BTDigg result HTML reached Rock64 gateway.` Logul **aceluiași proces gateway instalat**: `total_ms=1094`, `dns_ms=430`, `tcp_ms=483` (cumulativ; TCP ≈53 ms), `tls_ms=865` (cumulativ), `open_ms=1013`, `read_ms=80`, `failure=none`, `family=IPv4`. Nu expune tokenuri/IP-uri/magneturi.
+
+**Incidente post-patch, încă reale:** două căutări iPhone au raportat `BTDIGG_SOURCE_TIMEOUT`; jurnalul noului gateway a înregistrat de două ori `failure=tcp_timeout`, `total_ms=3052/3007`, `dns_ms=48/3`, `tcp_ms=null`. Separat, `curl -4` a obținut HTTP 200 în 0.497 s, iar un test Python de conectare TCP prin contul shell a reușit în 50 ms cu un singur IPv4 DNS returnat la momentul respectiv. Acum inclusiv serviciul real, în context `systemd DynamicUser=yes`, a înregistrat HTTP 200 și 10 BTIH. Nu mai există motiv probat pentru schimbarea DNS/IP/IPv6, a limitelor `systemd` sau a transportului TLS; cauza intermitenței nu este încă demonstrată. **Acest PASS unic nu dovedește fiabilitate continuă ori dispariția timeouturilor.**
+
+**Acțiunea următoare, numai pe iPhone:** în https://index.alexlab.media reactivează doar BTDigg în `Indexers` dacă a fost auto-suspendat și efectuează o căutare normală `ubuntu`, lăsând-o să termine, pentru verificare end-to-end browser → Worker → Tunnel → Rock64 → BTDigg. Nu lansa teste repetate agresiv, nu ocoli 429. Capturile precedente cu erorile 3→1 sunt compatibile cu auto-pause, dar validarea separată a listei active pe a doua căutare rămâne de confirmat. Textul UI `about 12 seconds` nu reflectă în mod necesar cele două timeouturi reale TCP de circa 3 s; orice corecție UX separat, fără rollout neaprobat.
+
+**Alte servicii și producția neschimbate:** Cloudflare PWA c86c100 / 136c0 (ultima verificare workflow #39516593949), 46 indexere originale păstrate, Flud transfer manual, fără deploy/restart suplimentar. Istoricul anterior cu „postinstall source search pending” se referă la starea de DINAINTEA acestui test pozitiv.
+
+---
+
