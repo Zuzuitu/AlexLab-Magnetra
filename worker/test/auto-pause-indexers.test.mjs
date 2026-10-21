@@ -52,17 +52,17 @@ test("screenshot failure mix: only actual API errors are paused; healthy zero re
 
 test("completed search pauses failures persistently without touching bookmarks or Flud pairing",()=>{
  const h=harness();
- const providers=["knaben","torrentscsv","torrent9","ytsmx"];
+ const providers=["knaben","torrentscsv","torrent9","internetarchive"];
  h.state.providers=providers.map(id=>({id,name:id,ported:true}));
  h.state.selected=new Set(providers);
  h.storage.set("magnetra.bookmarks.v1",JSON.stringify({sample:"bookmark"}));
  h.storage.set("magnetra.companion.v1",JSON.stringify({deviceId:"unchanged"}));
  const n=h.pauseFailedSources(providers,[{provider:"torrent9",code:"TIMEOUT"}]);
  assert.equal(n,1);
- assert.deepEqual([...h.state.selected].sort(),["knaben","torrentscsv","ytsmx"]);
- assert.equal(h.storage.get("magnetra.providers.v1"),JSON.stringify(["knaben","torrentscsv","ytsmx"]));
+ assert.deepEqual([...h.state.selected].sort(),["internetarchive","knaben","torrentscsv"]);
+ assert.equal(h.storage.get("magnetra.providers.v1"),JSON.stringify(["knaben","torrentscsv","internetarchive"]));
  assert.equal(h.storage.get("magnetra.paused-indexers.v1"),JSON.stringify(["torrent9"]));
- assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer paused/);
+ assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer\(s\) paused/);
  assert.equal(h.storage.get("magnetra.bookmarks.v1"),JSON.stringify({sample:"bookmark"}));
  assert.equal(h.storage.get("magnetra.companion.v1"),JSON.stringify({deviceId:"unchanged"}));
 });
@@ -101,9 +101,9 @@ test("paused provider metadata survives browser restart, while manual selection 
  h.storage.set("magnetra.providers.v1",JSON.stringify(["knaben","ytsmx"]));
  h.storage.set("magnetra.paused-indexers.v1",JSON.stringify(["torrent9","ytsmx"]));
  h.chooseProviders();
- assert.deepEqual([...h.state.selected].sort(),["knaben","ytsmx"]);
+ assert.deepEqual([...h.state.selected].sort(),["knaben"]);
  assert.deepEqual([...h.state.pausedIds],["torrent9"]);
- assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer/);
+ assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer\(s\)/);
 });
 
 test("no automatic remote probing, query changes or source deletions",()=>{

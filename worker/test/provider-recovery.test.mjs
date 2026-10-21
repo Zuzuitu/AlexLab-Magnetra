@@ -76,8 +76,8 @@ test("generic manual magnet action for Flud remains (not BTDigg browser importin
 
 test("PWA online assets are refreshed network-first but authenticated APIs never cached",()=>{
  const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
- assert.ok(sw.includes('CACHE="alexlab-magnetra-v5"'));
- assert.ok(sw.includes('new Set(["/app.js","/styles.css","/manifest.webmanifest"])'));
+ assert.ok(sw.includes('CACHE="alexlab-magnetra-v6"'));
+ assert.ok(sw.includes('new Set(["/app.js","/i18n.js","/styles.css","/manifest.webmanifest"])'));
  assert.ok(sw.includes('fetch(event.request,{cache:"no-store"})'));
  assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
  assert.ok(sw.includes('event.request.method!=="GET"'));
@@ -116,10 +116,11 @@ test("public BTDigg API distinguishes upstream HTTP 504 from tunnel fetch timeou
  }finally{globalThis.fetch=original;}
 });
 
-test("PWA exposes safe BTDigg diagnostic codes visibly on mobile",()=>{
+test("PWA uses translated categorical BTDigg errors without exposing developer codes",()=>{
  const app=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
- assert.match(app,/diagnostic-code/);
- assert.match(app,/SOURCE_TIMEOUT/);
- assert.match(app,/TUNNEL_TIMEOUT/);
+ assert.match(app,/const genericError=\(failure\)=>/);
+ assert.match(app,/RATE_LIMIT|429/);
+ assert.match(app,/Provider timed out/);
  assert.match(app,/failure\.provider==="btdigg"/);
+ assert.doesNotMatch(app,/diagnostic-code|Diagnostic: /);
 });

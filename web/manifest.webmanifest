@@ -2,7 +2,7 @@
   "id": "/",
   "name": "AlexLab Magnetra",
   "short_name": "Magnetra",
-  "description": "Torrent metasearch with Flud Companion handoff.",
+  "description": "Caută torrente în mai multe surse și trimite magneturi către Flud Companion.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

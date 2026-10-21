@@ -1210,11 +1210,11 @@ def check_web_parity_and_companion(config: dict) -> None:
     if curation:
         hidden_ids = curation.get("hidden_ids", [])
         priority_ids = curation.get("priority_visible_ids", [])
-        if (len(hidden_ids) != 19 or len(set(hidden_ids)) != 19
-                or curation.get("visible_picker_count") != 27
+        if (len(hidden_ids) != 34 or len(set(hidden_ids)) != 34
+                or curation.get("visible_picker_count") != 12
                 or curation.get("original_adapter_ids_retained") != 46
                 or priority_ids[:3] != ["btdigg", "torrent9", "oxtorrent"]
-                or "btdigg" in hidden_ids or not {"eztvx","animetosho","mikanproject"}.issubset(hidden_ids)):
+                or "btdigg" in hidden_ids or not {"eztvx","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks"}.issubset(hidden_ids)):
             fail("PWA curated indexers lost owner-approved exclusions/defaults")
         picker_text = frontend.read_text(encoding="utf-8")
         html_text = (ROOT / "web/index.html").read_text(encoding="utf-8")
@@ -1229,7 +1229,7 @@ def check_web_parity_and_companion(config: dict) -> None:
         for id_ in hidden_ids:
             if '"' + id_ + '"' not in picker_text:
                 fail("PWA picker exclusion ID absent: " + id_)
-        if ('Select all available' not in html_text
+        if ('id="selectAllProviders">Selectează toate' not in html_text
                 or 'Select all 46' in html_text):
             fail("PWA bulk action must never imply hidden sources can be selected")
 

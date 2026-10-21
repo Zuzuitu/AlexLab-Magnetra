@@ -353,8 +353,8 @@
   "pwa_indexer_curation": {
     "owner_approved_visible_only": true,
     "original_adapter_ids_retained": 46,
-    "hidden_from_picker_and_pwa_search_count": 19,
-    "visible_picker_count": 27,
+    "hidden_from_picker_and_pwa_search_count": 34,
+    "visible_picker_count": 12,
     "hidden_ids": [
       "anirena",
       "bt4g",
@@ -374,7 +374,22 @@
       "xxxclub",
       "torrentz",
       "animetosho",
-      "mikanproject"
+      "mikanproject",
+      "bangumimoe",
+      "btsow",
+      "dmhy",
+      "linuxtracker",
+      "mypornclub",
+      "nekobt",
+      "sukebeinyaa",
+      "ytsmx",
+      "anilibria",
+      "blueroms",
+      "epublibre",
+      "megapeer",
+      "rutorinfo",
+      "xxxtracker",
+      "fitgirlrepacks"
     ],
     "priority_visible_ids": [
       "btdigg",
@@ -754,5 +769,22 @@
     "btdigg_last_public_one_shot_elapsed_ms": 6465,
     "btdigg_patch_pr_105_main_sha": "9c3930f406078ee744e0473b2093ded9b91cead7",
     "btdigg_patch_rock64_install_user_output_received": true
+  },
+  "bilingual_curated_release": {
+    "owner_requested_on": "2026-10-21",
+    "ui_languages": [
+      "ro",
+      "it"
+    ],
+    "default_language": "ro",
+    "language_persisted_in_local_storage": true,
+    "external_translation_or_new_services": false,
+    "hidden_indexers_count": 34,
+    "visible_selectable_indexers_count": 12,
+    "adapter_id_catalog_unchanged": 46,
+    "deprecated_audit_test_labels_removed_from_public_ui": true,
+    "previous_cloudflare_6dad_version": "6dadc612-9660-4195-aeed-cdb658b22cf8",
+    "current_rollout_verified": false,
+    "iphone_visual_acceptance_verified": false
   }
 }

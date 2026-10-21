@@ -189,6 +189,7 @@ test("source HTTP 403/429, redirects and missing JSON are surfaced honestly with
 test("TVmaze attribution and no token exposure in public PWA markup",()=>{
  const html=readFileSync(new URL("../../web/index.html",import.meta.url),"utf8");
  assert.match(html,/https:\/\/www\.tvmaze\.com/);
- assert.match(html,/torrent results come only from EZTV/);
+ assert.match(html,/<small class="metadata-credit">Date TV:/);
+ assert.doesNotMatch(html,/torrent results come only from EZTV/, "outdated technical explanation removed");
  assert.doesNotMatch(html,/TVMAZE_API_KEY|EZTV_API_KEY/);
 });

@@ -17,7 +17,8 @@ test("BTDigg Safari bookmarks, instructions and clipboard imports are completely
  assert.equal(existsSync(fromRoot("worker/test/btdigg-browser-import.test.mjs")),false);
  assert.equal(existsSync(fromRoot("worker/test/btdigg-three-step-guide.test.mjs")),false);
  assert.equal(sw.includes("btdigg-bridge.js"),false);
- assert.equal(sw.includes("alexlab-magnetra-v5"),true);
+ assert.equal(sw.includes("alexlab-magnetra-v6"),true);
+ assert.ok(sw.includes("/i18n.js"),"translation asset cached and refreshed");
 });
 
 test("only BTDigg source-error browser prompt disappears; Flud and provider catalog remain intact",()=>{
