@@ -11,6 +11,12 @@ test("TheRarBg unique source-labelled info hash yields a BTIH magnet",()=>{
   assert.equal(magnetFromTheRarBgInfoHash("<p>Info Hash: &#160;<b>"+HASH+"</b></p>"),"magnet:?xt=urn:btih:"+HASH);
 });
 
+test("duplicate identical source-owned hash is unambiguous on mobile and desktop markup",()=>{
+  const duplicated="<section class='desktop'>Info Hash: "+HASH+"</section>"+
+                   "<section class='mobile'>Info Hash: "+HASH.toUpperCase()+"</section>";
+  assert.equal(magnetFromTheRarBgInfoHash(duplicated),"magnet:?xt=urn:btih:"+HASH);
+});
+
 test("refuse ambiguous, scripted, unrelated, invalid and oversized hashes",()=>{
   assert.equal(magnetFromTheRarBgInfoHash("<p>"+HASH+"</p>"),null);
   assert.equal(magnetFromTheRarBgInfoHash("<p>Info Hash: "+"z".repeat(40)+"</p>"),null);
