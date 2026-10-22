@@ -1,5 +1,18 @@
 # AlexLab Magnetra — Project State
 
+## FINAL RELEASE CONFIRMATION — 22 OCT 2026 — THE RARBG STAGE DIAGNOSTICS LIVE 100%
+
+- **Published successfully** via unique one-shot GitHub Actions [#39719146924](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39719146924), activated by reviewed PR #133 squash merge `d9215159dfc8e7466961abb8b1f21aa0981a77d6`. Workflow conclusion: **SUCCESS**; actual guarded release code, not just mocked unit tests, logged all three traffic stages.
+- **Cloudflare live:** `056d8394-79b0-459a-b93e-b5f5a8a7295d @100%`. **Immutable rollback:** `8c4e0f6a-dc7a-4f72-9954-ba9cdd91392f @0%`. Snapshot and unchanged share verified by release's postflight. Previous `60112...` was the old rollback before the release; it is no longer the current 0% rollback and must **NOT** be targeted by a historic release script.
+- Old baseline preflight verified 8c4e@100/60112@0, three immutable bindings for each, public old `/app.js` SHA prefix `67775b388e3239e2`, old `/styles.css` SHA `71ea60a9eaf7c03e`, old `/i18n.js` SHA `5b09171b28a75a81`. Candidate uploaded `056d8394...`; checks passed at 0%, 5% and full 100%.
+- Verified *new* public `/app.js` SHA prefix `adbd2f21c2803a1e`, `/styles.css` `71ea60a9eaf7c03e`, `/i18n.js` `2c0b099a3a840d78`, HTML reviewed source `37865e2eb60ee9f0` (Cloudflare beacon-only delta). `/api/providers`: original **46 IDs**, no provider searches or downloads as part of guarded rollout.
+- **Functionality still needs independent iPhone acceptance:** the user's first TheRarBg / Genshin Impact 2026 card previously failed twice on cellular; the source parser now accepts repeated *identical* original hash and the PWA translates finite upstream/HTML/client transport errors. No evidence yet that exact previously failed iPhone card resolves after this release. One single user-triggered search and `Obține magnet` on that card is the next action; use exact new RO error category if it still fails. Do not declare permanent TheRarBg availability or Flud Shield ACK.
+- **No further deploy planned or needed** until actual live user outcome. Do not use historical `magnetra-therarbag-magnet-one-shot` or old 20261021 deployment scripts. Preserve 46 original adapters, 12 visible, RO default, IT optional, Rock64/BTDigg gateway, secrets, Flud, DNS and Tunnel unchanged.
+
+
+---
+
+
 ## 22 OCT 2026 — THE RARBG SAFE ERROR-STAGES RELEASE PACKAGE (PREPARED, NOT YET DEPLOYED)
 
 - PR #131 **merged into main** at `0a0c65546728e834cd9b265c68b5dd26d5a18c4e`; all required PR CI passed. Parser fix accepts multiple copies of the exact same validated source-owned 40-hex `Info Hash`, but rejects different values. `therarbag` only API provides sanitized categorical resolve failure `code`; RO/IT client now distinguishes transport, upstream HTTP, missing hash, redirects and client/network failures. Old iPhone card continued to fail before this change was deployed.
