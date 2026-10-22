@@ -746,6 +746,14 @@ const DICTIONARY={
     "ro": "Magnetra a primit un răspuns invalid la rezolvarea magnetului.",
     "it": "Magnetra ha ricevuto una risposta non valida durante la risoluzione del magnet."
   },
+  "Your phone could not reach Magnetra's magnet resolver.": {
+    "ro": "Telefonul nu a reușit să contacteze serviciul Magnetra pentru magneturi.",
+    "it": "Il telefono non è riuscito a contattare il servizio Magnetra per i magnet."
+  },
+  "The magnet request was cancelled before completion.": {
+    "ro": "Cererea pentru magnet a fost anulată înainte de finalizare.",
+    "it": "La richiesta del magnet è stata annullata prima del completamento."
+  },
   "TheRarBg could not provide this magnet. Open Details to try it on the source site.": {
     "ro": "TheRarBg nu a putut furniza magnetul. Deschide „Detalii” pentru a încerca direct pe site.",
     "it": "TheRarBg non ha fornito il magnet. Apri «Dettagli» per provare direttamente sul sito."
