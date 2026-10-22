@@ -42,5 +42,6 @@ jobs:
         run: |
           python3 scripts/check-project-invariants.py
           python3 scripts/diagnose_therarbag_iphone_resolve.py --selftest
-      - name: One bounded production query and one Resolve, no deploy
+          python3 -m unittest discover -s scripts -p 'test_therarbag_readonly_diagnostic.py'
+      - name: One bounded production query or verified diagnostic failure, no deploy
         run: python3 scripts/diagnose_therarbag_iphone_resolve.py --approved-readonly
