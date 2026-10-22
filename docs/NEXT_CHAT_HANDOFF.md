@@ -1,5 +1,17 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 22 OCT 2026 — THE RARBG SAFE ERROR-STAGES RELEASE PACKAGE (PREPARED, NOT YET DEPLOYED)
+
+- PR #131 **merged into main** at `0a0c65546728e834cd9b265c68b5dd26d5a18c4e`; all required PR CI passed. Parser fix accepts multiple copies of the exact same validated source-owned 40-hex `Info Hash`, but rejects different values. `therarbag` only API provides sanitized categorical resolve failure `code`; RO/IT client now distinguishes transport, upstream HTTP, missing hash, redirects and client/network failures. Old iPhone card continued to fail before this change was deployed.
+- One-shot release implementation `scripts/release_magnetra_therarbag_error_stages_20261022.py`, offline regression `scripts/test_release_magnetra_therarbag_error_stages_20261022.py`, and guarded workflow `.github/workflows/magnetra-therarbag-error-stages-one-shot.yml`. **Never use historical 20261021 release script against the new baseline**: it targets earlier immutable versions.
+- Expected latest documented Cloudflare split before upload: `8c4e0f6a-dc7a-4f72-9954-ba9cdd91392f@100%` and `60112a3d-b478-4071-b087-ab793fbdfd60@0%`. Script must re-read actual Cloudflare deployment and requires exact split + validated static asset SHA prefixes + verified 3 bindings before any upload. Unexpected state = STOP, no new traffic.
+- Unique activation path `docs/release-events/therarbag-error-stages-20261022.md`; marker `[magnetra-therarbag-stages-publish-20261022]`; no normal merge triggers release. Guarded immutable upload preserves existing secrets, staged 0% asset and 46 ID check, 5% canary verification, 100% public verification, old 8c4e at 0% for rollback, rollback only after inspecting exact known split; no Rock64, DNS, Tunnel, Flud, external torrent downloads, BTDigg source probes, or source-site bypass.
+- **Not yet deployed at the time this checkpoint was drafted.** Merge release PR only after CI; activate separately under owner's explicit production-publish authorization. Confirm run deployment ID and exact Cloudflare shares; then one real same-card iPhone test. Do not claim functional fix without that test.
+
+
+---
+
+
 ### Small functional TheRarBg parser hardening — not proven for owner card
 
 The `magnetFromTheRarBgInfoHash` extractor previously rejected HTML containing two identical `Info Hash: <same 40 hex>` labels because it counted **occurrences**, not distinct values. On a source-owned same-origin successful HTTP 200 detail page, duplicate identical mobile/desktop copies are unambiguous: the parser now permits them; two *different* hashes, malformed labels, off-origin redirects, HTTP errors and oversize documents still fail closed. Added regression test for identical duplicates; earlier conflicting-hash test remains. This is a bounded **potential functional improvement**, not proof that the repeated failing Genshin iPhone card contains duplicate labels; that live HTML has not been inspected and no new release has occurred.
