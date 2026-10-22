@@ -1,0 +1,46 @@
+# Explicit owner-triggered READ ONLY: one TheRarBg search and at most one resolve.
+# No source IDs, URLs, hashes, magnets, titles, tokens or torrent downloads logged.
+name: Diagnose TheRarBg iPhone Resolve (READ ONLY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagnostic_approval:
+        description: "Allow one 2026 TheRarBg search and one resolve, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_ONCE_THE_RARBG_READONLY
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-therarbag-readonly-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Refuse without explicit source-read approval
+        env:
+          CHOICE: ${{ inputs.diagnostic_approval }}
+        run: |
+          test "$CHOICE" = "RUN_ONCE_THE_RARBG_READONLY" || {
+            echo "::error::Explicit source-read approval missing; abort."
+            exit 2
+          }
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Offline invariants and diagnostic selftest
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 scripts/diagnose_therarbag_iphone_resolve.py --selftest
+      - name: One bounded production query and one Resolve, no deploy
+        run: python3 scripts/diagnose_therarbag_iphone_resolve.py --approved-readonly
