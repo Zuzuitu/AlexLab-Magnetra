@@ -1,5 +1,16 @@
 # AlexLab Magnetra — Project State
 
+## 22 OCT 2026 — GUARDED 056d TO SOURCE-CACHE LINK RELEASE PREPARED (NOT DEPLOYED)
+
+- PR #135 merged into `main` at `bebf1a92015cf94987396d5316a63c2b2a27b7ae`, after PWA + invariants + debug/staging CI PASS. Adds the strictly source-linked `https://itorrents.org/torrent/<40hex>.torrent` fallback extracted only from validated original TheRarBg detail HTML, alongside cross-validation against any labelled 40-hex original `Info Hash`. Does not fetch/download torrents or use other indexers.
+- Release package uses **new** script `scripts/release_magnetra_therarbag_cache_link_20261022.py`, offline safety tests `scripts/test_release_magnetra_therarbag_cache_link_20261022.py`, workflow `.github/workflows/magnetra-therarbag-cache-link-one-shot.yml`. Unique activation marker `[magnetra-therarbag-cachelink-publish-20261022]` and release-event path `docs/release-events/therarbag-cache-link-20261022.md`. The activation file MUST be a separate approved PR: normal merges must NEVER deploy.
+- Last **verified** live version `056d8394-79b0-459a-b93e-b5f5a8a7295d@100%`, with rollback `8c4e0f6a-dc7a-4f72-9954-ba9cdd91392f@0%`. Expected old `/app.js` SHA prefix `adbd2f21c2803a1e`, `/i18n.js` `2c0b099a3a840d78`, `/styles.css` `71ea60a9eaf7c03e`. Preflight must re-read Cloudflare actual deployment, hashes, 3 bindings and exact distribution; any difference stops before upload.
+- Candidate release stages 0% (asset, language, HTML and 46-provider catalog), 5% canary, 100% public verification, previous 056d preserved at 0% for rollback; no DNS/Tunnel/Rock64/BTDigg/Flud/secret changes and no provider searches.
+- **NOT YET LIVE.** The previously failing Genshin 93.2 MB card was observed `DETAIL_NO_BTIH` after 056d release, and the new source-cache link fallback is not yet E2E validated against its actual details HTML. Successful stage promotion must be followed by one fresh iPhone same-card test. Do not report a fixed magnet without this acceptance.
+
+---
+
+
 ## 22 OCT 2026 — THE RARBG EXACT IPHONE CARD FAIL AFTER 056d RELEASE
 
 - User repeated same first Genshin Impact music result (93.2 MB) at 07:40 Europe/Rome after release `056d8394-79b0-459a-b93e-b5f5a8a7295d`@100%. The new RO toast was **"Pagina de detalii TheRarBg nu conține un magnet acceptat sau un hash unic verificabil."** This maps to actual API `DETAIL_NO_BTIH` from an HTTP-200 detail HTML that lacked the previous parser's accepted `<a href="magnet:?">` or `Info Hash: <40 hex>` text. **The 056d release did not fix this card**; the diagnosis is no longer a generic 502/unknown origin. Do not claim success or repeat the previous duplicate-hash assumption.
