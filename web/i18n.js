@@ -678,6 +678,74 @@ const DICTIONARY={
     "ro": "AlexLab Magnetra — Caută. Magnet. Gata.",
     "it": "AlexLab Magnetra — Cerca. Magnet. Fatto."
   },
+  "TheRarBg refused the details request (403). Open Details on the source site.": {
+    "ro": "TheRarBg a refuzat accesul la detalii (403). Deschide „Detalii” pe site-ul sursă.",
+    "it": "TheRarBg ha rifiutato la pagina dei dettagli (403). Apri «Dettagli» sul sito di origine."
+  },
+  "TheRarBg details page is missing (404). Open Details on the source site.": {
+    "ro": "Pagina de detalii TheRarBg nu există (404). Deschide „Detalii” pe site-ul sursă.",
+    "it": "La pagina dei dettagli TheRarBg non esiste (404). Apri «Dettagli» sul sito di origine."
+  },
+  "TheRarBg is limiting requests (429). Try this result later.": {
+    "ro": "TheRarBg limitează cererile (429). Încearcă acest rezultat mai târziu.",
+    "it": "TheRarBg limita le richieste (429). Riprova più tardi."
+  },
+  "TheRarBg details server returned 500. Try this result later.": {
+    "ro": "Serverul de detalii TheRarBg a răspuns cu 500. Încearcă mai târziu.",
+    "it": "Il server dei dettagli TheRarBg ha risposto 500. Riprova più tardi."
+  },
+  "TheRarBg details server returned 502. Try this result later.": {
+    "ro": "Serverul de detalii TheRarBg a răspuns cu 502. Încearcă mai târziu.",
+    "it": "Il server dei dettagli TheRarBg ha risposto 502. Riprova più tardi."
+  },
+  "TheRarBg details server returned 503. Try this result later.": {
+    "ro": "Serverul de detalii TheRarBg a răspuns cu 503. Încearcă mai târziu.",
+    "it": "Il server dei dettagli TheRarBg ha risposto 503. Riprova più tardi."
+  },
+  "TheRarBg details server returned 504. Try this result later.": {
+    "ro": "Serverul de detalii TheRarBg a răspuns cu 504. Încearcă mai târziu.",
+    "it": "Il server dei dettagli TheRarBg ha risposto 504. Riprova più tardi."
+  },
+  "TheRarBg requires browser verification. Open Details on the source site.": {
+    "ro": "TheRarBg cere verificare în browser. Deschide „Detalii” pe site-ul sursă.",
+    "it": "TheRarBg richiede la verifica nel browser. Apri «Dettagli» sul sito di origine."
+  },
+  "TheRarBg details page did not contain a supported magnet or unique info hash.": {
+    "ro": "Pagina de detalii TheRarBg nu conține un magnet acceptat sau un hash unic verificabil.",
+    "it": "La pagina dei dettagli TheRarBg non contiene un magnet supportato o un hash univoco verificabile."
+  },
+  "TheRarBg details request timed out. Try this result later.": {
+    "ro": "Cererea de detalii TheRarBg a expirat. Încearcă mai târziu.",
+    "it": "La richiesta dei dettagli TheRarBg è scaduta. Riprova più tardi."
+  },
+  "TheRarBg details redirected outside the approved source route.": {
+    "ro": "Pagina de detalii TheRarBg a redirecționat în afara domeniului permis.",
+    "it": "La pagina dei dettagli TheRarBg ha reindirizzato fuori dal dominio consentito."
+  },
+  "TheRarBg details page exceeded the safe size limit.": {
+    "ro": "Pagina de detalii TheRarBg depășește limita sigură de dimensiune.",
+    "it": "La pagina dei dettagli TheRarBg supera il limite di dimensione sicuro."
+  },
+  "TheRarBg details URL was rejected by source validation.": {
+    "ro": "Adresa detaliilor TheRarBg nu a trecut verificarea sursei.",
+    "it": "L'indirizzo dei dettagli TheRarBg non ha superato la verifica della fonte."
+  },
+  "Magnetra could not connect to TheRarBg details.": {
+    "ro": "Magnetra nu se poate conecta la pagina de detalii TheRarBg.",
+    "it": "Magnetra non riesce a collegarsi alla pagina dei dettagli TheRarBg."
+  },
+  "The magnet resolver is temporarily unavailable.": {
+    "ro": "Serviciul de rezolvare a magneturilor este temporar indisponibil.",
+    "it": "Il servizio di risoluzione dei magnet è temporaneamente non disponibile."
+  },
+  "Magnetra was blocked before receiving a server response (HTTP 403).": {
+    "ro": "Cererea Magnetra a fost blocată înainte de răspunsul serverului (HTTP 403).",
+    "it": "La richiesta Magnetra è stata bloccata prima della risposta del server (HTTP 403)."
+  },
+  "Magnetra received a non-JSON response while resolving the magnet.": {
+    "ro": "Magnetra a primit un răspuns invalid la rezolvarea magnetului.",
+    "it": "Magnetra ha ricevuto una risposta non valida durante la risoluzione del magnet."
+  },
   "TheRarBg could not provide this magnet. Open Details to try it on the source site.": {
     "ro": "TheRarBg nu a putut furniza magnetul. Deschide „Detalii” pentru a încerca direct pe site.",
     "it": "TheRarBg non ha fornito il magnet. Apri «Dettagli» per provare direttamente sul sito."
