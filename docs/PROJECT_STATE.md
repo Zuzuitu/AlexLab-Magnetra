@@ -1,5 +1,16 @@
 # AlexLab Magnetra — Project State
 
+## PRODUCTION RELEASE CONFIRMED — 22 OCT 2026 — THE RARBG SOURCE-CACHE HASH FALLBACK
+
+- New source-owned parser PR #135 was merged at `bebf1a92015cf94987396d5316a63c2b2a27b7ae`; guarded release package PR #136 merged at `de78d133d81971dde82ed91305eb0ff7abde3474`; unique activation PR #137 squash merge `243cccc94e41c5f11f7ea089c0a66f1a564e4eb7`.
+- **Real production release SUCCESS:** GitHub Actions [#39732674576](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39732674576). Cloudflare active `a088fa41-233d-48d3-bd4c-52be6194fda8@100%`, immutable rollback `056d8394-79b0-459a-b93e-b5f5a8a7295d@0%`. Preflight verified prior split `056d@100/8c4e@0`, expected old JS `adbd2f21c2803a1e`, CSS `71ea60a9eaf7c03e`, i18n `2c0b099a3a840d78`, and 3 immutable bindings. Candidate independently validated after stage 0%, canary 5%, full 100%, 46/46 original provider identities and correct static assets.
+- Source-owned fallback: after exactly one successful, safe same-origin `therarbg.com` detail fetch, accept either a unique labelled infohash OR a single vetted original `.torrent File` link with URL `https://itorrents.org/torrent/<40hex>.torrent` from the `Torrent:` action row, adjacent to `Info Hash:`; reject disagreements, mixed hashes and unsupported/foreign links. **No cache fetch or .torrent download**, no search in another provider, no fabricated hash. Existing original magnet paths remain untouched. 136+ source/provider tests PASS.
+- **The exact Genshin 93.2 MB card has NOT been retested since `a088` release.** User's 07:40 local screenshot on earlier 056d release showed `DETAIL_NO_BTIH`, proving that earlier patch did not solve it. Do NOT claim this new source-cache fallback is E2E confirmed for that card until one owner iPhone `Obține magnet` attempt succeeds. If still `DETAIL_NO_BTIH`, the actual HTML likely lacks both accepted source-owned indicators; request the direct `Detalii ↗` URL for exact structural audit instead of more speculative releases.
+- Old version IDs must not be reused for a new release; latest rollback is now `056d`, **not 8c4e**. The iPhone PWA uses RO default, IT optional, 12 visible indexers and 46 API identities. BTDigg, Rock64, Flud Companion Shield ACK, DNS and Tunnel untouched.
+
+---
+
+
 ## 22 OCT 2026 — GUARDED 056d TO SOURCE-CACHE LINK RELEASE PREPARED (NOT DEPLOYED)
 
 - PR #135 merged into `main` at `bebf1a92015cf94987396d5316a63c2b2a27b7ae`, after PWA + invariants + debug/staging CI PASS. Adds the strictly source-linked `https://itorrents.org/torrent/<40hex>.torrent` fallback extracted only from validated original TheRarBg detail HTML, alongside cross-validation against any labelled 40-hex original `Info Hash`. Does not fetch/download torrents or use other indexers.
