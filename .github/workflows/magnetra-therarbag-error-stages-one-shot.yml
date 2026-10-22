@@ -1,0 +1,64 @@
+# Owner-approved one-shot immutable release. Normal main pushes / PR merges do not deploy.
+# Only a dedicated NEW release-event file and exact commit marker can activate.
+name: Magnetra TheRarBg Resolve Stages Immutable Release (ONE SHOT)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-error-stages-20261022.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-therarbag-stages-publish-20261022]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require exact one-shot release authorization
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          case "$COMMIT_MESSAGE" in
+            *'[magnetra-therarbag-stages-publish-20261022]'*) ;;
+            *) echo "::error::Missing explicit release marker"; exit 2;;
+          esac
+          test -s docs/release-events/therarbag-error-stages-20261022.md
+          echo "THE_RARBG_STAGE_RELEASE_ACTIVATION_PASS"
+      - name: Project invariants and offline immutable release gates
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_therarbag_error_stages_20261022.py' -v
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_therarbag_magnet.py' -v
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify all original provider contracts and RO/IT regression tests
+        run: |
+          node --test worker/test/*.test.mjs
+          node --check web/app.js
+          node --check web/i18n.js
+      - name: Validate Worker bundle, bindings and static assets without upload
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Owner-approved exact-baseline immutable 0-5-100 release
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_THERARBG_RELEASE_ACTION: CONFIRM_MAGNETRA_THERARBG_ERROR_STAGES_20261022
+        run: |
+          set -euo pipefail
+          python3 scripts/release_magnetra_therarbag_error_stages_20261022.py
