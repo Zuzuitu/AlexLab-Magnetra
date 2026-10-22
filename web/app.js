@@ -28,7 +28,7 @@ function magnetFailureText(item,error){
    SOURCE_HTTP_503:"TheRarBg details server returned 503. Try this result later.",
    SOURCE_HTTP_504:"TheRarBg details server returned 504. Try this result later.",
    SOURCE_CHALLENGE:"TheRarBg requires browser verification. Open Details on the source site.",
-   DETAIL_NO_BTih:"TheRarBg details page did not contain a supported magnet or unique info hash.",
+   DETAIL_NO_BTIH:"TheRarBg details page did not contain a supported magnet or unique info hash.",
    SOURCE_TIMEOUT:"TheRarBg details request timed out. Try this result later.",
    SOURCE_REDIRECT:"TheRarBg details redirected outside the approved source route.",
    SOURCE_PAGE_TOO_LARGE:"TheRarBg details page exceeded the safe size limit.",
