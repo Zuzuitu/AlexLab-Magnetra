@@ -1363,7 +1363,7 @@ def check_btdigg_residential_gateway(config: dict) -> None:
         "2026_10_21_transport_patch_local_success_open_cumulative_ms": 1013,
         "2026_10_21_transport_patch_local_success_read_ms": 80,
         "2026_10_21_transport_patch_local_postinstall_tcp_timeouts_observed": 2,
-        "2026_10_21_transport_patch_postinstall_iphone_positive_e2e_proven": False,
+        "2026_10_21_transport_patch_postinstall_iphone_positive_e2e_proven": True,
         "2026_10_21_transport_timeout_permanent_fix_proven": False,
         "2026_10_21_previous_rock64_errors_ms": [12852,12753],
         "2026_10_21_previous_rock64_success_ms": 5734,

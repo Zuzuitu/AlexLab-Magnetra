@@ -210,7 +210,7 @@
     "2026_10_21_transport_patch_local_success_open_cumulative_ms": 1013,
     "2026_10_21_transport_patch_local_success_read_ms": 80,
     "2026_10_21_transport_patch_local_postinstall_tcp_timeouts_observed": 2,
-    "2026_10_21_transport_patch_postinstall_iphone_positive_e2e_proven": false,
+    "2026_10_21_transport_patch_postinstall_iphone_positive_e2e_proven": true,
     "2026_10_21_transport_timeout_permanent_fix_proven": false,
     "2026_10_21_previous_rock64_errors_ms": [
       12852,
@@ -221,7 +221,9 @@
     "2026_10_21_python_ipv4_connect_ms": 56,
     "2026_10_21_ipv6_unreachable_caused_timeout_proven": false,
     "2026_10_21_install_script": "rock64/update-btdigg.sh",
-    "2026_10_21_rollback_available": true
+    "2026_10_21_rollback_available": true,
+    "2026_10_21_postinstall_tcp_timeouts_still_real": true,
+    "2026_10_21_no_retry_or_ip_rotation_without_root_cause": true
   },
   "eztv_residential_gateway": {
     "upstream_api": "https://eztvx.to/api/get-torrents",
@@ -836,8 +838,46 @@
     "activation_marker": "[magnetra-therarbag-magnet-publish-20261021]",
     "activation_file": "docs/release-events/therarbag-magnet-20261021.md",
     "immutable_0_5_100_guarded_release_prepared": true,
-    "public_release_verified": false,
+    "public_release_verified": true,
     "real_iphone_the_rarbg_magnet_resolve_verified": false,
-    "rock64_btdigg_unmodified": true
+    "rock64_btdigg_unmodified": true,
+    "public_release_run_id": 39652018835,
+    "public_release_conclusion": "success",
+    "public_release_activated_commit": "bdd1270a977653122f234d6b960dbaab120ad7a3",
+    "new_live_version_id": "8c4e0f6a-dc7a-4f72-9954-ba9cdd91392f",
+    "new_live_version_percent": 100,
+    "rollback_version_id": "60112a3d-b478-4071-b087-ab793fbdfd60",
+    "rollback_version_percent": 0,
+    "stage_0_percent_pass": true,
+    "canary_5_percent_pass": true,
+    "full_100_percent_pass": true,
+    "original_46_catalog_verified": true,
+    "public_app_js_sha_prefix": "67775b388e3239e2",
+    "public_css_sha_prefix": "71ea60a9eaf7c03e",
+    "public_html_source_sha_prefix": "37865e2eb60ee9f0",
+    "public_i18n_js_sha_prefix": "5b09171b28a75a81",
+    "upstream_therarbg_actual_http_502_proven": false
+  },
+  "magnetra_current_checkpoint_2026_10_22": {
+    "github_main_last_release_commit": "bdd1270a977653122f234d6b960dbaab120ad7a3",
+    "cloudflare_live_version": "8c4e0f6a-dc7a-4f72-9954-ba9cdd91392f",
+    "cloudflare_live_percentage": 100,
+    "cloudflare_rollback_version": "60112a3d-b478-4071-b087-ab793fbdfd60",
+    "cloudflare_rollback_percentage": 0,
+    "release_run": 39652018835,
+    "owner_the_rarbg_resolve_real_iphone_retest_pending": true,
+    "btdigg_iphone_positive_search_confirmed_once": true,
+    "btdigg_intermitent_tcp_timeout_not_proven_resolved": true,
+    "hidden_indexers": 34,
+    "visible_indexers": 12,
+    "original_adapter_ids": 46,
+    "languages": [
+      "ro",
+      "it"
+    ],
+    "default_language": "ro",
+    "flud_companion_physical_delivery_not_verified": true,
+    "android_staging_latest_push_missing_dependency": "org.jetbrains.kotlin:compose-group-mapping:2.4.20",
+    "no_new_cloudflare_release_for_checkpoint": true
   }
 }
