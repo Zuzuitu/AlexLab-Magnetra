@@ -877,7 +877,13 @@
     ],
     "default_language": "ro",
     "flud_companion_physical_delivery_not_verified": true,
-    "android_staging_latest_push_missing_dependency": "org.jetbrains.kotlin:compose-group-mapping:2.4.20",
+    "android_staging_historical_failure_run_id": 39652018922,
+    "android_staging_historical_missing_dependency": "org.jetbrains.kotlin:compose-group-mapping:2.4.20",
+    "android_staging_2026_10_22_main_run_id": 39698657719,
+    "android_staging_2026_10_22_main_conclusion": "success",
+    "android_staging_2026_10_22_main_artifact_id": 12392185923,
+    "production_smoke_2026_10_22_main_run_id": 39698657765,
+    "production_smoke_2026_10_22_main_conclusion": "success",
     "no_new_cloudflare_release_for_checkpoint": true
   }
 }
