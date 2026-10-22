@@ -143,6 +143,49 @@ export function magnetFromTheRarBgInfoHash(html){
   return "magnet:?xt=urn:btih:"+[...uniqueHashes][0];
 }
 
+// The .torrent File link on the SAME validated TheRarBg detail page can
+// reference an iTorrents cache URL named after the v1 torrent infohash.
+// This is a source-endorsed metadata pointer, NOT an alternate search indexer:
+// no request to the cache and no .torrent download is ever made here.
+// Only consider an exact HTTPS cache target in the main "Torrent:" action row,
+// accompanied by the page's "Info Hash:" label; never harvest arbitrary
+// .torrent links from description, similar posts, scripts, or comments.
+export function magnetFromTheRarBgSourceMetadata(html){
+  if(typeof html!=="string"||!html||html.length>MAX_HTML)return null;
+  const safe=html
+    .replace(/<(script|style|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi," ")
+    .replace(/<!--[\s\S]*?-->/g," ");
+  const cleanText=(value)=>value.replace(/<[^>]*>/g," ")
+    .replace(/&nbsp;|&#(?:160|xA0);/gi," ")
+    .replace(/&colon;|&#(?:58|x3A);/gi,":")
+    .replace(/\s+/g," ").trim();
+  const visible=cleanText(safe);
+  const labelled=[...visible.matchAll(/\bInfo\s*Hash\s*:\s*([a-f0-9]{40})\b/gi)]
+    .map(match=>match[1].toLowerCase());
+  const cache=[];
+  for(const match of safe.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
+    if(!/^\.torrent\s+File$/i.test(cleanText(match[2])))continue;
+    const attr=/\bhref\s*=\s*(?:"([^"]+)"|'([^']+)')/i.exec(match[1]);
+    if(!attr)continue;
+    const href=attr[1]||attr[2];
+    let url;
+    try{url=new URL(href);}catch{continue;}
+    if(url.protocol!=="https:"||url.hostname!=="itorrents.org"||
+      url.port||url.username||url.password||url.search||url.hash)continue;
+    const path=/^\/torrent\/([a-f0-9]{40})\.torrent$/i.exec(url.pathname);
+    if(!path)continue;
+    const before=cleanText(safe.slice(Math.max(0,match.index-750),match.index));
+    const after=cleanText(safe.slice(match.index+match[0].length,match.index+match[0].length+750));
+    // Anchor must belong to this torrent's download controls, not a link
+    // to another torrent found elsewhere on the detail page.
+    if(!/\bTorrent\s*:\s*[^:]{0,220}$/i.test(before) ||
+       !/\bInfo\s*Hash\s*:/i.test(after))continue;
+    cache.push(path[1].toLowerCase());
+  }
+  const unique=new Set([...labelled,...cache]);
+  return unique.size===1 ? "magnet:?xt=urn:btih:"+[...unique][0] : null;
+}
+
 export async function resolveLegacy(id,url,fetcher=fetch){
   const spec=LEGACY_SPECS[id];
   if(!spec)throw Error("provider not configured");
@@ -169,7 +212,7 @@ export async function resolveLegacy(id,url,fetcher=fetch){
   await reader.transform(new Response(html,{headers:{"content-type":"text/html"}})).text();
   // Strict single-provider fallback; successful detail HTML was fetched via
   // its fixed-origin allowlisted URL with anti-bot and size guards above.
-  if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgInfoHash(html);
+  if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgSourceMetadata(html);
   if(!magnet)throw Error("provider details page contains no supported magnet link");
   return {magnet};
 }
