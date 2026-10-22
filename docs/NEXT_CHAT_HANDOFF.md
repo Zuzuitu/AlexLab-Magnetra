@@ -1,5 +1,15 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 22 OCT 2026 — THE RARBG EXACT IPHONE CARD FAIL AFTER 056d RELEASE
+
+- User repeated same first Genshin Impact music result (93.2 MB) at 07:40 Europe/Rome after release `056d8394-79b0-459a-b93e-b5f5a8a7295d`@100%. The new RO toast was **"Pagina de detalii TheRarBg nu conține un magnet acceptat sau un hash unic verificabil."** This maps to actual API `DETAIL_NO_BTIH` from an HTTP-200 detail HTML that lacked the previous parser's accepted `<a href="magnet:?">` or `Info Hash: <40 hex>` text. **The 056d release did not fix this card**; the diagnosis is no longer a generic 502/unknown origin. Do not claim success or repeat the previous duplicate-hash assumption.
+- A publicly accessible TheRarBg own detail example exposes a `Torrent: Magnet Download .torrent File Copy Magnet Info Hash: <40 hex>` action row. Its `.torrent File` link goes to an iTorrents cache, documented URL form `https://itorrents.org/torrent/<40hex>.torrent` embeds the BTIH. This is evidence of a **source-linked metadata path**, not authority to use a different search indexer or infer hashes from titles.
+- New narrow `magnetFromTheRarBgSourceMetadata` fallback, invoked ONLY after a successful original TheRarBg same-origin detail HTML fetch: accepts labelled original 40hex text OR exactly one strict `https://itorrents.org/torrent/<40hex>.torrent` link whose anchor is `.torrent File` in the same first-party `Torrent:` row followed by an `Info Hash:` label. If text hash and cache URL disagree, reject; if multiple different hashes appear, reject; disallow malicious lookalike hosts, non-HTTPS, credentials, queries, fragments, scripts, comments and unlabelled related links. It **does not fetch iTorrents or any .torrent file** and does not query another indexer; the output is a canonical BTIH derived only from that record's first-party HTML. Other 45 provider adapters unaffected.
+- Added offline regression tests for source-linked cache hash, missing text hash, contradictions, phishing URLs, origin checking and one-request original-resolver behavior. **Not proven for the actual Genshin record until a new guarded release and iPhone retest.** Existing PWA 056d remains active and old 8c4e at 0% for rollback until then. Do not use old hardcoded 8c4e baseline release script after any new rollout.
+
+---
+
+
 ## FINAL RELEASE CONFIRMATION — 22 OCT 2026 — THE RARBG STAGE DIAGNOSTICS LIVE 100%
 
 - **Published successfully** via unique one-shot GitHub Actions [#39719146924](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39719146924), activated by reviewed PR #133 squash merge `d9215159dfc8e7466961abb8b1f21aa0981a77d6`. Workflow conclusion: **SUCCESS**; actual guarded release code, not just mocked unit tests, logged all three traffic stages.

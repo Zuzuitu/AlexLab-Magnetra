@@ -66,7 +66,15 @@ def guard_source():
     pwa=(ROOT/"web/app.js").read_text(encoding="utf8")
     i18n=(ROOT/"web/i18n.js").read_text(encoding="utf8")
     if ("export function magnetFromTheRarBgInfoHash(html){" not in source
-        or 'if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgInfoHash(html);' not in source
+        or not (
+            'if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgInfoHash(html);' in source
+            or (
+                'export function magnetFromTheRarBgSourceMetadata(html){' in source
+                and 'if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgSourceMetadata(html);' in source
+                and 'url.hostname!=="itorrents.org"' in source
+                and 'url.search||url.hash' in source
+            )
+        )
         or "function magnetFailureText(item,error)" not in pwa
         or '"TheRarBg could not provide this magnet.' not in i18n
         or 'import {classifyTheRarBgResolveError} from "./therarbag-resolve-errors.mjs";' not in (ROOT/"worker/src/index.mjs").read_text(encoding="utf8")
