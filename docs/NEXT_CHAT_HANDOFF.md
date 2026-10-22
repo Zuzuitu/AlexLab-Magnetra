@@ -1,5 +1,22 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+### Small functional TheRarBg parser hardening — not proven for owner card
+
+The `magnetFromTheRarBgInfoHash` extractor previously rejected HTML containing two identical `Info Hash: <same 40 hex>` labels because it counted **occurrences**, not distinct values. On a source-owned same-origin successful HTTP 200 detail page, duplicate identical mobile/desktop copies are unambiguous: the parser now permits them; two *different* hashes, malformed labels, off-origin redirects, HTTP errors and oversize documents still fail closed. Added regression test for identical duplicates; earlier conflicting-hash test remains. This is a bounded **potential functional improvement**, not proof that the repeated failing Genshin iPhone card contains duplicate labels; that live HTML has not been inspected and no new release has occurred.
+
+
+
+## 22 OCT 2026 — THE RARBG IPHONE REPEATED FAIL, STRUCTURED ERROR STAGES IN CODE (NOT YET LIVE)
+
+- Owner iPhone screenshot at 04:29 Italy on 22 Oct shows the same first **TheRarBg** result (Genshin Impact soundtrack, 93.2 MB, 157 seeders) from the earlier failed session; tapping **Obține magnet** again displays the same generic RO fallback. At least two real iPhone failures; do not call this simply a one-off. Public API diagnostic #39710746214 earlier successfully resolved a sample `2026` card; it did **not** prove the owner clicked identical record, nor did it test the iPhone-to-Worker HTTP POST.
+- Current `web/app.js` `api()` discarded the JSON body and code on non-2xx; `magnetFailureText` always displayed the same generic TheRarBg fallback for all errors. Consequently screenshots **cannot distinguish** source HTTP 403/429/502/504, anti-bot, network timeout, missing unique `Info Hash` in genuine source HTML, or an outer non-JSON Cloudflare 403. Do not infer root cause from the previous toast.
+- Targeted source-level PR adds `worker/src/therarbag-resolve-errors.mjs` finite, safe classifications *only* for `therarbag` in `/api/resolve` errors; error body never contains raw details URLs, HTML, hashes, titles or tokens. On success API shape remains `{provider,magnet}`. Other 45 adapter identities and errors untouched. `web/app.js` preserves `magnetraCode` for `/api/resolve` only; RO/IT `web/i18n.js` displays the specific stage. Existing `Detalii` still available; no automatic retries, origin change, torrent downloads, Flud, Rock64, proxy, source bypass or secret change.
+- This instrumentation is **not a demonstrated functional magnet repair** and requires independently guarded Cloudflare promotion after PR 4/4 CI and an exact live baseline/rollback check. Until published, the screenshot toast does not expose details. After release, a single new same-card tap can distinguish transport vs parsing; only then design a root-cause-specific fix. Do not run full source search stress tests.
+
+
+---
+
+
 ## THE RARBG — 22 OCT 2026 — REAL PRODUCTION RESOLVE PASS (INTERMITTENCY STILL UNVERIFIED)
 
 - Manual approved read-only GitHub Actions [run #39710746214](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39710746214) at 2026-10-22 02:19 UTC, commit `fbbb6dd298849f47756954491de0519c3f4a8ac1`, **SUCCESS**. New guarded diagnostic was run with explicit source approval. `SEARCH_HTTP_STATUS: 200`, JSON, `SEARCH_CARD_COUNT: 50`, `SEARCH_ERRORS_COUNT: 0`, `SOURCE_CARD_TORRENTFILE_PRESENT: True`, `RESOLVE_HTTP_STATUS: 200`, `RESOLVE_CLASS: RESOLVED_MAGNET`, `DIAGNOSTIC_COMPLETED: RESOLVER_E2E_PASS`; no `cf-mitigated` challenge reported. This proves **one real Worker API → source-owned TheRarBg → valid magnet result** after the fix; it is not merely an offline parser test.

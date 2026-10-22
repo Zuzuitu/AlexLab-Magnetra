@@ -135,8 +135,12 @@ export function magnetFromTheRarBgInfoHash(html){
     .replace(/&colon;|&#(?:58|x3A);/gi,":")
     .replace(/\s+/g," ");
   const matches=[...clean.matchAll(/\bInfo\s*Hash\s*:\s*([a-f0-9]{40})\b/gi)];
-  if(matches.length!==1)return null;
-  return "magnet:?xt=urn:btih:"+matches[0][1].toLowerCase();
+  // A page may render the same source-owned hash in both mobile/desktop
+  // sections. Repeated identical hashes are unambiguous; different hashes
+  // on one detail page remain unsafe and must never be guessed.
+  const uniqueHashes=new Set(matches.map(match=>match[1].toLowerCase()));
+  if(uniqueHashes.size!==1)return null;
+  return "magnet:?xt=urn:btih:"+[...uniqueHashes][0];
 }
 
 export async function resolveLegacy(id,url,fetcher=fetch){
