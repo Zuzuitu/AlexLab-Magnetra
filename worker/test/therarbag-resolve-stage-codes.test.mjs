@@ -79,6 +79,10 @@ test("RO/IT UI displays stage-specific information and does not leak raw errors"
  assert.match(app,/failure\.magnetraCode=data\.code/);
  assert.match(app,/SOURCE_HTTP_403:"TheRarBg refused/);
  assert.match(app,/DETAIL_NO_BTIH:"TheRarBg details page/);
+ assert.match(app,/CLIENT_NETWORK:"Your phone could not reach/);
+ assert.match(app,/failure\.magnetraCode=e\?\.name==="AbortError"/);
+ assert.match(i18n,/Telefonul nu a reușit să contacteze/);
+ assert.match(i18n,/Il telefono non è riuscito a contattare/);
  assert.match(app,/function magnetFailureText\(item,error\)/);
  assert.match(i18n,/TheRarBg a refuzat accesul la detalii/);
  assert.match(i18n,/TheRarBg ha rifiutato la pagina dei dettagli/);
