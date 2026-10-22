@@ -1,5 +1,16 @@
 # AlexLab Magnetra — Project State
 
+## ACTUALIZARE VERIFICATĂ — 22 OCTOMBRIE 2026 — CI POST-CHECKPOINT
+
+- `main` verificat la `c4f1e5fb90f288c76c026a53e706cd2687c2f90d`; PR #126 rămâne ultimul merge la momentul acestei verificări.
+- **Android staging:** GitHub Actions [#39698657719](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39698657719) = `SUCCESS` pe acel `main`. Logul confirmă `:app:assembleStaging`, `BUILD SUCCESSFUL` și uploadul artefactului `torrentsearch-staging.apk` (ID 12392185923). Eșecul anterior #39652018922 pentru `org.jetbrains.kotlin:compose-group-mapping:2.4.20` este ISTORIC, nu statusul ultimului run. Nu s-a aplicat un patch de cod Android în această verificare; nu declara rezolvare garantată permanent.
+- **Producție PWA smoke:** [#39698657765](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39698657765) `SUCCESS`; log `PASS: HTTP+TLS OK; HTML, manifest, /api/health, /api/providers OK; 46/46 adapters inventoried as ported`.
+- **Teste:** PWA/provider contracts [#39698657715](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39698657715) și technical invariants [#39698657874](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39698657874) = `SUCCESS`.
+- **Fără redeploy:** workflow-ul automat Deploy Magnetra PWA [#39698657731](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39698657731) = `SKIPPED`; ultimul release Cloudflare documentat rămâne `8c4e0f6a…@100% / 60112a3d…@0%`, însă această verificare nu a putut citi direct un split actual din API Cloudflare. Nu transforma istoricul în dovadă nouă de trafic LIVE.
+- **Încă deschis:** TheRarBg `Obține magnet` real pe iPhone după patch nevalidat; BTDigg reușit măcar o dată E2E dar intermitent; Flud Companion ACK fizic pe Shield nevalidat. Fără query de scraping repetitiv, modificări Rock64 sau schimbări în secrete.
+
+---
+
 _Current operational checkpoint updated 2026-10-19, ~23:00 Europe/Rome; last verified pre-checkpoint `main`: `10818d487facbcf1ba66d7f92322926e9b76508a`. The historical 2026-10-12 baseline in older sections is not the live state. Full new-chat prompt: [`docs/MAGNETRA_MASTER_PROMPT_2026-10-19.md`](MAGNETRA_MASTER_PROMPT_2026-10-19.md)._
 
 This file is the canonical human-readable technical checkpoint for AlexLab Magnetra. Repository state on the main branch takes precedence over old chat context. Material changes must reconcile this file, `config/project-invariants.json`, code, and CI guards.
