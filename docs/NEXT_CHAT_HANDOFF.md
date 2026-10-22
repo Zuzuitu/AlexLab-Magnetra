@@ -1,5 +1,15 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## INCIDENT IPHONE THE RARBG — 22 OCTOMBRIE 2026 — E2E FAIL DUPĂ FIX
+
+- Proprietarul a testat efectiv `https://index.alexlab.media` pe iPhone 5G, căutarea a afișat 51 rezultate și 9 titluri excluse ca nerelevante. Un card marcat **TheRarBg** a afișat **„Obține magnet”** și buton **„.torrent ↗”**. La apăsare, UI a arătat fallbackul nou RO: „TheRarBg nu a putut furniza magnetul. Deschide «Detalii» pentru a încerca direct pe site.” **Verdict: TheRarBg iPhone resolve FAIL după release 8c4e, nu mai este PENDING.** Fallbackul UI RO este confirmat funcțional, nu și rezolvarea magnetului.
+- **Cauza upstream vs parser rămâne NECUNOSCUTĂ.** Worker întoarce generic HTTP 502 și pentru erori de request, și pentru `no supported magnet`. O pagină publică TheRarBg examinată separat afișează `Info Hash:`, dar asta nu demonstrează că Worker a primit aceeași pagină la detaliul din iPhone.
+- Pregătit diagnostic manual read-only dedicat: `.github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml` și `scripts/diagnose_therarbag_iphone_resolve.py`. Necesită selecția explicită `RUN_ONCE_THE_RARBG_READONLY`, pe `main`; face **maximum o căutare TheRarBg `2026` și un POST resolve dintr-un card cu URL detalii HTTPS allowlisted**, raportează doar categoria sanitară (ex. `UPSTREAM_HTTP_403`, `DETAIL_HTML_NO_MAGNET_OR_HASH`, `FETCH_TIMEOUT`) și dacă linkul .torrent era prezent; nu loghează titluri, URL-uri, hashuri, magneturi sau secrete. **NU este un deploy și NU rulează automat după merge.**
+- Nu publica alt fix Worker pe ghicite și nu lărgi origin allowlist; întâi diagnosticul categorial, apoi patch izolat, CI, release guarded și retest efectiv pe iPhone. BTDigg, OxTorrent, Torrent9, Flud, Rock64, DNS, IPv6 și cele 46 adaptoare neatinse.
+
+---
+
+
 ## ACTUALIZARE VERIFICATĂ — 22 OCTOMBRIE 2026 — CI POST-CHECKPOINT
 
 - `main` verificat la `c4f1e5fb90f288c76c026a53e706cd2687c2f90d`; PR #126 rămâne ultimul merge la momentul acestei verificări.
