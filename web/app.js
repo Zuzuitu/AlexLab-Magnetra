@@ -19,7 +19,26 @@ const genericError=(failure)=>{
  // Keep the existing Details action as a manual, source-owned fallback.
 function magnetFailureText(item,error){
  if(item?.provider==="therarbag"){
-  return tr("TheRarBg could not provide this magnet. Open Details to try it on the source site.");
+  const failures={
+   SOURCE_HTTP_403:"TheRarBg refused the details request (403). Open Details on the source site.",
+   SOURCE_HTTP_404:"TheRarBg details page is missing (404). Open Details on the source site.",
+   SOURCE_HTTP_429:"TheRarBg is limiting requests (429). Try this result later.",
+   SOURCE_HTTP_500:"TheRarBg details server returned 500. Try this result later.",
+   SOURCE_HTTP_502:"TheRarBg details server returned 502. Try this result later.",
+   SOURCE_HTTP_503:"TheRarBg details server returned 503. Try this result later.",
+   SOURCE_HTTP_504:"TheRarBg details server returned 504. Try this result later.",
+   SOURCE_CHALLENGE:"TheRarBg requires browser verification. Open Details on the source site.",
+   DETAIL_NO_BTih:"TheRarBg details page did not contain a supported magnet or unique info hash.",
+   SOURCE_TIMEOUT:"TheRarBg details request timed out. Try this result later.",
+   SOURCE_REDIRECT:"TheRarBg details redirected outside the approved source route.",
+   SOURCE_PAGE_TOO_LARGE:"TheRarBg details page exceeded the safe size limit.",
+   DETAIL_URL_REJECTED:"TheRarBg details URL was rejected by source validation.",
+   SOURCE_NETWORK:"Magnetra could not connect to TheRarBg details.",
+   WORKER_RUNTIME:"The magnet resolver is temporarily unavailable.",
+   EDGE_403:"Magnetra was blocked before receiving a server response (HTTP 403).",
+   RESPONSE_NOT_JSON:"Magnetra received a non-JSON response while resolving the magnet."
+  };
+  return tr(failures[error?.magnetraCode]||"TheRarBg could not provide this magnet. Open Details to try it on the source site.");
  }
  return genericError(error);
 }
@@ -75,8 +94,21 @@ function magnetIdentity(magnet,deviceId){
 const api=async(path,options={})=>{
   const response=await fetch(path,{cache:"no-store",...options});
   let data;
-  try{data=await response.json();}catch{throw Error(tr("Server returned an invalid response"));}
-  if(!response.ok)throw Error(tr("Request failed ({code})",{code:response.status}));
+  try{data=await response.json();}catch{
+    const failure=Error(tr("Server returned an invalid response"));
+    if(path==="/api/resolve")failure.magnetraCode=response.status===403?"EDGE_403":"RESPONSE_NOT_JSON";
+    throw failure;
+  }
+  if(!response.ok){
+    const failure=Error(tr("Request failed ({code})",{code:response.status}));
+    if(path==="/api/resolve"){
+      // Server-side codes are finite, source-specific classifications.
+      // Never echo provider exception strings, URLs, magnets or tokens.
+      if(typeof data?.code==="string"&&/^[A-Z0-9_]{3,40}$/.test(data.code))
+        failure.magnetraCode=data.code;
+    }
+    throw failure;
+  }
   return data;
 };
 function load(key,fallback){
