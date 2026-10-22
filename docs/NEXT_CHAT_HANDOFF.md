@@ -1,5 +1,11 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+### Small functional TheRarBg parser hardening — not proven for owner card
+
+The `magnetFromTheRarBgInfoHash` extractor previously rejected HTML containing two identical `Info Hash: <same 40 hex>` labels because it counted **occurrences**, not distinct values. On a source-owned same-origin successful HTTP 200 detail page, duplicate identical mobile/desktop copies are unambiguous: the parser now permits them; two *different* hashes, malformed labels, off-origin redirects, HTTP errors and oversize documents still fail closed. Added regression test for identical duplicates; earlier conflicting-hash test remains. This is a bounded **potential functional improvement**, not proof that the repeated failing Genshin iPhone card contains duplicate labels; that live HTML has not been inspected and no new release has occurred.
+
+
+
 ## 22 OCT 2026 — THE RARBG IPHONE REPEATED FAIL, STRUCTURED ERROR STAGES IN CODE (NOT YET LIVE)
 
 - Owner iPhone screenshot at 04:29 Italy on 22 Oct shows the same first **TheRarBg** result (Genshin Impact soundtrack, 93.2 MB, 157 seeders) from the earlier failed session; tapping **Obține magnet** again displays the same generic RO fallback. At least two real iPhone failures; do not call this simply a one-off. Public API diagnostic #39710746214 earlier successfully resolved a sample `2026` card; it did **not** prove the owner clicked identical record, nor did it test the iPhone-to-Worker HTTP POST.
