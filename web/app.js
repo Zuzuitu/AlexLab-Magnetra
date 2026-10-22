@@ -35,6 +35,8 @@ function magnetFailureText(item,error){
    DETAIL_URL_REJECTED:"TheRarBg details URL was rejected by source validation.",
    SOURCE_NETWORK:"Magnetra could not connect to TheRarBg details.",
    WORKER_RUNTIME:"The magnet resolver is temporarily unavailable.",
+   CLIENT_NETWORK:"Your phone could not reach Magnetra's magnet resolver.",
+   CLIENT_ABORT:"The magnet request was cancelled before completion.",
    EDGE_403:"Magnetra was blocked before receiving a server response (HTTP 403).",
    RESPONSE_NOT_JSON:"Magnetra received a non-JSON response while resolving the magnet."
   };
@@ -92,7 +94,14 @@ function magnetIdentity(magnet,deviceId){
  return deviceId+"|"+(xt?xt.toLowerCase():magnet.trim());
 }
 const api=async(path,options={})=>{
-  const response=await fetch(path,{cache:"no-store",...options});
+  let response;
+  try{response=await fetch(path,{cache:"no-store",...options});}
+  catch(e){
+    if(path!=="/api/resolve")throw e;
+    const failure=Error(tr("Provider unavailable"));
+    failure.magnetraCode=e?.name==="AbortError"?"CLIENT_ABORT":"CLIENT_NETWORK";
+    throw failure;
+  }
   let data;
   try{data=await response.json();}catch{
     const failure=Error(tr("Server returned an invalid response"));
