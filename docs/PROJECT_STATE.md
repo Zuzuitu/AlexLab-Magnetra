@@ -1,5 +1,15 @@
 # AlexLab Magnetra — Project State
 
+## THE RARBG — 22 OCT 2026 — REAL PRODUCTION RESOLVE PASS (INTERMITTENCY STILL UNVERIFIED)
+
+- Manual approved read-only GitHub Actions [run #39710746214](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39710746214) at 2026-10-22 02:19 UTC, commit `fbbb6dd298849f47756954491de0519c3f4a8ac1`, **SUCCESS**. New guarded diagnostic was run with explicit source approval. `SEARCH_HTTP_STATUS: 200`, JSON, `SEARCH_CARD_COUNT: 50`, `SEARCH_ERRORS_COUNT: 0`, `SOURCE_CARD_TORRENTFILE_PRESENT: True`, `RESOLVE_HTTP_STATUS: 200`, `RESOLVE_CLASS: RESOLVED_MAGNET`, `DIAGNOSTIC_COMPLETED: RESOLVER_E2E_PASS`; no `cf-mitigated` challenge reported. This proves **one real Worker API → source-owned TheRarBg → valid magnet result** after the fix; it is not merely an offline parser test.
+- Prior [run #39708239432](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39708239432) was blocked by outer 403 on search, before resolve. PR #129 corrected the premature `SUCCESS` and added fail-closed classification. The later success is separate evidence, not a retrospective interpretation of the earlier 403.
+- **iPhone status remains MIXED:** user screenshot around 03:17 local on 22 October showed a TheRarBg `Obține magnet` failure and RO fallback in the PWA. The later Actions probe selected the first eligible source-owned card in a `2026` search; an exact match to the user-clicked card **was not proven**. The apparent conflict may be due to a distinct card or time-dependent upstream availability, but neither cause is established. Do not mark iPhone E2E PASS and do not claim 100% reliability.
+- **Next measured decision:** one user-controlled retry on the same card (no stress searches); if it still fails, capture card-specific, sanitized stage evidence before parser/transport changes. Do not relabel results, guess hashes, bypass CAPTCHA, change Rock64/BTDigg, or redeploy a Worker already proven reachable. Flud Shield ACK remains separate.
+
+---
+
+
 ## THE RARBG 22 OCT 2026 — DIAGNOSTIC 403 FAIL-CLOSED (no Worker release)
 
 - Owner-approved run [#39708239432](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39708239432), main `d3d0040...`: GitHub Actions job concluded `SUCCESS`, but actual public GET `/api/search?q=2026&category=all&providers=therarbag` returned outer HTTP **403**, before the Worker `/api/resolve` request. **The run is INCONCLUSIVE for magnet resolution**. No source HTTP status can be inferred, and 403 is not proof that `therarbg.com` returned 403. On this Worker, ordinary GET search wraps provider errors into JSON HTTP 200.
