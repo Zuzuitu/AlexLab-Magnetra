@@ -30,7 +30,7 @@ jobs:
       - name: Enforce explicit opt-in before outbound request
         shell: bash
         env:
-          APPROVAL: \${{ inputs.diagnostic_approval }}
+          APPROVAL: ${{ inputs.diagnostic_approval }}
         run: |
           test "$APPROVAL" = 'RUN_ONE_EXACT_THE_RARBG_SOURCE_READ' || {
             echo 'DIAGNOSTIC_STOP: OWNER_APPROVAL_REQUIRED'; exit 2;
@@ -45,7 +45,7 @@ jobs:
       - name: Read original HTML once, emit counts only
         shell: bash
         env:
-          EXACT_URL: \${{ inputs.detail_url }}
+          EXACT_URL: ${{ inputs.detail_url }}
         run: |
           set -euo pipefail
           python3 scripts/diagnose_therarbag_exact_detail.py --approved-readonly --detail-url "$EXACT_URL"
