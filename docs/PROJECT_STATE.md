@@ -1,5 +1,16 @@
 # AlexLab Magnetra — Project State
 
+## THE RARBG 22 OCT 2026 — DIAGNOSTIC 403 FAIL-CLOSED (no Worker release)
+
+- Owner-approved run [#39708239432](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39708239432), main `d3d0040...`: GitHub Actions job concluded `SUCCESS`, but actual public GET `/api/search?q=2026&category=all&providers=therarbag` returned outer HTTP **403**, before the Worker `/api/resolve` request. **The run is INCONCLUSIVE for magnet resolution**. No source HTTP status can be inferred, and 403 is not proof that `therarbg.com` returned 403. On this Worker, ordinary GET search wraps provider errors into JSON HTTP 200.
+- Root bug in the diagnostic: `if code != 200: print(...); return` from `main()` gave process exit 0 and a false `SUCCESS`. Corrected diagnostic uses explicit nonzero exit for pre-resolve HTTP block, unusable JSON, missing real TheRarBg card and unclassified resolve errors. It emits finite classifications, response content type, `cf-mitigated` challenge flag and Cloudflare Ray correlation ID when validated (never torrent IDs/URLs/hashes/magnets/tokens). An outer search block permits one harmless GET `/api/health` comparison, using the same diagnostic User-Agent to distinguish route-specific from host-wide blocks; **no extra provider calls**. Only one bounded real search and up to one real resolve when explicitly dispatched.
+- Offline regression tests `scripts/test_therarbag_readonly_diagnostic.py` mock HTTP 403 HTML/JSON, health compare, search failure, source allowlist, 502 classified resolution and a successful BTIH response; workflow runs them before any manually approved network request. No GitHub workflow auto-run on merge, no Worker deploy and no Rock64/DNS/BTDigg/Flud changes.
+- Next evidence: on manual dispatch of `Diagnose TheRarBg iPhone Resolve (READ ONLY)` with explicit `RUN_ONCE_THE_RARBG_READONLY` input, capture **`SEARCH_BLOCK_CLASS`, `HEALTH_COMPARISON_CLASS`** or **`RESOLVE_CLASS`**. If still outer 403 with Cloudflare metadata, examine Cloudflare Security Events via Ray in the owner's authorized dashboard, no WAF bypass. Do not patch TheRarBg parser or traffic without cause. A GitHub workflow `SUCCESS` after a full probe classifies transport/parser, it is NOT proof of working magnet unless `RESOLVE_CLASS: RESOLVED_MAGNET` and independent iPhone E2E pass.
+
+
+---
+
+
 ## INCIDENT IPHONE THE RARBG — 22 OCTOMBRIE 2026 — E2E FAIL DUPĂ FIX
 
 - Proprietarul a testat efectiv `https://index.alexlab.media` pe iPhone 5G, căutarea a afișat 51 rezultate și 9 titluri excluse ca nerelevante. Un card marcat **TheRarBg** a afișat **„Obține magnet”** și buton **„.torrent ↗”**. La apăsare, UI a arătat fallbackul nou RO: „TheRarBg nu a putut furniza magnetul. Deschide «Detalii» pentru a încerca direct pe site.” **Verdict: TheRarBg iPhone resolve FAIL după release 8c4e, nu mai este PENDING.** Fallbackul UI RO este confirmat funcțional, nu și rezolvarea magnetului.

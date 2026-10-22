@@ -40,6 +40,8 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_ro_it_12.py' -v
       - name: Offline guarded TheRarBg source-owned magnet release safety
         run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_therarbag_magnet.py' -v
+      - name: Offline TheRarBg edge-403 diagnostic and resolver stage regression tests
+        run: python3 -m unittest discover -s scripts -p 'test_therarbag_readonly_diagnostic.py' -v
       - name: Offline 27-indexer AnimeTosho Mikan release and rollback gates
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_hide_anime_mikan_release.py' -v
       - name: Offline exact 6dad zero-slot resume and bounded HTML propagation
