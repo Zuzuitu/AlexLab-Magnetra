@@ -3,6 +3,7 @@ import {recoveryFor,recoveryPlan,recoverySummary} from "./recovery-strategy.mjs"
 import {classifyProviderError,directSearchUrl} from "./provider-recovery.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
+import {classifyTheRarBgResolveError} from "./therarbag-resolve-errors.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {filterRelevance} from "./query-relevance.mjs";
@@ -84,6 +85,10 @@ async function resolveMagnet(request,env){
    const result=await resolveLegacy(provider,details,sourceFetch);
    return json({provider,magnet:result.magnet});
  }catch(e){
+   if(provider==="therarbag"){
+     return json({error:"TheRarBg magnet could not be resolved.",
+       code:classifyTheRarBgResolveError(e)},502);
+   }
    return error("Provider could not resolve magnet: "+String(e?.message||e).slice(0,170),502);
  }
 }
