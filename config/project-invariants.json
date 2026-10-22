@@ -69,7 +69,8 @@
       ".github/workflows/magnetra-resolve-fix-canary-5.yml",
       ".github/workflows/verify-magnetra-fix-canary-5-e2e.yml",
       ".github/workflows/magnetra-resolve-fix-full-100.yml",
-      ".github/workflows/magnetra-therarbag-magnet-one-shot.yml"
+      ".github/workflows/magnetra-therarbag-magnet-one-shot.yml",
+      ".github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
