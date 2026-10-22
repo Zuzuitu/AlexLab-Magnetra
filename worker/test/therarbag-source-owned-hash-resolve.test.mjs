@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {magnetFromTheRarBgInfoHash,resolveLegacy} from "../src/legacy-adapters.mjs";
+import {magnetFromTheRarBgInfoHash,magnetFromTheRarBgSourceMetadata,resolveLegacy} from "../src/legacy-adapters.mjs";
 
 const HASH="a".repeat(40);
 const sample='<html><main><h1>Public-domain sample</h1><div><strong>Info Hash:</strong> <code>'+HASH.toUpperCase()+'</code> <button>Copy Magnet</button></div></main></html>';
@@ -25,6 +25,60 @@ test("refuse ambiguous, scripted, unrelated, invalid and oversized hashes",()=>{
   assert.equal(magnetFromTheRarBgInfoHash("<style>Info Hash: "+HASH+"</style>"),null);
   assert.equal(magnetFromTheRarBgInfoHash("<p>Info Hash: "+HASH+"</p>"+" ".repeat(3_000_010)),null);
   assert.equal(magnetFromTheRarBgInfoHash(null),null);
+});
+
+// Real TheRarBg music/detail pages place a ".torrent File" anchor in
+// their own "Torrent:" action row before "Info Hash:".
+// A missing textual hash can be recovered from that source-provided metadata
+// pointer, without ever downloading a torrent or querying a second indexer.
+const cacheLink=(hash=HASH,host="itorrents.org")=>
+  "<div>Torrent: <span>Magnet Download</span> "+
+  "<a class='download' href='https://"+host+"/torrent/"+hash.toUpperCase()+".torrent'>.torrent File</a>"+
+  " <button>Copy Magnet</button> <span>Info Hash:</span> <input readonly value=''></div>";
+
+test("source-endorsed iTorrents .torrent link provides BTIH even when visible label is blank",()=>{
+  assert.equal(magnetFromTheRarBgInfoHash(cacheLink()),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink()),"magnet:?xt=urn:btih:"+HASH);
+  const withSpan=cacheLink().replace(".torrent File</a>", "<strong>.torrent File</strong></a>");
+  assert.equal(magnetFromTheRarBgSourceMetadata(withSpan),"magnet:?xt=urn:btih:"+HASH);
+});
+
+test("source-endorsed cache hash must agree with any labelled original hash",()=>{
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace("<input readonly value=''>",HASH)),
+    "magnet:?xt=urn:btih:"+HASH);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace("<input readonly value=''>","b".repeat(40))),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink()+"<p>Info Hash: "+"b".repeat(40)+"</p>"),null);
+});
+
+test("reject off-origin cache lookalikes, any HTTP cache, and unrelated source links",()=>{
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink(HASH,"itorrents.org.attacker.test")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace("https://","http://")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace(".torrent'>",".torrent?u=tracking'>")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace("Torrent:", "Recommended posts:")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace("Info Hash:", "Related torrent:")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata("<script>"+cacheLink()+"</script>"),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink()+cacheLink("b".repeat(40))),null);
+});
+
+test("original TheRarBg .torrent action resolves with one allowed detail fetch and zero torrent downloads",async()=>{
+  const prior=globalThis.HTMLRewriter;
+  class FakeHTMLRewriter {on(){return this} transform(response){return response}}
+  globalThis.HTMLRewriter=FakeHTMLRewriter;
+  let called=0;
+  try{
+    const url="https://therarbg.com/post-detail/a-test/public-domain-test/";
+    const result=await resolveLegacy("therarbag",url,async(target,options)=>{
+      called++;
+      assert.equal(target,url);
+      assert.equal(options.redirect,"manual");
+      return new Response(cacheLink(),{status:200,headers:{"content-type":"text/html"}});
+    });
+    assert.equal(result.magnet,"magnet:?xt=urn:btih:"+HASH);
+    assert.equal(called,1);
+  }finally{
+    if(prior===undefined)delete globalThis.HTMLRewriter;
+    else globalThis.HTMLRewriter=prior;
+  }
 });
 
 test("same-origin TheRarBg HTML with labelled hash resolves with one request",async()=>{
