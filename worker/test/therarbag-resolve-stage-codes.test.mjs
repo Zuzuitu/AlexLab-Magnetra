@@ -23,7 +23,7 @@ test("finite sanitized classifications do not include untrusted source text",()=
  for(const [message,code] of [
   ["provider HTTP 403","SOURCE_HTTP_403"],["provider HTTP 502","SOURCE_HTTP_502"],
   ["provider HTTP 418","SOURCE_HTTP_OTHER"],
-  ["provider details page contains no supported magnet link","DETAIL_NO_BTih"],
+  ["provider details page contains no supported magnet link","DETAIL_NO_BTIH"],
   ["provider challenge requires a browser session","SOURCE_CHALLENGE"],
   ["provider page too large","SOURCE_PAGE_TOO_LARGE"],
   ["Provider redirected repeatedly; browser challenge may be required","SOURCE_REDIRECT"],
@@ -51,7 +51,7 @@ test("source HTTP 200 missing original source hash gets distinct parser category
  await withSource(async()=>new Response("<html><main>No source-owned info hash</main></html>",{status:200}),async()=>{
   const response=await Worker.fetch(request(),{});
   assert.equal(response.status,502);
-  assert.equal((await response.json()).code,"DETAIL_NO_BTih");
+  assert.equal((await response.json()).code,"DETAIL_NO_BTIH");
  });
 });
 test("source HTML with unique own BTIH still works",async()=>{
@@ -66,7 +66,7 @@ test("other provider endpoint behavior is not globally reclassified",async()=>{
  await withSource(async()=>new Response("Upstream", {status:502}),async()=>{
   const resp=await Worker.fetch(new Request("https://index.alexlab.media/api/resolve",{
    method:"POST",headers:{"origin":"https://index.alexlab.media","content-type":"application/json"},
-   body:JSON.stringify({provider:"oxtorrent",details:"https://www.oxtorrent.co/torrent/111/public-domain-test"})
+   body:JSON.stringify({provider:"audiobookbay",details:"https://audiobookbay.lu/post/public-domain-test/"})
   }),{});
   const body=await resp.json();
   assert.equal(resp.status,502);
@@ -78,7 +78,7 @@ test("RO/IT UI displays stage-specific information and does not leak raw errors"
  const i18n=readFileSync(new URL("../../web/i18n.js",import.meta.url),"utf8");
  assert.match(app,/failure\.magnetraCode=data\.code/);
  assert.match(app,/SOURCE_HTTP_403:"TheRarBg refused/);
- assert.match(app,/DETAIL_NO_BTih:"TheRarBg details page/);
+ assert.match(app,/DETAIL_NO_BTIH:"TheRarBg details page/);
  assert.match(app,/function magnetFailureText\(item,error\)/);
  assert.match(i18n,/TheRarBg a refuzat accesul la detalii/);
  assert.match(i18n,/TheRarBg ha rifiutato la pagina dei dettagli/);
