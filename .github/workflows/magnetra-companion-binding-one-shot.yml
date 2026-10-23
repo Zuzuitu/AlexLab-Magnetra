@@ -1,0 +1,63 @@
+# One-time owner-authorized publication. Pushes to main do NOT deploy by default.
+# Activation requires a separately committed release-event file with the exact marker.
+name: Magnetra Flud Companion Binding Immutable Release (ONE SHOT)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/companion-binding-20261023.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-companion-binding-publish-20261023]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout reviewed main commit
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify unique activation and required release note
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_MESSAGE" == *'[magnetra-companion-binding-publish-20261023]'* ]]
+          test -s docs/release-events/companion-binding-20261023.md
+          echo "COMPANION_OWNER_RELEASE_MARKER_PASS"
+      - name: Check protected project invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Offline Cloudflare-account and release safety tests
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_inspect_companion_binding_readonly.py' -v
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_companion_binding_20261023.py' -v
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: PWA integration and all original provider contracts
+        run: |
+          node --test worker/test/*.test.mjs
+          node --check worker/src/index.mjs
+          node --check web/app.js
+          node --check web/i18n.js
+      - name: Verify Cloudflare Worker bundle and service-binding source
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Owner authorized guarded 0% to 5% to 100% release
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_COMPANION_RELEASE_ACTION: CONFIRM_COMPANION_BINDING_RELEASE_20261023
+        run: |
+          set -euo pipefail
+          python3 scripts/release_magnetra_companion_binding_20261023.py
