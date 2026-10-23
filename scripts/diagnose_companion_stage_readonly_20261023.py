@@ -11,7 +11,7 @@ import json
 import urllib.error
 import urllib.request
 
-from deploy_magnetra_auto_pause_once import Stop, current, stable, NoRedirect
+from deploy_magnetra_auto_pause_once import Stop, snapshot, stable, NoRedirect
 
 ACTIVE = "a088fa41-233d-48d3-bd4c-52be6194fda8"
 CANDIDATE = "ac71bb51-b681-458b-8f40-980d4621fe62"
@@ -65,12 +65,31 @@ def http_probe(url, method, headers, body=None):
 
 
 def run():
-    before = current(SLOT)
+    before, observed = snapshot()
+    if set(observed).issubset({
+        ACTIVE,
+        CANDIDATE,
+        "056d8394-79b0-459a-b93e-b5f5a8a7295d",
+    }):
+        compact = ",".join(
+            ("ACTIVE" if v == ACTIVE else "CANDIDATE" if v == CANDIDATE
+             else "PRIOR_ROLLBACK") + "=" + str(int(p))
+            for v, p in sorted(observed.items())
+        )
+        print("CLOUDFLARE_CURRENT_TRAFFIC:" + compact, flush=True)
+    else:
+        print("CLOUDFLARE_CURRENT_TRAFFIC:UNRECOGNIZED", flush=True)
+    if observed != SLOT:
+        print("STAGED_SLOT_GATE:NOT_MATCHED", flush=True)
+        raise Stop("STAGED_SLOT_NOT_PRESENT")
+    print("STAGED_SLOT_GATE:PASS", flush=True)
     direct, direct_kind = http_probe(
         RELAY + "/api/v1/device/" + DEVICE + "/status",
         "GET",
         {"Authorization": "Bearer " + TOKEN, "Accept": "application/json"}
     )
+    print("DIRECT_FLUD_RELAY_HTTP:" + str(direct), flush=True)
+    print("DIRECT_FLUD_RELAY_CATEGORY:" + direct_kind, flush=True)
     if (direct, direct_kind) != (401, "UNAUTHORIZED"):
         raise Stop("DIRECT_RELAY_BASELINE_NOT_401")
     print("DIRECT_FLUD_RELAY_FAKE_STATUS:401_UNAUTHORIZED_PASS")
