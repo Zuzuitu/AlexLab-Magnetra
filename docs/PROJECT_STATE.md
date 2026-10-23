@@ -1,5 +1,13 @@
 # AlexLab Magnetra — Project State
 
+## 23 OCT 2026 — WORKER SERVICE BINDING CONSTRUCTOR TYPEERROR IDENTIFIED (FIX CANDIDATE; NOT LIVE)
+
+- Owner performed real Rock64 staged call with version override `47bbcec3-a4fc-4830-aa5e-33c55356a30b` and uniquely gated `X-AlexLab-Companion-Probe: 20261023-v2`. Result: HTTP 502 with `x-alexlab-companion-probe: binding-request-type_error`; this **proves the new immutable version ran**, entered Service Binding branch, and threw TypeError constructing `new Request(url,outboundOptions)` BEFORE `env.FLUD_RELAY.fetch` was called. No real creds were supplied.
+- Root cause identified in Cloudflare's actual workerd Request implementation: `Request::Redirect` enum permits `FOLLOW`/`MANUAL` only; `error` is unsupported. The existing `redirect:"error"` caused constructor TypeError. The fix uses `redirect:"manual"`, with explicit 300-399 response refusal before parsing data; unlike `follow`, it cannot forward the Remote bearer token to another origin. Preserve bounded 12s abort, exact allowlisted target, authentication, POST payload and idempotency semantics. Node and workerd tests must pass.
+- The previous zero-only stage run [#39981515340](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/39981515340) uploaded `47bbcec3-a4fc-4830-aa5e-33c55356a30b` and verified it at 0%; its resource-gate then stopped on an asset verification, leaving prior `a088fa41-233d-48d3-bd4c-52be6194fda8` serving 100% at last confirmation.
+- New branch `fix/companion-redirect-mode-workerd-20261023`: stage-only guarded release script requires `a088@100/47bb@0` exactly; uploads a fresh immutable Worker candidate with corrected manual policy; retains old production @100%; verifies all four bindings, assets, 46 providers and fake token `401` plus synthetic diagnostic header. **Never automatically promote to 5% or 100%** or send a magnet. After a verified staged 401, a separate owner-controlled promotion with rollback is required.
+- No Shield, Flud Remote, Rock64, YouTube, DNS or real secret/token modifications.
+
 ## 23 OCT 2026 — IMMUTABLE COMPANION VERSION OVERRIDE VERIFICATION (PROPOSED; NO PRODUCTION CHANGE)
 
 - User ran actual synthetic-only Rock64 `POST /api/companion/status` with `Cloudflare-Workers-Version-Overrides: alexlab-magnetra="ac71bb51-b681-458b-8f40-980d4621fe62"` and received HTTP 502 `Companion remote relay is unavailable.`. The same body appears in old and candidate code, so this DOES NOT prove the override took effect. Cloudflare explicitly documents that an un-applied version override falls back to weighted traffic without raising a request error.
