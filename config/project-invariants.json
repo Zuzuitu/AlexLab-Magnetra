@@ -72,7 +72,8 @@
       ".github/workflows/magnetra-therarbag-magnet-one-shot.yml",
       ".github/workflows/magnetra-therarbag-error-stages-one-shot.yml",
       ".github/workflows/magnetra-therarbag-cache-link-one-shot.yml",
-      ".github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml"
+      ".github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml",
+      ".github/workflows/inspect-companion-binding-readonly.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -121,7 +122,10 @@
     "internal_binding_name": "FLUD_RELAY",
     "internal_worker_name": "flud-remote-relay",
     "internal_binding_same_cloudflare_account_required": true,
-    "internal_binding_activation_confirmed": false
+    "internal_binding_activation_confirmed": false,
+    "internal_binding_same_cloudflare_account_owner_confirmed_on": "2026-10-23",
+    "binding_readonly_preflight_workflow": ".github/workflows/inspect-companion-binding-readonly.yml",
+    "binding_release_production_active": false
   },
   "deployment": {
     "provider": "cloudflare-workers",
