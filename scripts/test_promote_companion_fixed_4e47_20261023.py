@@ -47,8 +47,8 @@ class SafeReleaseTests(unittest.TestCase):
              patch.object(r,"restore_if_safe") as restore:
             self.assertEqual(r.release(),0)
         self.assertEqual(promote.call_count,2)
-        self.assertEqual(promote.call_args_list[0].args[1:],[r.BASELINE,r.CANARY,95,5,"CANARY_5"])
-        self.assertEqual(promote.call_args_list[1].args[1:],[r.CANARY,r.FULL,0,100,"PRODUCTION_100"])
+        self.assertEqual(promote.call_args_list[0].args[1:],(r.BASELINE,r.CANARY,95,5,"CANARY_5"))
+        self.assertEqual(promote.call_args_list[1].args[1:],(r.CANARY,r.FULL,0,100,"PRODUCTION_100"))
         restore.assert_not_called()
 
     def test_canary_failure_blocks_full_and_attempts_guarded_rollback(self):
