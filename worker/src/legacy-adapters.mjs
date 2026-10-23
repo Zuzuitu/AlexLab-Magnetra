@@ -1,5 +1,6 @@
 import {SOURCE_HEADERS,fetchProviderSameOrigin} from "./request-headers.mjs";
 import {LEGACY_SPECS,legacySearchUrl} from "./legacy-specs.mjs";
+import {classifyTheRarBgWorkerHtmlShape} from "./therarbag-worker-shape.mjs";
 
 const MAX_HTML = 3_000_000;
 const TIMEOUT = 11_000;
@@ -203,9 +204,11 @@ export async function resolveLegacy(id,url,fetcher=fetch){
   const html=await safeProviderHtml(safe,{},fetcher);
   if(typeof HTMLRewriter==="undefined")throw Error("Cloudflare HTMLRewriter runtime required");
   let magnet=null;
+  let sourceAnchorMatches=0;
   const selector=spec.magnetDetails||"a[href^='magnet:']";
   const field=spec.resolution==="input"?"value":"href";
   const reader=new HTMLRewriter().on(selector,{element(e){
+    sourceAnchorMatches++;
     const candidate=e.getAttribute(field);
     if(candidate&&candidate.startsWith("magnet:?")&&candidate.length<=12000)magnet=candidate;
   }});
@@ -213,6 +216,11 @@ export async function resolveLegacy(id,url,fetcher=fetch){
   // Strict single-provider fallback; successful detail HTML was fetched via
   // its fixed-origin allowlisted URL with anti-bot and size guards above.
   if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgSourceMetadata(html);
-  if(!magnet)throw Error("provider details page contains no supported magnet link");
+  if(!magnet){
+    const failure=Error("provider details page contains no supported magnet link");
+    if(id==="therarbag")failure.magnetraShapeStage=
+      classifyTheRarBgWorkerHtmlShape(html,sourceAnchorMatches);
+    throw failure;
+  }
   return {magnet};
 }

@@ -4,6 +4,7 @@ import {classifyProviderError,directSearchUrl} from "./provider-recovery.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {classifyTheRarBgResolveError} from "./therarbag-resolve-errors.mjs";
+import {allowTheRarBgWorkerShapeDiagnostic,THERARBAG_SHAPE_STAGES} from "./therarbag-worker-shape.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {filterRelevance} from "./query-relevance.mjs";
@@ -80,14 +81,21 @@ async function resolveMagnet(request,env){
    return error("Provider has no approved deferred magnet resolver.");
  if(typeof details!=="string"||!validateLegacyDetail(provider,details))
    return error("Details URL is not in the provider allowlist.");
+ const shapeProbe=allowTheRarBgWorkerShapeDiagnostic(request,provider,details);
  try{
    const sourceFetch=rock64HtmlFetcher(provider,env)||fetch;
    const result=await resolveLegacy(provider,details,sourceFetch);
-   return json({provider,magnet:result.magnet});
+   return json({provider,magnet:result.magnet,
+     ...(shapeProbe?{shapeDiagnosticVersion:"THERARBAG_WORKER_SHAPE_V1"}:{})});
  }catch(e){
    if(provider==="therarbag"){
+     const stage=e?.magnetraShapeStage;
      return json({error:"TheRarBg magnet could not be resolved.",
-       code:classifyTheRarBgResolveError(e)},502);
+       code:classifyTheRarBgResolveError(e),
+       ...(shapeProbe?{
+         shapeDiagnosticVersion:"THERARBAG_WORKER_SHAPE_V1",
+         ...(THERARBAG_SHAPE_STAGES.has(stage)?{shapeStage:stage}:{})
+       }:{})},502);
    }
    return error("Provider could not resolve magnet: "+String(e?.message||e).slice(0,170),502);
  }

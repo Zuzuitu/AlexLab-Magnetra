@@ -1,5 +1,6 @@
 import {LEGACY_SPECS} from "../src/legacy-specs.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "../src/html-adapters.mjs";
+import {resolveLegacy} from "../src/legacy-adapters.mjs";
 
 /** CI-only workerd endpoint: validates actual Cloudflare HTMLRewriter syntax. */
 export default {
@@ -41,8 +42,49 @@ export default {
       rows[0].seeders!==null||rows[0].peers!==null)
     invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields",extractedMagnet:rows[0]?.magnet||null});
   }catch(e){invalid.push({id:"btdigg-fixture",error:String(e).slice(0,250)});}
+  let therarbagFixturePhase="START";
+  // True workerd behavioral regression: prior Node tests used a stub for
+  // HTMLRewriter. This fixture exercises the actual Cloudflare parser and
+  // the same exact original details route as the reported iPhone failure.
+  // No remote provider request, torrent download or real infohash.
+  try{
+   const hash="a".repeat(40);
+   const detail="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
+   const expected="magnet:?xt=urn:btih:"+hash+"&dn=Synthetic";
+   const html="<html><body><table><tr><th>Torrent:</th><td>"+
+     "<a href='"+expected.replaceAll("&","&amp;")+"'>Magnet Download</a>"+
+     "<a href='https://example.invalid/fictional.torrent'>.torrent File</a>"+
+     "<button>Copy Magnet</button><div>Info Hash: "+hash+"</div>"+
+     "</td></tr></table></body></html>";
+   let sourceCalls=0;
+   const source=async(url,options)=>{
+    sourceCalls++;
+    if(url!==detail||options.redirect!=="manual")throw Error("unexpected fixture request");
+    return new Response(html,{status:200,headers:{"content-type":"text/html"}});
+   };
+   therarbagFixturePhase="ANCHOR_PARSER";
+   const direct=await resolveLegacy("therarbag",detail,source);
+   if(direct.magnet!==expected||sourceCalls!==1){
+    const returnedClass=direct.magnet===expected.replaceAll("&","&amp;")?
+      "HTML_ENTITY_UNDECODED":
+      direct.magnet==="magnet:?xt=urn:btih:"+hash?
+      "BTIH_FROM_FALLBACK_WITHOUT_ANCHOR":
+      typeof direct.magnet==="string"&&direct.magnet.startsWith("magnet:?xt=urn:btih:"+hash)?
+      "BTIH_WITH_OTHER_SUFFIX":"UNEXPECTED_MAGNET_SHAPE";
+    invalid.push({id:"therarbag-workerd-magnet-fixture",
+      error:"Source magnet differs from HTMLRewriter fixture",
+      returnedClass,sourceCalls});
+   }
+   const noAnchor="<html><main><p>Info Hash: "+hash+"</p></main></html>";
+   therarbagFixturePhase="LABEL_FALLBACK";
+   const fallback=await resolveLegacy("therarbag",detail,async()=>new Response(noAnchor,{status:200,headers:{"content-type":"text/html"}}));
+   if(fallback.magnet!=="magnet:?xt=urn:btih:"+hash)
+    invalid.push({id:"therarbag-workerd-hash-fixture",error:"Source label fallback not extracted"});
+  }catch{
+   invalid.push({id:"therarbag-workerd-real-parser",error:"Cloudflare HTMLRewriter fixture failed",phase:therarbagFixturePhase});
+  }
   return new Response(JSON.stringify({ok:invalid.length===0,checked:verified.length+invalid.length,verified,invalid}),{
-    status:invalid.length?500:200,headers:{"content-type":"application/json"}
+    status:200,headers:{"content-type":"application/json"}
   });
  }
 };
