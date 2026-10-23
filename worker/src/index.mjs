@@ -139,7 +139,9 @@ async function companion(request,action,env){
      headers:{"authorization":"Bearer "+v.token,"content-type":"application/json","accept":"application/json"},
      ...(action==="status"?{}:{body:payload}),
      signal:AbortSignal.timeout(12000),
-     redirect:"error"
+     // workerd supports manual/follow, not the Fetch spec's error redirect mode.
+     // Manual prevents Authorization from being forwarded to another origin.
+     redirect:"manual"
    };
    stage=hasBinding?"binding-request":"public-fetch";
    if(hasBinding){
@@ -155,6 +157,10 @@ async function companion(request,action,env){
      e?.name==="AbortError"?"aborted":
      e?.name==="TypeError"?"type_error":"other";
    return annotate(error("Companion remote relay is unavailable.",502),stage+"-"+kind);
+ }
+ // Reject 3xx explicitly: never follow a redirect with the private bearer token.
+ if(upstream.status>=300 && upstream.status<400){
+   return annotate(error("Companion relay redirect rejected.",502),"upstream-redirect");
  }
  let data;
  try {data=await upstream.json();}
