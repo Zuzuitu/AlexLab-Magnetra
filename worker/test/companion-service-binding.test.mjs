@@ -67,3 +67,36 @@ test("internal transport failure is still sanitized as a 502, not claimed as off
  assert.deepEqual(body,{error:"Companion remote relay is unavailable."});
  assert.ok(!JSON.stringify(body).includes("private transport"));
 });
+
+test("synthetic-only version marker proves bound Worker branch without disclosing credentials",async()=>{
+ const id="MAGNETRA_DIAG_NOTREAL_1234";
+ const token="TEST_TOKEN_NOT_REAL_12345678901234567890";
+ const make=(header)=>new Request("https://index.alexlab.media/api/companion/status",{
+  method:"POST",
+  headers:{"content-type":"application/json","origin":"https://index.alexlab.media",...(header?{"x-alexlab-companion-probe":header}:{})},
+  body:JSON.stringify({deviceId:id,token})
+ });
+ const env={FLUD_RELAY:{async fetch(){return json({error:"Unauthorized"},401)}}};
+ const special=await worker.fetch(make("20261023-v2"),env);
+ assert.equal(special.status,401);
+ assert.equal(special.headers.get("x-alexlab-companion-probe"),"upstream-http-401");
+ assert.ok(!JSON.stringify(await special.json()).includes(token));
+ const regular=await worker.fetch(make(null),env);
+ assert.equal(regular.status,401);
+ assert.equal(regular.headers.get("x-alexlab-companion-probe"),null);
+});
+
+test("synthetic-only bound fetch failures return finite diagnostic labels",async()=>{
+ const id="MAGNETRA_DIAG_NOTREAL_1234";
+ const token="TEST_TOKEN_NOT_REAL_12345678901234567890";
+ const env={FLUD_RELAY:{async fetch(){throw new TypeError("private worker exception that must not leak");}}};
+ const req=new Request("https://index.alexlab.media/api/companion/status",{
+  method:"POST",
+  headers:{"content-type":"application/json","origin":"https://index.alexlab.media","x-alexlab-companion-probe":"20261023-v2"},
+  body:JSON.stringify({deviceId:id,token})
+ });
+ const response=await worker.fetch(req,env);
+ assert.equal(response.status,502);
+ assert.equal(response.headers.get("x-alexlab-companion-probe"),"binding-fetch-type_error");
+ assert.deepEqual(await response.json(),{error:"Companion remote relay is unavailable."});
+});
