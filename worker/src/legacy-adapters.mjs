@@ -150,6 +150,19 @@ export function magnetFromTheRarBgInfoHash(html){
 // Only consider an exact HTTPS cache target in the main "Torrent:" action row,
 // accompanied by the page's "Info Hash:" label; never harvest arbitrary
 // .torrent links from description, similar posts, scripts, or comments.
+// Cloudflare's actual HTMLRewriter returns href attribute values with
+// literal HTML entities (proven by the 2026-10-24 real-workerd fixture).
+// Decode only ampersand delimiter entities on TheRarBg magnet links.
+// Do NOT URL-decode other parameters, construct a new hash or touch others.
+export function normalizedTheRarBgMagnetHref(href){
+ if(typeof href!=="string"||href.length>12000||!href.startsWith("magnet:?"))return null;
+ const clean=href.replace(/&(?:amp|#0*38|#x0*26);/gi,"&");
+ if(clean.length>12000||
+    !/^magnet:\?xt=urn:btih:(?:[a-f0-9]{40}|[a-z2-7]{32})(?:&|$)/i.test(clean))
+   return null;
+ return clean;
+}
+
 export function magnetFromTheRarBgSourceMetadata(html){
   if(typeof html!=="string"||!html||html.length>MAX_HTML)return null;
   const safe=html
@@ -207,7 +220,12 @@ export async function resolveLegacy(id,url,fetcher=fetch){
   const field=spec.resolution==="input"?"value":"href";
   const reader=new HTMLRewriter().on(selector,{element(e){
     const candidate=e.getAttribute(field);
-    if(candidate&&candidate.startsWith("magnet:?")&&candidate.length<=12000)magnet=candidate;
+    if(id==="therarbag"){
+      const normalized=normalizedTheRarBgMagnetHref(candidate);
+      if(normalized)magnet=normalized;
+    }else if(candidate&&candidate.startsWith("magnet:?")&&candidate.length<=12000){
+      magnet=candidate;
+    }
   }});
   await reader.transform(new Response(html,{headers:{"content-type":"text/html"}})).text();
   // Strict single-provider fallback; successful detail HTML was fetched via
