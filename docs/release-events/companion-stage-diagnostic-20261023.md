@@ -9,3 +9,7 @@ The corresponding workflow must:
 - Send one GET to the public Flud Remote status route with intentionally fake credentials, then one POST to the 0%-staged Magnetra status route using the Cloudflare version override and the same fake credentials.
 - Print only finite HTTP code/category and preserve 100/0 unchanged.
 - Never expose real credentials or send a magnet.
+
+## Second read-only diagnostic authorization
+
+Owner wants the Magnetra connection resolved. PR #143 has passed all four CI gates and updates the classifier to show only sanitized Cloudflare split labels and direct relay status before attempting candidate status. Execute the read-only diagnostic once more; do not upload versions or change production traffic.
