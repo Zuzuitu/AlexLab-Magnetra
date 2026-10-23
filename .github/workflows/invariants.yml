@@ -63,3 +63,6 @@ jobs:
 
       - name: Test BTDigg one-query production-first differential without network
         run: python3 -m unittest discover -s scripts -p 'test_btdigg_differential.py'
+
+      - name: Test exact TheRarBg detail diagnostic bounds and output offline
+        run: python3 -m unittest discover -s scripts -p 'test_therarbag_exact_detail_diagnostic.py'

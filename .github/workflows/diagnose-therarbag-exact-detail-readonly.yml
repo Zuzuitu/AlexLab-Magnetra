@@ -1,0 +1,51 @@
+# Manual owner approval; one original HTML read, no downloads, deployment or mutations.
+# Do not echo source URL, title, raw HTML, hashes, magnets or identifiers.
+name: Diagnose TheRarBg Exact Detail (READ ONLY)
+on:
+  workflow_dispatch:
+    inputs:
+      detail_url:
+        description: "Exact original public https://therarbg.com/post-detail/... URL"
+        required: true
+        type: string
+      diagnostic_approval:
+        description: "Allow ONE read of this exact source page, or CANCEL"
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RUN_ONE_EXACT_THE_RARBG_SOURCE_READ
+        default: CANCEL
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-exact-detail-readonly
+  cancel-in-progress: false
+jobs:
+  diagnose:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Enforce explicit opt-in before outbound request
+        shell: bash
+        env:
+          APPROVAL: ${{ inputs.diagnostic_approval }}
+        run: |
+          test "$APPROVAL" = 'RUN_ONE_EXACT_THE_RARBG_SOURCE_READ' || {
+            echo 'DIAGNOSTIC_STOP: OWNER_APPROVAL_REQUIRED'; exit 2;
+          }
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Offline validation
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_therarbag_exact_detail_diagnostic.py'
+      - name: Read original HTML once, emit counts only
+        shell: bash
+        env:
+          EXACT_URL: ${{ inputs.detail_url }}
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_therarbag_exact_detail.py --approved-readonly --detail-url "$EXACT_URL"
