@@ -1,0 +1,53 @@
+# One-shot staging of the source-owned JSON fallback. Normal user traffic
+# must remain exactly on 36019925 @100%; only an immutable 0% candidate added.
+# No production launch, 5%, 100%, torrent download or secret logs.
+name: Stage TheRarBg JSON Candidate at Zero Only
+
+on:
+  push:
+    branches:
+      - release/therarbag-json-zero-20261024
+    paths:
+      - .github/workflows/stage-therarbag-json-zero-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-cf-therarbag-json-stage-zero-once
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra' && github.ref == 'refs/heads/release/therarbag-json-zero-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check invariants, syntax and exact source JSON regression
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m py_compile scripts/stage_therarbag_json_zero_only_20261024.py scripts/probe_therarbag_json_zero_candidate_20261024.py
+          node --test worker/test/therarbag-original-json-fallback.test.mjs
+          node --test worker/test/therarbag-source-owned-hash-resolve.test.mjs
+      - name: Verify baseline live Cloudflare binding and release without writes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/inspect_companion_binding_readonly.py
+      - name: Upload and stage one immutable 0 percent candidate
+        id: stage
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          THERARBAG_STAGE_APPROVAL: ZERO_ONLY_EXACT_36019925
+        run: python3 scripts/stage_therarbag_json_zero_only_20261024.py
+      - name: Baseline versus candidate exact public Resolve (read only)
+        env:
+          CANDIDATE: ${{ steps.stage.outputs.candidate }}
+        run: python3 scripts/probe_therarbag_json_zero_candidate_20261024.py "$CANDIDATE"
