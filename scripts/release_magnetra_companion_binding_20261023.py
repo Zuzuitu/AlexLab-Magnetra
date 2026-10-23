@@ -26,7 +26,7 @@ from release_magnetra_therarbag_cache_link_20261022 import (
 )
 from release_magnetra_hide_anime_mikan import catalog_guard
 from inspect_companion_binding_readonly import (
-    validated_source, account_list, verify_account_scripts,
+    validated_source, account_list, verify_account_scripts, Stop as InspectorStop,
 )
 from deploy_magnetra_zero_percent import _get_api
 from inspect_magnetra_fix_stage import binding_pairs
@@ -176,7 +176,7 @@ def restore_if_safe(candidate):
             return
         wait_for(dep, shares, target, ok)
         print("ROLLBACK_OLD_100_NEW_0_PASS")
-    except (Stop, ValueError, KeyError, TypeError, OSError):
+    except (Stop, InspectorStop, ValueError, KeyError, TypeError, OSError):
         print("ROLLBACK_UNVERIFIED_MANUAL_AUDIT_REQUIRED")
 
 
@@ -233,7 +233,7 @@ def run():
         print("COMPANION_PRODUCTION_100_PASS:" + candidate)
         print("IPHONE_REAL_PAIRING_AND_PHYSICAL_ACK_STILL_OWNER_ACCEPTANCE")
         return 0
-    except (Stop, ValueError, KeyError, TypeError, OSError):
+    except (Stop, InspectorStop, ValueError, KeyError, TypeError, OSError):
         print("COMPANION_RELEASE_ABORTED_FAIL_CLOSED")
         restore_if_safe(candidate)
         return 1
@@ -245,7 +245,7 @@ def main():
         return 2
     try:
         return run()
-    except (Stop, ValueError, KeyError, TypeError, OSError):
+    except (Stop, InspectorStop, ValueError, KeyError, TypeError, OSError):
         print("COMPANION_PREFLIGHT_STOP_NO_WRITES_VERIFIED")
         return 1
 
