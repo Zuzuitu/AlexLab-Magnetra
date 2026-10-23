@@ -199,6 +199,60 @@ export function magnetFromTheRarBgSourceMetadata(html){
   return unique.size===1 ? "magnet:?xt=urn:btih:"+[...unique][0] : null;
 }
 
+// If the original TheRarBg HTML detail yields no usable magnet, consult
+// the original provider's OWN exact per-detail JSON representation:
+// same HTTPS origin, same detail id/slug, only ?format=json.
+// Confirmed by the owner-approved real-source audit #40037986215:
+// JSON.data.info_hash agrees with the visible original hash and magnet href.
+// No alternate torrent indexer, tracker/cache request, title-based guess,
+// third-party host, HTML challenge bypass, or .torrent download.
+export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch){
+  let original;
+  try {original=new URL(detailUrl);}catch{return null;}
+  if(original.protocol!=="https:"||original.origin!=="https://therarbg.com"||
+     original.username||original.password||original.hash||original.search||
+     !/^\/post-detail\/[a-z0-9]{1,32}\/[a-z0-9][a-z0-9._%~-]{0,340}\/?$/i.test(original.pathname))
+    return null;
+  const jsonUrl=new URL(original);
+  jsonUrl.searchParams.set("format","json");
+  let response;
+  try {
+    response=await fetcher(jsonUrl.toString(),{
+      method:"GET",redirect:"manual",signal:AbortSignal.timeout(TIMEOUT),
+      headers:{...SOURCE_HEADERS,accept:"application/json"}
+    });
+  }catch{return null;}
+  // Do not follow even same-host redirects for source JSON. The exact detail
+  // document is the only source for this fallback.
+  if(response.status!==200||response.headers.get("cf-mitigated")==="challenge"||
+    !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type")||"")||
+    Number(response.headers.get("content-length")||0)>MAX_HTML)
+    return null;
+  let payload;
+  try {
+    const raw=await response.text();
+    if(raw.length>MAX_HTML)return null;
+    payload=JSON.parse(raw);
+  }catch{return null;}
+  const entry=payload?.data;
+  if(!entry||typeof entry!=="object"||Array.isArray(entry))return null;
+  const hash=entry.info_hash;
+  if(typeof hash!=="string"||!/^[a-f0-9]{40}$/i.test(hash))return null;
+  // Refuse a JSON candidate if any independently labelled BTIH or magnet
+  // anchor on the already-fetched original page contradicts this same item.
+  const safe=html.replace(/<(script|style|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi," ")
+    .replace(/<!--[\s\S]*?-->/g," ");
+  const visible=safe.replace(/<[^>]*>/g," ")
+    .replace(/&nbsp;|&#(?:160|xA0);/gi," ")
+    .replace(/&colon;|&#(?:58|x3A);/gi,":").replace(/\s+/g," ");
+  const ownHashes=[
+    ...[...visible.matchAll(/\bInfo\s*Hash\s*:\s*([a-f0-9]{40})\b/gi)].map(x=>x[1]),
+    ...[...safe.matchAll(/<a\b[^>]*\bhref\s*=\s*["']magnet:\?xt=urn:btih:([a-f0-9]{40})(?:&|["'])/gi)].map(x=>x[1])
+  ];
+  if(ownHashes.some(x=>x.toLowerCase()!==hash.toLowerCase()))return null;
+  return "magnet:?xt=urn:btih:"+hash.toLowerCase();
+}
+
 export async function resolveLegacy(id,url,fetcher=fetch){
   const spec=LEGACY_SPECS[id];
   if(!spec)throw Error("provider not configured");
@@ -231,6 +285,7 @@ export async function resolveLegacy(id,url,fetcher=fetch){
   // Strict single-provider fallback; successful detail HTML was fetched via
   // its fixed-origin allowlisted URL with anti-bot and size guards above.
   if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgSourceMetadata(html);
+  if(!magnet&&id==="therarbag")magnet=await theRarBgOriginalJsonHash(safe,html,fetcher);
   if(!magnet)throw Error("provider details page contains no supported magnet link");
   return {magnet};
 }
