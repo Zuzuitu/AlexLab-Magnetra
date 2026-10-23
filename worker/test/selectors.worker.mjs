@@ -1,6 +1,7 @@
 import {LEGACY_SPECS} from "../src/legacy-specs.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "../src/html-adapters.mjs";
 import {resolveLegacy} from "../src/legacy-adapters.mjs";
+import {resolveLegacy} from "../src/legacy-adapters.mjs";
 
 /** CI-only workerd endpoint: validates actual Cloudflare HTMLRewriter syntax. */
 export default {
@@ -61,6 +62,31 @@ export default {
     invalid.push({id:"therarbag-workerd-magnet-fixture",error:"HTML entity magnet normalization not verified"});
   }catch{
    invalid.push({id:"therarbag-workerd-magnet-fixture",error:"Cloudflare source fixture exception"});
+  }
+  // Real workerd regression for source-owned JSON fallback, with a local
+  // transport fixture and no network. The HTTP 200 source HTML lacks BTIH;
+  // the matching exact detail ?format=json supplies the owner's infohash.
+  try{
+   const hash="a".repeat(40);
+   const original="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
+   const json=original+"?format=json";
+   const observed=[];
+   const result=await resolveLegacy("therarbag",original,async(url,options)=>{
+     observed.push(url);
+     if(options.redirect!=="manual")throw Error("fixture redirect policy changed");
+     if(url===original)return new Response(
+       "<html><main><p>Magnet Download</p></main></html>",
+       {status:200,headers:{"content-type":"text/html"}});
+     if(url===json)return new Response(JSON.stringify({data:{info_hash:hash}}),
+       {status:200,headers:{"content-type":"application/json"}});
+     throw Error("unexpected source request");
+   });
+   if(result.magnet!=="magnet:?xt=urn:btih:"+hash||
+       JSON.stringify(observed)!==JSON.stringify([original,json])){
+     invalid.push({id:"therarbag-official-json-runtime",error:"incorrect same-detail JSON resolution"});
+   }
+  }catch{
+   invalid.push({id:"therarbag-official-json-runtime",error:"workerd JSON fallback exception"});
   }
   return new Response(JSON.stringify({ok:invalid.length===0,checked:verified.length+invalid.length,verified,invalid}),{
     status:invalid.length?500:200,headers:{"content-type":"application/json"}
