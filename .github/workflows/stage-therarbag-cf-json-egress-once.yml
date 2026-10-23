@@ -1,0 +1,46 @@
+# One-shot zero-traffic staged Worker diagnostic. Preserves active 100%.
+name: Probe Original TheRarBg JSON from Cloudflare Egress
+on:
+  push:
+    branches:
+      - diagnostics/therarbag-cloudflare-json-egress-20261024
+    paths:
+      - .github/workflows/stage-therarbag-cf-json-egress-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-source-json-egress-zero-once
+  cancel-in-progress: false
+jobs:
+  probe:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra' && github.ref == 'refs/heads/diagnostics/therarbag-cloudflare-json-egress-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate exact source and safety guards
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m py_compile scripts/stage_therarbag_json_probe_zero_20261024.py scripts/probe_therarbag_cf_json_egress_20261024.py
+          node --test worker/test/therarbag-original-json-fallback.test.mjs
+      - name: Live Cloudflare baseline metadata read only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/inspect_companion_binding_readonly.py
+      - name: Replace only 0-percent staged candidate, preserve 36019925 at 100
+        id: stage
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          THERARBAG_STAGE_APPROVAL: ZERO_ONLY_EXACT_36019925
+        run: python3 scripts/stage_therarbag_json_probe_zero_20261024.py
+      - name: Probe exact JSON original through staged Worker only
+        env:
+          CANDIDATE: ${{ steps.stage.outputs.candidate }}
+        run: python3 scripts/probe_therarbag_cf_json_egress_20261024.py "$CANDIDATE"
