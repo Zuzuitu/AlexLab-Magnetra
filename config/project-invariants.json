@@ -74,7 +74,8 @@
       ".github/workflows/magnetra-therarbag-cache-link-one-shot.yml",
       ".github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml",
       ".github/workflows/inspect-companion-binding-readonly.yml",
-      ".github/workflows/magnetra-companion-binding-one-shot.yml"
+      ".github/workflows/magnetra-companion-binding-one-shot.yml",
+      ".github/workflows/companion-stage-readonly-diagnostic.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -135,7 +136,11 @@
       5,
       100
     ],
-    "internal_binding_rollback_preserved": true
+    "internal_binding_rollback_preserved": true,
+    "binding_staged_0_percent_diagnostic_script": "scripts/diagnose_companion_stage_readonly_20261023.py",
+    "binding_staged_0_percent_diagnostic_workflow": ".github/workflows/companion-stage-readonly-diagnostic.yml",
+    "binding_staged_candidate_version": "ac71bb51-b681-458b-8f40-980d4621fe62",
+    "binding_staged_candidate_published_100": false
   },
   "deployment": {
     "provider": "cloudflare-workers",
