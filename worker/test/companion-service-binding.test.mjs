@@ -100,3 +100,23 @@ test("synthetic-only bound fetch failures return finite diagnostic labels",async
  assert.equal(response.headers.get("x-alexlab-companion-probe"),"binding-fetch-type_error");
  assert.deepEqual(await response.json(),{error:"Companion remote relay is unavailable."});
 });
+
+test("Worker-to-Worker requests use workerd-compatible manual redirect policy",async()=>{
+ const env={FLUD_RELAY:{async fetch(request){
+  assert.equal(request.redirect,"manual");
+  assert.equal(request.headers.get("authorization"),"Bearer "+token);
+  return json({error:"Unauthorized"},401);
+ }}};
+ const response=await worker.fetch(incoming("status"),env);
+ assert.equal(response.status,401);
+});
+
+test("redirect from bound relay is rejected rather than leaking bearer to another host",async()=>{
+ const env={FLUD_RELAY:{async fetch(request){
+  assert.equal(request.redirect,"manual");
+  return new Response(null,{status:302,headers:{location:"https://other.example.com/collect"}});
+ }}};
+ const response=await worker.fetch(incoming("status"),env);
+ assert.equal(response.status,502);
+ assert.deepEqual(await response.json(),{error:"Companion relay redirect rejected."});
+});
