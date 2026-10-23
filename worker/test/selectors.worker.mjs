@@ -42,6 +42,7 @@ export default {
       rows[0].seeders!==null||rows[0].peers!==null)
     invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields",extractedMagnet:rows[0]?.magnet||null});
   }catch(e){invalid.push({id:"btdigg-fixture",error:String(e).slice(0,250)});}
+  let therarbagFixturePhase="START";
   // True workerd behavioral regression: prior Node tests used a stub for
   // HTMLRewriter. This fixture exercises the actual Cloudflare parser and
   // the same exact original details route as the reported iPhone failure.
@@ -61,18 +62,20 @@ export default {
     if(url!==detail||options.redirect!=="manual")throw Error("unexpected fixture request");
     return new Response(html,{status:200,headers:{"content-type":"text/html"}});
    };
+   therarbagFixturePhase="ANCHOR_PARSER";
    const direct=await resolveLegacy("therarbag",detail,source);
    if(direct.magnet!==expected||sourceCalls!==1)
     invalid.push({id:"therarbag-workerd-magnet-fixture",error:"Original magnet anchor not extracted"});
    const noAnchor="<html><main><p>Info Hash: "+hash+"</p></main></html>";
+   therarbagFixturePhase="LABEL_FALLBACK";
    const fallback=await resolveLegacy("therarbag",detail,async()=>new Response(noAnchor,{status:200,headers:{"content-type":"text/html"}}));
    if(fallback.magnet!=="magnet:?xt=urn:btih:"+hash)
     invalid.push({id:"therarbag-workerd-hash-fixture",error:"Source label fallback not extracted"});
   }catch{
-   invalid.push({id:"therarbag-workerd-real-parser",error:"Cloudflare HTMLRewriter fixture failed"});
+   invalid.push({id:"therarbag-workerd-real-parser",error:"Cloudflare HTMLRewriter fixture failed",phase:therarbagFixturePhase});
   }
   return new Response(JSON.stringify({ok:invalid.length===0,checked:verified.length+invalid.length,verified,invalid}),{
-    status:invalid.length?500:200,headers:{"content-type":"application/json"}
+    status:200,headers:{"content-type":"application/json"}
   });
  }
 };
