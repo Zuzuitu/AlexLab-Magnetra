@@ -1,10 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {magnetFromTheRarBgInfoHash,magnetFromTheRarBgSourceMetadata,resolveLegacy} from "../src/legacy-adapters.mjs";
+import {magnetFromTheRarBgInfoHash,magnetFromTheRarBgSourceMetadata,normalizedTheRarBgMagnetHref,resolveLegacy} from "../src/legacy-adapters.mjs";
 
 const HASH="a".repeat(40);
 const sample='<html><main><h1>Public-domain sample</h1><div><strong>Info Hash:</strong> <code>'+HASH.toUpperCase()+'</code> <button>Copy Magnet</button></div></main></html>';
+
+test("TheRarBg Cloudflare HTMLRewriter href preserves HTML ampersands; normalize exact BTIH",()=>{
+  const href="magnet:?xt=urn:btih:"+HASH+"&amp;dn=Public-domain%20Sample&amp;tr=udp%3A%2F%2Ftracker.invalid";
+  const expected="magnet:?xt=urn:btih:"+HASH+"&dn=Public-domain%20Sample&tr=udp%3A%2F%2Ftracker.invalid";
+  assert.equal(normalizedTheRarBgMagnetHref(href),expected);
+  assert.equal(normalizedTheRarBgMagnetHref(href.replaceAll("&amp;","&#38;")),expected);
+  assert.equal(normalizedTheRarBgMagnetHref(href.replaceAll("&amp;","&#x26;")),expected);
+  assert.equal(normalizedTheRarBgMagnetHref(expected),expected);
+  assert.equal(normalizedTheRarBgMagnetHref("magnet:?xt=urn:btih:"+HASH), "magnet:?xt=urn:btih:"+HASH);
+});
+test("TheRarBg HTML entity normalization refuses other schemes, invalid hashes and oversized links",()=>{
+  for(const candidate of [
+    "https://therarbg.com/magnet", "magnet:?xt=urn:btih:"+"z".repeat(40),
+    "magnet:?xt=urn:btih:"+"a".repeat(39),
+    "magnet:?dn=Unrelated&xt=urn:btih:"+HASH,
+    "magnet:?xt=urn:btih:"+HASH+"x",
+    "magnet:?xt=urn:btih:"+HASH+"&dn="+"x".repeat(12000),
+    null, "", 12
+  ])assert.equal(normalizedTheRarBgMagnetHref(candidate),null);
+});
 
 test("TheRarBg unique source-labelled info hash yields a BTIH magnet",()=>{
   assert.equal(magnetFromTheRarBgInfoHash(sample),"magnet:?xt=urn:btih:"+HASH);
