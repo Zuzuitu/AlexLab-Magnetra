@@ -1,0 +1,19 @@
+name: Read Staged Cloudflare TheRarBg Probe Status Only
+on:
+  push:
+    branches:
+      - diagnostics/therarbag-cloudflare-json-egress-20261024
+    paths:
+      - .github/workflows/read-staged-therarbag-probe-status.yml
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare staged original JSON probe HTTP code, no writes
+        run: python3 scripts/probe_therarbag_cf_json_egress_20261024.py 8d3f9813-e30f-417b-b9a7-a1247f994e9d
