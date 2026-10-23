@@ -1,5 +1,16 @@
 # AlexLab Magnetra — Project State
 
+## 23 OCT 2026 — MAGNETRA → FLUD REMOTE STATUS HTTP 502 (PROPOSED INTERNAL BINDING; NOT DEPLOYED)
+
+- Owner confirmed real Flud Companion Remote PWA reports Shield online and public GET health succeeds: Magnetra `/api/health` gives 46/46 and Flud Remote `/health` reports v0.25.2, `https-r2-mailbox`.
+- Read-only command using intentionally fake Device ID/token on public `POST /api/companion/status` returned HTTP 502 `{"error":"Companion remote relay is unavailable."}`, whereas a direct fake-credential GET to the Flud Remote status route returned HTTP 401 `{"error":"Unauthorized"}`. These prove separate public endpoints respond, with Magnetra's relay subrequest throwing; they do NOT prove physical torrent delivery or identify the exact Cloudflare exception.
+- This branch proposes adding Wrangler same-account service binding `FLUD_RELAY` targeting existing Worker `flud-remote-relay`, plus `env.FLUD_RELAY.fetch(new Request(fixedRelayUrl, ...))` for both status and magnet forwarding. Legacy outbound `fetch` remains a fallback only when binding absent, including in local development.
+- Preserve the exact fixed allowlisted relay host, bearer token header, no credentials in URLs/logs, same-origin POST API, bounded 12s timeout, idempotency ID, queued vs Shield ACK distinction, auto-start guard and existing frontend UX. Do NOT touch Shield/Flud repo, DNS, Rock64, BTDigg or the original 46 provider adapters.
+- **Activation gate:** confirm `alexlab-magnetra` and `flud-remote-relay` are deployed in the **same Cloudflare account**; GitHub ownership alone is insufficient. Ensure any immutable-version release process actually includes this new service binding and preserves every existing asset, secret and tunnel binding. Existing version-promotion scripts may assume a fixed binding count; audit/update them before a separate approved 0% → 5% → 100% rollout. No deploy, route modification, secret rotation or test magnet on this draft branch.
+- Regression test `worker/test/companion-service-binding.test.mjs` uses fake credentials and an in-memory stub of the binding, covers status success, 401 passthrough, magnet request fidelity and sanitized transport failure. These are unit tests, not yet proof of real cross-Worker Cloudflare reachability.
+- Owner acceptance after separately approved rollout: authenticate using existing browser pairing, click Verifică legătura Shield, confirm actual Online + auto-start readiness, then deliberately send a benign test magnet and verify physical Shield ACK, not merely relay queue acceptance. Keep rollback version available.
+
+
 ## LATEST INCIDENT / MANDATORY HANDOFF — 22 OCT 2026 18:56 EUROPE/ROME — THE RARBG STILL FAILS AFTER a088
 
 **Outcome: FUNCTIONAL FAILURE CONFIRMED ON OWNER'S IPHONE. NO FURTHER SPECULATIVE RELEASE.**
