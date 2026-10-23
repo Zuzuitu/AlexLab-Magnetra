@@ -114,15 +114,26 @@ async function companion(request,action,env){
    if(body.autoStart!==true && body.autoStart!==false)return error("Invalid autoStart setting.");
  }
  const id=v.deviceId;
+ // Only synthetic credentials and an explicit test header may reveal a finite
+ // diagnostic stage. Never disclose real tokens, request URLs, or raw exceptions.
+ const probe=action==="status" && id==="MAGNETRA_DIAG_NOTREAL_1234"
+   && v.token==="TEST_TOKEN_NOT_REAL_12345678901234567890"
+   && request.headers.get("x-alexlab-companion-probe")==="20261023-v2";
+ const annotate=(response,stage)=>{
+   if(probe)response.headers.set("x-alexlab-companion-probe",stage);
+   return response;
+ };
  const url=COMPANION_RELAY_ORIGIN+"/api/v1/device/"+encodeURIComponent(id)+"/"+action;
  const payload=action==="magnet"?JSON.stringify({
    magnet:body.magnet,autoStart:body.autoStart,
    requestId:typeof body.requestId==="string"&&/^[A-Za-z0-9._:-]{8,100}$/.test(body.requestId)?body.requestId:crypto.randomUUID()
  }):JSON.stringify({});
  let upstream;
+ let stage="request-preparation";
+ const hasBinding=Boolean(env?.FLUD_RELAY);
  try{
-   // Cloudflare same-account binding bypasses a public-hostname Worker subrequest.
-   // Keep the exact relay host, bearer authorization, and existing endpoint allowlist.
+   // Cloudflare same-account binding bypasses public-hostname subrequests.
+   // Keep fixed relay origin, bearer authorization and endpoint allowlist.
    const outboundOptions={
      method:action==="status"?"GET":"POST",
      headers:{"authorization":"Bearer "+v.token,"content-type":"application/json","accept":"application/json"},
@@ -130,14 +141,26 @@ async function companion(request,action,env){
      signal:AbortSignal.timeout(12000),
      redirect:"error"
    };
-   upstream=env?.FLUD_RELAY
-     ?await env.FLUD_RELAY.fetch(new Request(url,outboundOptions))
-     :await fetch(url,outboundOptions);
- }catch{return error("Companion remote relay is unavailable.",502);}
+   stage=hasBinding?"binding-request":"public-fetch";
+   if(hasBinding){
+     const outbound=new Request(url,outboundOptions);
+     stage="binding-fetch";
+     upstream=await env.FLUD_RELAY.fetch(outbound);
+   }else{
+     upstream=await fetch(url,outboundOptions);
+   }
+ }catch(e){
+   // Finite, sanitised debug categories on synthetic requests ONLY.
+   const kind=e?.name==="TimeoutError"?"timeout":
+     e?.name==="AbortError"?"aborted":
+     e?.name==="TypeError"?"type_error":"other";
+   return annotate(error("Companion remote relay is unavailable.",502),stage+"-"+kind);
+ }
  let data;
- try {data=await upstream.json();}catch{return error("Companion relay returned an invalid response.",502);}
- // Never echo the bearer token to frontend or log it.
- return json(data,upstream.status);
+ try {data=await upstream.json();}
+ catch{return annotate(error("Companion relay returned an invalid response.",502),"upstream-invalid-json");}
+ // Never echo the bearer token to frontend or logs.
+ return annotate(json(data,upstream.status),"upstream-http-"+String(upstream.status));
 }
 export default {
  async fetch(request,env){
