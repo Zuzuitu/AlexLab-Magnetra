@@ -1,5 +1,6 @@
 import {LEGACY_SPECS} from "../src/legacy-specs.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "../src/html-adapters.mjs";
+import {resolveLegacy} from "../src/legacy-adapters.mjs";
 
 /** CI-only workerd endpoint: validates actual Cloudflare HTMLRewriter syntax. */
 export default {
@@ -41,6 +42,26 @@ export default {
       rows[0].seeders!==null||rows[0].peers!==null)
     invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields",extractedMagnet:rows[0]?.magnet||null});
   }catch(e){invalid.push({id:"btdigg-fixture",error:String(e).slice(0,250)});}
+  // Real Cloudflare workerd contract: href="...&amp;dn=..." must become
+  // a usable magnet "&dn=..." for an original TheRarBg detail. This catches
+  // the concrete fake-HTMLRewriter blind spot; no external fetch is made.
+  try{
+   const hash="a".repeat(40);
+   const url="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
+   const expected="magnet:?xt=urn:btih:"+hash+"&dn=Synthetic";
+   const html="<html><body><table><tr><th>Torrent:</th><td>"+
+     "<a href='"+expected.replaceAll("&","&amp;")+"'>Magnet Download</a>"+
+     "<div>Info Hash: "+hash+"</div></td></tr></table></body></html>";
+   let calls=0;
+   const result=await resolveLegacy("therarbag",url,async(target,opts)=>{
+    calls++;if(target!==url||opts.redirect!=="manual")throw Error("invalid fixture transport");
+    return new Response(html,{status:200,headers:{"content-type":"text/html"}});
+   });
+   if(calls!==1||result.magnet!==expected)
+    invalid.push({id:"therarbag-workerd-magnet-fixture",error:"HTML entity magnet normalization not verified"});
+  }catch{
+   invalid.push({id:"therarbag-workerd-magnet-fixture",error:"Cloudflare source fixture exception"});
+  }
   return new Response(JSON.stringify({ok:invalid.length===0,checked:verified.length+invalid.length,verified,invalid}),{
     status:invalid.length?500:200,headers:{"content-type":"application/json"}
   });
