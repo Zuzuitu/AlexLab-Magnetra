@@ -123,16 +123,16 @@ async function companion(request,action,env){
  try{
    // Cloudflare same-account binding bypasses a public-hostname Worker subrequest.
    // Keep the exact relay host, bearer authorization, and existing endpoint allowlist.
-   const outbound=new Request(url,{
+   const outboundOptions={
      method:action==="status"?"GET":"POST",
      headers:{"authorization":"Bearer "+v.token,"content-type":"application/json","accept":"application/json"},
      ...(action==="status"?{}:{body:payload}),
      signal:AbortSignal.timeout(12000),
      redirect:"error"
-   });
+   };
    upstream=env?.FLUD_RELAY
-     ?await env.FLUD_RELAY.fetch(outbound)
-     :await fetch(outbound);
+     ?await env.FLUD_RELAY.fetch(new Request(url,outboundOptions))
+     :await fetch(url,outboundOptions);
  }catch{return error("Companion remote relay is unavailable.",502);}
  let data;
  try {data=await upstream.json();}catch{return error("Companion relay returned an invalid response.",502);}
