@@ -1,0 +1,48 @@
+# Exact post-incident audit; Cloudflare API GET only, no source fetch or deploy.
+name: Audit Magnetra CF Bindings after 36019925
+on:
+  push:
+    branches:
+      - audit/therarbag-post-unintended-release-20261024
+    paths:
+      - .github/workflows/audit-magnetra-36019925-readonly.yml
+permissions:
+  contents: read
+jobs:
+  audit:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra' && github.ref == 'refs/heads/audit/therarbag-post-unintended-release-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify source contracts and offline binding audit
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_inspect_companion_binding_readonly.py'
+      - name: Inspect live Cloudflare version and all bindings (GET ONLY)
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          temp="$(mktemp)"
+          trap 'rm -f "$temp"' EXIT
+          if ! python3 scripts/inspect_companion_binding_readonly.py > "$temp"; then
+            cat "$temp"
+            echo "AUDIT_STOP: CLOUDFLARE_BINDINGS_UNVERIFIED"
+            exit 2
+          fi
+          cat "$temp"
+          if ! grep -Fx 'ACTIVE_IMMUTABLE_VERSION: 36019925-2308-4f99-8223-13854012d372' "$temp" >/dev/null; then
+            echo "AUDIT_STOP: DIFFERENT_LIVE_VERSION_THAN_GITHUB_RELEASE"
+            exit 2
+          fi
+          if ! grep -Fx 'ACTIVE_FLUD_RELAY_BINDING: PRESENT' "$temp" >/dev/null; then
+            echo "AUDIT_STOP: FLUD_BINDING_MISSING"
+            exit 2
+          fi
+          echo "POST_DEPLOY_36019925_ALL_BINDINGS_VERIFIED: PASS"
