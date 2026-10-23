@@ -182,7 +182,41 @@ export function magnetFromTheRarBgSourceMetadata(html){
        !/\bInfo\s*Hash\s*:/i.test(after))continue;
     cache.push(path[1].toLowerCase());
   }
-  const unique=new Set([...labelled,...cache]);
+  // Some original TheRarBg detail views keep the torrent's own Info Hash
+  // in an adjacent <input value="..."> rather than a visible text node.
+  // Accept it ONLY in the page's main Torrent: download controls, with the
+  // Info Hash: label immediately preceding the input in the same DOM block.
+  // Never pick a hash from related results, comments or executable scripts.
+  const inputs=[];
+  for(const match of safe.matchAll(/<input\b([^>]*)>/gi)){
+    const attribute=/(?:^|\s)value\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(match[1]);
+    const value=attribute?.[1]??attribute?.[2];
+    if(!/^[a-f0-9]{40}$/i.test(value||""))continue;
+    const rawBefore=safe.slice(Math.max(0,match.index-6500),match.index);
+    const before=cleanText(rawBefore);
+    const labelledAt=before.toLowerCase().lastIndexOf("info hash:");
+    const rawLabelAt=rawBefore.toLowerCase().lastIndexOf("info hash:");
+    if(labelledAt<0||rawLabelAt<0||
+      !/^Info Hash:\s*$/i.test(before.slice(labelledAt)))continue;
+    // Close of a table row/cell or article between label and value means
+    // the input does not belong to this labelled torrent information field.
+    const afterLabel=rawBefore.slice(rawLabelAt+"info hash:".length);
+    if(/<\/(?:tr|td|table|section|article)\b/i.test(afterLabel)||
+      cleanText(afterLabel))continue;
+    const torrentAt=before.toLowerCase().lastIndexOf("torrent:");
+    if(torrentAt<0||torrentAt>labelledAt||
+      labelledAt-torrentAt>700)continue;
+    const controls=before.slice(torrentAt,labelledAt);
+    if(!/\bMagnet\s+Download\b/i.test(controls)||
+      !/\.torrent\s+File/i.test(controls)||
+      !/\bCopy\s+Magnet\b/i.test(controls)||
+      /\b(?:Similar Posts|Discussion|Description|Thumbnail)\s*:/i.test(controls))
+      continue;
+    inputs.push(value.toLowerCase());
+  }
+  // All source-owned evidence must agree. A conflicting valid hash is NOT a
+  // reason to choose the first candidate or search another provider.
+  const unique=new Set([...labelled,...cache,...inputs]);
   return unique.size===1 ? "magnet:?xt=urn:btih:"+[...unique][0] : null;
 }
 
