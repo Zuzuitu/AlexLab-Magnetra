@@ -1,0 +1,36 @@
+name: Magnetra Companion Staged Relay Diagnostic (READ ONLY)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/companion-stage-diagnostic-20261023.md
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-companion-stage-diagnostic-20261023]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check canonical invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Confirm owner one-time diagnostic marker
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_MESSAGE" == *'[magnetra-companion-stage-diagnostic-20261023]'* ]]
+          test -s docs/release-events/companion-stage-diagnostic-20261023.md
+      - name: GET-only Cloudflare staged version and fake-status probe
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/diagnose_companion_stage_readonly_20261023.py
