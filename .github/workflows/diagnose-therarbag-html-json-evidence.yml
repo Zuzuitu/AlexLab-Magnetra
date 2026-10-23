@@ -1,0 +1,23 @@
+# This workflow has NO Cloudflare credentials and NO deployment steps.
+name: TheRarBg Exact HTML vs JSON Source Evidence
+on:
+  push:
+    branches:
+      - diagnostics/therarbag-html-json-evidence-20261024
+    paths:
+      - .github/workflows/diagnose-therarbag-html-json-evidence.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra' && github.ref == 'refs/heads/diagnostics/therarbag-html-json-evidence-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check existing technical guardrails
+        run: python3 scripts/check-project-invariants.py
+      - name: Original TheRarBg HTML and same-origin JSON only
+        run: python3 scripts/diagnose_therarbag_html_json_evidence.py
