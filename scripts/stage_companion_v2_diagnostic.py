@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Owner-triggered, zero-traffic-only Companion diagnostic version stage.
+"""Owner-triggered, zero-traffic-only Companion fixed-request version stage.
 
-Precondition: existing a088100/ac710. Upload a new immutable version and replace
+Precondition: existing a088100/47bb0 (previous finite-stage candidate). Upload a new immutable version and replace
 the previously staged ac71 zero-percent slot. Old a088 retains 100% traffic.
 Use synthetic credentials and a finite response header to prove override
 routing and distinguish a binding exception from previous-version fallback.
@@ -23,7 +23,7 @@ from release_magnetra_companion_binding_20261023 import (
 )
 from inspect_companion_binding_readonly import validated_source, account_list, verify_account_scripts
 
-OLD_ZERO="ac71bb51-b681-458b-8f40-980d4621fe62"
+OLD_ZERO="47bbcec3-a4fc-4830-aa5e-33c55356a30b"
 BASELINE={ACTIVE:100,OLD_ZERO:0}
 ACTION="CONFIRM_COMPANION_V2_DIAGNOSTIC_ZERO_ONLY_20261023"
 STAGE_HEADER="x-alexlab-companion-probe"
