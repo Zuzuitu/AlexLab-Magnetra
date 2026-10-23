@@ -1,7 +1,6 @@
 import {LEGACY_SPECS} from "../src/legacy-specs.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "../src/html-adapters.mjs";
 import {resolveLegacy} from "../src/legacy-adapters.mjs";
-import {resolveLegacy} from "../src/legacy-adapters.mjs";
 
 /** CI-only workerd endpoint: validates actual Cloudflare HTMLRewriter syntax. */
 export default {
