@@ -126,10 +126,10 @@
     "internal_binding_name": "FLUD_RELAY",
     "internal_worker_name": "flud-remote-relay",
     "internal_binding_same_cloudflare_account_required": true,
-    "internal_binding_activation_confirmed": false,
+    "internal_binding_activation_confirmed": true,
     "internal_binding_same_cloudflare_account_owner_confirmed_on": "2026-10-23",
     "binding_readonly_preflight_workflow": ".github/workflows/inspect-companion-binding-readonly.yml",
-    "binding_release_production_active": false,
+    "binding_release_production_active": true,
     "internal_binding_release_script": "scripts/release_magnetra_companion_binding_20261023.py",
     "internal_binding_release_workflow": ".github/workflows/magnetra-companion-binding-one-shot.yml",
     "internal_binding_activation_marker": "[magnetra-companion-binding-publish-20261023]",
@@ -153,7 +153,14 @@
     "promote_fixed_4e47_workflow": ".github/workflows/companion-4e47-immutable-promotion.yml",
     "promote_fixed_4e47_script": "scripts/promote_companion_fixed_4e47_20261023.py",
     "promote_fixed_4e47_activation_marker": "[magnetra-companion-4e47-publish-20261023]",
-    "fixed_4e47_rollout_confirmed": false
+    "fixed_4e47_rollout_confirmed": true,
+    "production_active_immutable_version": "4e4730a1-3334-4b1a-98da-966f807d5078",
+    "production_rollback_immutable_version": "a088fa41-233d-48d3-bd4c-52be6194fda8",
+    "production_verified_action_run": 39985628821,
+    "production_traffic_new_percent": 100,
+    "production_traffic_rollback_percent": 0,
+    "real_shield_online_verified_in_magnetra": false,
+    "real_magnet_delivery_ack_verified": false
   },
   "deployment": {
     "provider": "cloudflare-workers",
