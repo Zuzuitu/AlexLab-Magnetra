@@ -1,5 +1,13 @@
 # AlexLab Magnetra — Project State
 
+## 23 OCT 2026 — WORKER REDIRECT FIX STAGED 0%, ROCK64 ACCEPTANCE PENDING
+
+- Conclusive owner Rock64 response from staged 47bbcec3-a4fc-4830-aa5e-33c55356a30b: HTTP 502 with unique probe header binding-request-type_error. New Request constructor threw TypeError before Service Binding fetch. Actual Cloudflare workerd Request Redirect only permits FOLLOW and MANUAL, not prior error mode.
+- PR #146 merged as 01be9341940b2c0c70242084e6dea0c10d211571: switch to redirect manual and explicit upstream 300–399 refusal, preserving bearer confidentiality. Tests for redirect mode and blocked redirects added.
+- Zero-only Cloudflare diagnostic workflow #39983123904 uploaded fixed candidate 4e4730a1-3334-4b1a-98da-966f807d5078; 4 binding identities PASS, old immutable a088@100 and new 4e47@0 VERIFIED. GitHub-hosted synthetic status lacked the candidate marker and failed closed, consistent with GitHub runner public edge 403 observed earlier. No 5%/100% promotion and no real token or magnet send.
+- Required Rock64 acceptance: POST https://index.alexlab.media/api/companion/status using Origin https://index.alexlab.media, Cloudflare-Workers-Version-Overrides alexlab-magnetra="4e4730a1-3334-4b1a-98da-966f807d5078", X-AlexLab-Companion-Probe 20261023-v2, fixed fake device MAGNETRA_DIAG_NOTREAL_1234 and fixed fake token TEST_TOKEN_NOT_REAL_12345678901234567890. Only HTTP 401 + response x-alexlab-companion-probe upstream-http-401 confirms bound relay. If it fails, no release.
+- After 401 validation, prepare separately owner-approved immutable version-specific guarded 0/5/100 promotion retaining active a088 rollback; never rerun stale initial one-shot script. Flud, Shield, Rock64, YouTube, DNS, secrets and original 46 adapters unchanged.
+
 ## 23 OCT 2026 — WORKER SERVICE BINDING CONSTRUCTOR TYPEERROR IDENTIFIED (FIX CANDIDATE; NOT LIVE)
 
 - Owner performed real Rock64 staged call with version override `47bbcec3-a4fc-4830-aa5e-33c55356a30b` and uniquely gated `X-AlexLab-Companion-Probe: 20261023-v2`. Result: HTTP 502 with `x-alexlab-companion-probe: binding-request-type_error`; this **proves the new immutable version ran**, entered Service Binding branch, and threw TypeError constructing `new Request(url,outboundOptions)` BEFORE `env.FLUD_RELAY.fetch` was called. No real creds were supplied.
