@@ -1,0 +1,50 @@
+# Read-only comparison on two known immutable Worker versions.
+# Does not upload, deploy, modify Cloudflare, or request any torrent download.
+name: Probe TheRarBg JSON Zero Candidate Only
+on:
+  push:
+    branches:
+      - release/therarbag-json-zero-20261024
+    paths:
+      - .github/workflows/probe-therarbag-json-zero-readonly.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra' && github.ref == 'refs/heads/release/therarbag-json-zero-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Confirm version split and service binding (GET only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,"scripts")
+          from deploy_magnetra_zero_percent import _current_deployment,_get_api,_shares
+          from inspect_magnetra_fix_stage import binding_pairs
+          old="36019925-2308-4f99-8223-13854012d372"
+          new="8c79bf41-40b0-4c2b-96a1-9506b706bf8a"
+          shares=_shares(_current_deployment(_get_api("/deployments")))
+          if shares!={old:100,new:0}:
+              print("READONLY_GATE: ACTIVE_CANDIDATE_SPLIT_UNVERIFIED")
+              sys.exit(2)
+          for v in (old,new):
+              meta=_get_api("/versions/"+v)
+              pairs=binding_pairs(meta)
+              expected={"ASSETS":"assets","FLUD_RELAY":"service"}
+              for k,t in expected.items():
+                  if (k,t) not in pairs:
+                      print("READONLY_GATE: BINDING_UNVERIFIED")
+                      sys.exit(2)
+          print("READONLY_GATE: ACTIVE_100_CANDIDATE_0_FOUR_BINDINGS_CONFIRMED")
+          PY
+      - name: Compare exact original source and two Cloudflare immutable versions
+        run: python3 scripts/probe_therarbag_json_zero_candidate_20261024.py 8c79bf41-40b0-4c2b-96a1-9506b706bf8a
