@@ -22,6 +22,10 @@ jobs:
         run: node --check worker/src/index.mjs && node --check worker/src/query-relevance.mjs && node --check worker/src/eztv-official-api.mjs && node --check worker/src/eztv-rock64.mjs && node --check worker/src/html-rock64.mjs && node --check worker/src/btdigg-rock64.mjs && node --check worker/src/providers.mjs && node --check worker/src/catalog.mjs && node --check worker/src/html-adapters.mjs && node --check worker/src/legacy-specs.mjs && node --check worker/src/legacy-adapters.mjs && node --check worker/src/request-headers.mjs && node --check worker/src/provider-recovery.mjs && node --check worker/src/recovery-strategy.mjs && node --check worker/src/source-audit.mjs && node --check scripts/recovery-plan.mjs && node --check web/app.js && node --check web/sw.js
       - name: Test provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
+      - name: Offline GET-only Flud Companion Cloudflare account and binding audit tests
+        run: python3 -m unittest discover -s scripts -p 'test_inspect_companion_binding_readonly.py' -v
+      - name: Offline owner-gated immutable Flud Companion rollout and 401 probe tests
+        run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_companion_binding_20261023.py' -v
       - name: Offline manual 540b full promotion and rollback regression tests
         run: python3 -m unittest discover -s scripts -p 'test_magnetra_fix_full_100.py'
       - name: Offline exact 136c relevance zero-slot regression tests

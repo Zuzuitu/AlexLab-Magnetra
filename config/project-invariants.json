@@ -72,7 +72,9 @@
       ".github/workflows/magnetra-therarbag-magnet-one-shot.yml",
       ".github/workflows/magnetra-therarbag-error-stages-one-shot.yml",
       ".github/workflows/magnetra-therarbag-cache-link-one-shot.yml",
-      ".github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml"
+      ".github/workflows/diagnose-therarbag-iphone-resolve-readonly.yml",
+      ".github/workflows/inspect-companion-binding-readonly.yml",
+      ".github/workflows/magnetra-companion-binding-one-shot.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -117,7 +119,23 @@
     "idempotent_request_id_required": true,
     "credentials_in_url_forbidden": true,
     "command_receipt_polling_required": true,
-    "queued_is_not_delivery_confirmation": true
+    "queued_is_not_delivery_confirmation": true,
+    "internal_binding_name": "FLUD_RELAY",
+    "internal_worker_name": "flud-remote-relay",
+    "internal_binding_same_cloudflare_account_required": true,
+    "internal_binding_activation_confirmed": false,
+    "internal_binding_same_cloudflare_account_owner_confirmed_on": "2026-10-23",
+    "binding_readonly_preflight_workflow": ".github/workflows/inspect-companion-binding-readonly.yml",
+    "binding_release_production_active": false,
+    "internal_binding_release_script": "scripts/release_magnetra_companion_binding_20261023.py",
+    "internal_binding_release_workflow": ".github/workflows/magnetra-companion-binding-one-shot.yml",
+    "internal_binding_activation_marker": "[magnetra-companion-binding-publish-20261023]",
+    "internal_binding_required_stages": [
+      0,
+      5,
+      100
+    ],
+    "internal_binding_rollback_preserved": true
   },
   "deployment": {
     "provider": "cloudflare-workers",

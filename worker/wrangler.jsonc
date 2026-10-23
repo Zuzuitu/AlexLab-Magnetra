@@ -14,5 +14,11 @@
       "pattern": "index.alexlab.media",
       "custom_domain": true
     }
+  ],
+  "services": [
+    {
+      "binding": "FLUD_RELAY",
+      "service": "flud-remote-relay"
+    }
   ]
 }

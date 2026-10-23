@@ -103,7 +103,7 @@ function validCompanion(body){
  if(token.length<20||token.length>512||/[\r\n]/.test(token))return {error:"Invalid Companion Remote token."};
  return {deviceId,token};
 }
-async function companion(request,action){
+async function companion(request,action,env){
  if(!checkSameOrigin(request))return error("Cross-origin submission not permitted.",403);
  let body;
  try {body=await safeBody(request);}catch{return error("Invalid JSON request.");}
@@ -121,13 +121,18 @@ async function companion(request,action){
  }):JSON.stringify({});
  let upstream;
  try{
-   upstream=await fetch(url,{
+   // Cloudflare same-account binding bypasses a public-hostname Worker subrequest.
+   // Keep the exact relay host, bearer authorization, and existing endpoint allowlist.
+   const outboundOptions={
      method:action==="status"?"GET":"POST",
      headers:{"authorization":"Bearer "+v.token,"content-type":"application/json","accept":"application/json"},
      ...(action==="status"?{}:{body:payload}),
      signal:AbortSignal.timeout(12000),
      redirect:"error"
-   });
+   };
+   upstream=env?.FLUD_RELAY
+     ?await env.FLUD_RELAY.fetch(new Request(url,outboundOptions))
+     :await fetch(url,outboundOptions);
  }catch{return error("Companion remote relay is unavailable.",502);}
  let data;
  try {data=await upstream.json();}catch{return error("Companion relay returned an invalid response.",502);}
@@ -142,8 +147,8 @@ export default {
    if(url.pathname==="/api/recovery-plan" && request.method==="GET")return json({summary:recoverySummary(),providers:recoveryPlan()});
    if(url.pathname==="/api/search" && request.method==="GET")return getSearch(url,env);
    if(url.pathname==="/api/resolve" && request.method==="POST")return resolveMagnet(request,env);
-   if(url.pathname==="/api/companion/magnet" && request.method==="POST")return companion(request,"magnet");
-   if(url.pathname==="/api/companion/status" && request.method==="POST")return companion(request,"status");
+   if(url.pathname==="/api/companion/magnet" && request.method==="POST")return companion(request,"magnet",env);
+   if(url.pathname==="/api/companion/status" && request.method==="POST")return companion(request,"status",env);
    if(url.pathname.startsWith("/api/"))return error("Not found.",404);
    if(request.method==="GET" && env?.ASSETS) return env.ASSETS.fetch(request);
    return error("Not found.",404);
