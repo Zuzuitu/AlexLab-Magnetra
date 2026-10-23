@@ -100,6 +100,10 @@ def run():
         if values=={ACTIVE:100,candidate:0}:
             audit_metadata(candidate)
             print("STAGED_CANDIDATE_UUID:",candidate)
+            output=os.environ.get("GITHUB_OUTPUT")
+            if output:
+                with open(output,"a",encoding="utf-8") as out:
+                    out.write("candidate="+candidate+"\n")
             print("STAGED_FOUR_BINDINGS: PASS")
             print("ACTIVE_UNCHANGED_36019925_100: PASS")
             print("CANDIDATE_ZERO_PERCENT: PASS")
