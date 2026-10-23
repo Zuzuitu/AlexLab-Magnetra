@@ -64,8 +64,17 @@ export default {
    };
    therarbagFixturePhase="ANCHOR_PARSER";
    const direct=await resolveLegacy("therarbag",detail,source);
-   if(direct.magnet!==expected||sourceCalls!==1)
-    invalid.push({id:"therarbag-workerd-magnet-fixture",error:"Original magnet anchor not extracted"});
+   if(direct.magnet!==expected||sourceCalls!==1){
+    const returnedClass=direct.magnet===expected.replaceAll("&","&amp;")?
+      "HTML_ENTITY_UNDECODED":
+      direct.magnet==="magnet:?xt=urn:btih:"+hash?
+      "BTIH_FROM_FALLBACK_WITHOUT_ANCHOR":
+      typeof direct.magnet==="string"&&direct.magnet.startsWith("magnet:?xt=urn:btih:"+hash)?
+      "BTIH_WITH_OTHER_SUFFIX":"UNEXPECTED_MAGNET_SHAPE";
+    invalid.push({id:"therarbag-workerd-magnet-fixture",
+      error:"Source magnet differs from HTMLRewriter fixture",
+      returnedClass,sourceCalls});
+   }
    const noAnchor="<html><main><p>Info Hash: "+hash+"</p></main></html>";
    therarbagFixturePhase="LABEL_FALLBACK";
    const fallback=await resolveLegacy("therarbag",detail,async()=>new Response(noAnchor,{status:200,headers:{"content-type":"text/html"}}));
