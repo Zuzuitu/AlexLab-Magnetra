@@ -41,7 +41,7 @@ def main():
     valid=data.get("originalSourceJsonValid") is True
     print("CF_OVERRIDE_PROBE_MARKER:", "VERIFIED" if marker else "NOT_VERIFIED")
     print("ORIGINAL_SOURCE_JSON_FROM_WORKER:", "VALID" if valid else "UNAVAILABLE")
-    print("CF_PROBE_HTTP:",status if status in (200,502) else "OTHER")
+    print("CF_PROBE_HTTP:",status if status in (200,400,401,403,404,405,429,500,502,503,530) else "OTHER")
     print("NO_TRAFFIC_PROMOTION_OR_USER_MAGNET:",True)
     return 0 if marker else 2
 if __name__=="__main__":sys.exit(main())
