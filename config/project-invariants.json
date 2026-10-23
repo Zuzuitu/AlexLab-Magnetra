@@ -76,7 +76,8 @@
       ".github/workflows/inspect-companion-binding-readonly.yml",
       ".github/workflows/magnetra-companion-binding-one-shot.yml",
       ".github/workflows/companion-stage-readonly-diagnostic.yml",
-      ".github/workflows/companion-v2-zero-only-diagnostic.yml"
+      ".github/workflows/companion-v2-zero-only-diagnostic.yml",
+      ".github/workflows/companion-4e47-immutable-promotion.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -145,7 +146,14 @@
     "v2_zero_only_diagnostic_script": "scripts/stage_companion_v2_diagnostic.py",
     "v2_zero_only_diagnostic_workflow": ".github/workflows/companion-v2-zero-only-diagnostic.yml",
     "v2_zero_only_activation_marker": "[magnetra-companion-v2-diagnostic-20261023]",
-    "v2_stage_will_not_promote_traffic": true
+    "v2_stage_will_not_promote_traffic": true,
+    "owner_rock64_proven_version": "4e4730a1-3334-4b1a-98da-966f807d5078",
+    "owner_rock64_proven_on": "2026-10-23",
+    "owner_rock64_synthetic_proof": "HTTP 401; x-alexlab-companion-probe: upstream-http-401",
+    "promote_fixed_4e47_workflow": ".github/workflows/companion-4e47-immutable-promotion.yml",
+    "promote_fixed_4e47_script": "scripts/promote_companion_fixed_4e47_20261023.py",
+    "promote_fixed_4e47_activation_marker": "[magnetra-companion-4e47-publish-20261023]",
+    "fixed_4e47_rollout_confirmed": false
   },
   "deployment": {
     "provider": "cloudflare-workers",

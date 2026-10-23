@@ -1,0 +1,58 @@
+# Owner-approved one-shot. Exact immutable version already tested on Rock64.
+# This workflow never uploads new code, rotates secrets, touches other Workers,
+# or sends magnets. It can revert to old immutable Worker if promotion fails.
+name: Magnetra Flud 4e47 Fixed Candidate Production Promotion (ONE SHOT)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/companion-4e47-publish-20261023.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-companion-4e47-publish-20261023]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout reviewed immutable release controls
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require exact owner one-shot release marker
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_MESSAGE" == *'[magnetra-companion-4e47-publish-20261023]'* ]]
+          test -s docs/release-events/companion-4e47-publish-20261023.md
+          echo "EXACT_4E47_ONE_SHOT_ACTIVATION_PASS"
+      - name: Check canonical invariants and offline release safety
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_promote_companion_fixed_4e47_20261023.py' -v
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test Flud Companion Worker and API regressions
+        run: |
+          node --check worker/src/index.mjs
+          node --test worker/test/*.test.mjs
+      - name: Verify reviewed Cloudflare Worker bundle (no deploy)
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Promote owner-proven exact immutable candidate 5 then 100 with rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_COMPANION_FIXED_PROMOTION_ACTION: CONFIRM_PROVEN_4E47_COMPANION_0_5_100_20261023
+          PYTHONUNBUFFERED: "1"
+        run: python3 scripts/promote_companion_fixed_4e47_20261023.py
