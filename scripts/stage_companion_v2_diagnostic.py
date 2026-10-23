@@ -2,7 +2,7 @@
 """Owner-triggered, zero-traffic-only Companion fixed-request version stage.
 
 Precondition: existing a088100/47bb0 (previous finite-stage candidate). Upload a new immutable version and replace
-the previously staged ac71 zero-percent slot. Old a088 retains 100% traffic.
+the previously staged 47bb zero-percent slot. Old a088 retains 100% traffic.
 Use synthetic credentials and a finite response header to prove override
 routing and distinguish a binding exception from previous-version fallback.
 Never promote, send magnets, touch Shield/Rock64/relay, or print credentials.
@@ -36,6 +36,7 @@ ALLOWED_STAGES=frozenset({
     "public-fetch-timeout","public-fetch-aborted",
     "upstream-http-401","upstream-http-403","upstream-http-404",
     "upstream-http-500","upstream-http-502","upstream-invalid-json",
+    "upstream-redirect",
 })
 
 
@@ -46,7 +47,9 @@ def source_guard():
     if ('"x-alexlab-companion-probe"' not in code
         or '"20261023-v2"' not in code
         or 'upstream-http-' not in code
-        or 'upstream=await env.FLUD_RELAY.fetch(outbound)' not in code):
+        or 'upstream=await env.FLUD_RELAY.fetch(outbound)' not in code
+        or 'redirect:"manual"' not in code
+        or 'upstream.status>=300 && upstream.status<400' not in code):
         raise Stop("FINITE_STAGE_SOURCE_NOT_REVIEWED")
     return config
 
@@ -87,7 +90,8 @@ def synthetic_status(version):
         raise Stop("STAGE_PROBE_UNVERIFIED_AUTH")
     if status==502 and data.get("error") not in (
             "Companion remote relay is unavailable.",
-            "Companion relay returned an invalid response."):
+            "Companion relay returned an invalid response.",
+            "Companion relay redirect rejected."):
         raise Stop("STAGE_PROBE_UNEXPECTED_502")
     print("CANDIDATE_OVERRIDE_PROVEN:PASS")
     print("COMPANION_DIAGNOSTIC_HTTP:"+str(status))
@@ -114,14 +118,21 @@ def run():
     )
     staged=wait_for(original,BASELINE,slot,ok)
     verify_version(new,True)
-    verify_all_assets(new,staged,slot)
-    catalog_guard(new)
+    print("STAGED_IMMUTABLE_VERSION:"+new,flush=True)
+    status=None
     try:
-        synthetic_status(new)
+        # Probe first so optional static-asset egress issues cannot hide the
+        # decisive internal Worker-to-Worker result.
+        status,_=synthetic_status(new)
+        verify_all_assets(new,staged,slot)
+        catalog_guard(new)
     finally:
         stable(staged,slot)
-    print("PRODUCTION_OLD_100_NEW_0_VERIFIED")
-    print("NO_CANARY_NO_PRODUCTION_PROMOTION")
+        print("PRODUCTION_OLD_100_NEW_0_VERIFIED",flush=True)
+    print("NO_CANARY_NO_PRODUCTION_PROMOTION",flush=True)
+    if status!=401:
+        raise Stop("INTERNAL_RELAY_NOT_AUTHENTICATED_401")
+    print("COMPANION_FIXED_REQUEST_STAGE_401_PASS",flush=True)
     return 0
 
 
