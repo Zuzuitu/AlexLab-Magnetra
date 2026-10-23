@@ -55,7 +55,14 @@ def reviewed_config():
         raise Stop("SERVICE_BINDING_TARGET_MISMATCH")
     code = (ROOT / "worker/src/index.mjs").read_text(encoding="utf-8")
     if ('env?.FLUD_RELAY.fetch' in code
-        or 'await env.FLUD_RELAY.fetch(new Request(url,outboundOptions))' not in code
+        or not (
+            'await env.FLUD_RELAY.fetch(new Request(url,outboundOptions))' in code
+            or (
+                'const outbound=new Request(url,outboundOptions)' in code
+                and 'upstream=await env.FLUD_RELAY.fetch(outbound)' in code
+                and 'x-alexlab-companion-probe' in code
+            )
+        )
         or 'return companion(request,"status",env)' not in code
         or 'return companion(request,"magnet",env)' not in code):
         raise Stop("COMPANION_RELAY_SOURCE_NOT_REVIEWED")
