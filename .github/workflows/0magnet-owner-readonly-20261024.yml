@@ -1,0 +1,49 @@
+name: Magnetra 0Magnet Owner Source Differential (READ ONLY ONE SHOT)
+on:
+  pull_request:
+    paths:
+      - scripts/diagnose_0magnet_owner_readonly_20261024.py
+      - scripts/test_diagnose_0magnet_owner_readonly_20261024.py
+      - .github/workflows/0magnet-owner-readonly-20261024.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/0magnet-owner-readonly-20261024.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-0magnet-owner-readonly
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Offline safety tests only, no live source requests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_owner_readonly_20261024.py' -v
+  compare:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-0magnet-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Project invariant and test gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_owner_readonly_20261024.py' -v
+      - name: Owner-authorized bounded public read-only differential
+        env:
+          MAGNETRA_0MAGNET_DIAGNOSTIC_APPROVAL: OWNER_0MAGNET_READONLY_20261024
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_0magnet_owner_readonly_20261024.py --approved-readonly

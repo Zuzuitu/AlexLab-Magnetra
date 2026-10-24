@@ -84,7 +84,8 @@
     ".github/workflows/therarbag-iphone-linkshape-readonly-20261024.yml",
     ".github/workflows/therarbag-iphone-exact-size-readonly-20261024.yml",
     ".github/workflows/therarbag-canonical-resolve-readonly-20261024.yml",
-    ".github/workflows/therarbag-details-first-production-20261024.yml"
+    ".github/workflows/therarbag-details-first-production-20261024.yml",
+    ".github/workflows/0magnet-owner-readonly-20261024.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",

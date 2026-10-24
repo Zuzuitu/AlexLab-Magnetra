@@ -1,5 +1,13 @@
 # AlexLab Magnetra — Project State
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — OWNER 0MAGNET DIAGNOSTIC PENDING; THE RARBG FIX ACCEPTED
+
+- **User evidence**: real Safari screenshots: PWA 0Magnet result "Little.House.on.the.Prairie.2026.S01.720p.10bit.WEBRip.2CH.x265.HEVC-PSA" (2.26 GB) shows "Obține magnet" and then generic "Sursă indisponibilă". The owner visits the original 9mag.net detail page, which visibly displays a magnet and Info Hash. This does not prove what static server HTML reached Cloudflare or what HTTP status the original upstream returned to the Worker.
+- **Confirmed implementation**: 0magnet has fixed origin https://9mag.net and an input-type deferred resolver with selector input#input-magnet, reading the value attribute of original detail HTML. This matches the Android ZeroMagnet implementation. The PWA currently collapses multiple failures into the same generic error; the code does NOT establish a failed selector or blocked upstream.
+- **Evidence gate staged, not yet run**: scripts/diagnose_0magnet_owner_readonly_20261024.py and workflow .github/workflows/0magnet-owner-readonly-20261024.yml; tests and explicit owner approval file. One-shot bounded read-only: at most 2 distinct production search GETs scoped to original 0magnet, one source-owned same-card detail GET, and one production metadata-only /api/resolve POST. Logs only finite status/class flags, no titles, detail URLs, magnets, hashes, raw HTML, credentials, user cookies or sensitive data. No torrent, download, Flud, Shield, retry on rate limit or challenge bypass. Stop if the source's same card is not available.
+- **Next**: inspect genuine action output and only then propose a smallest possible regression-tested source-specific fix with a separately owner-approved controlled immutable release. Preserve the proven TheRarBg fix, existing 46 adapters, 12 visible/34 hidden PWA picker, RO/IT UI, SSRF allowlist, all bindings, existing Cloudflare 100/0 last-proven split, Rock64/Tunnel/DNS/Shield/Flud. This PR is diagnostic and documentation only; automatic general PWA deploy must be skipped.
+
+
 
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — OWNER IPHONE SUCCESS REPORTED; THE RARBG MAGNET FIX ACCEPTED
 
