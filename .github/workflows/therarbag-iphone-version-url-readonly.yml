@@ -1,0 +1,41 @@
+# Read-only, one-shot Cloudflare Version URL attribution (no settings changes).
+name: Magnetra iPhone Version URL Check (READ ONLY ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-iphone-version-url-readonly-20261024.md
+
+permissions:
+  contents: read
+
+jobs:
+  verify-version-url:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-iphone-version-url-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: One-shot owner authorization gate
+        shell: bash
+        env:
+          ACTIVATION: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$ACTIVATION" == *'[magnetra-iphone-version-url-readonly-20261024]'* ]]
+          test -s docs/release-events/therarbag-iphone-version-url-readonly-20261024.md
+      - name: Immutable source guards and read-only probe tests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_therarbag_iphone_version_url_20261024.py' -v
+      - name: Cloudflare GET-only version URL check (never enable previews)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_THERARBAG_PREVIEW_AUDIT_ACTION: CONFIRM_READ_ONLY_IPHONE_VERSION_URL_AUDIT_20261024
+        run: python3 scripts/diagnose_therarbag_iphone_version_url_20261024.py
+      - name: Preserve production
+        run: echo "READ_ONLY - no preview settings, Worker deployments, traffic or DNS were changed"
