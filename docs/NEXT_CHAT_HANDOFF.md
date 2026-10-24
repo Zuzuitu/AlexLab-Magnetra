@@ -1,5 +1,16 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET IMMUTABLE PRODUCTION RELEASE OWNER APPROVED; PRE-ACTIVATION
+
+**Owner directly confirmed 24 Oct 2026 the proposal to deploy the proven frontend-only 0Magnet details-first correction at immutable 0% -> 5% -> 100%, with rollback. Approval permits the guarded one-shot process; not proof of completed production activation or iPhone acceptance.**
+
+- **Reviewed fix already in main**: PR #168 merged at `f870fa7300eb9cd04c4e267671270540f89f3263`, CI all four green, generic PWA deployment SKIPPED, public production smoke PASS. The real `web/app.js::ensureMagnet` prefers same-source canonical `details` for `0magnet` alongside therarbag/oxtorrent/torrent9 and preserves the other 42 provider source selections. TheRarBg iPhone fix remains functional.
+- **Exact cause evidence**: source-owner-provided `https://9mag.net/!lxbV` found one exact 0magnet API search match, one auxiliary magnetSource, no ready magnet. Production HTML original source HTTP 200 yielded a valid `input#input-magnet`; when given canonical `details` the production Worker `/api/resolve` HTTP 200 produced matching BTIH (real run #40133513283). This strongly supports client wrong selection as error origin, without claiming separate HTTP status for auxiliary or completed Safari acceptance.
+- **New guarded release preparation**: `scripts/release_0magnet_details_first_20261024.py`, `scripts/test_release_0magnet_details_first_20261024.py`, one-shot `.github/workflows/0magnet-details-first-production-20261024.yml`, event `docs/release-events/0magnet-details-first-production-20261024.md`. Require exact current Cloudflare active `916d0671-b9c5-432d-8724-aed27bc22c4f@100%` and previous `139d97f7-4048-4bbb-8e90-80585f1f4b26@0%` **verified live immediately before any write**, same account / four required bindings (ASSETS, BTDIGG_GATEWAY_TOKEN, MAGNETRA_GATEWAY_TOKEN, FLUD_RELAY), new immutable upload, 0%, candidate asset SHA + 46 provider catalog and exact source metadata-only resolver, 5%, repeat test, 100%, production asset SHA and smoke. Rollback previous active to 100% if known 5/100 split fails; refuse unknown concurrent state. Workflow runs only after unique owner-authorized merge marker; do not rerun.
+- **No nonessential changes**: do not change DNS, Rock64, BTDigg/EZTV/HTML gateways, existing workers except immutable new Magnetra version, Flud/Shield, paid services, tokens, all 46 original provider IDs or 12-visible/34-hidden curated picker. Do not log magnet/BTIH/HTML/bodies/secrets.
+- **Status at checkpoint**: release script and new workflow are still pending PR CI and guarded one-shot execution. **Never report online until a completed successful release run + postflight verifies new 100/old 0**. The owner must then physically retest Safari on exact 2.26 GB 0Magnet card: Obține magnet, Copiază and Distribuie (not automatically Flud). Separate Shield ACK testing after.
+
+
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET EXACT OWNER DETAILS-FIRST SOURCE FIX STAGED; PRODUCTION UNCHANGED
 
 **Most recent code checkpoint. TheRarBg remains accepted and live. The newly staged 0Magnet fix is NOT YET released or physically retested on iPhone.**
