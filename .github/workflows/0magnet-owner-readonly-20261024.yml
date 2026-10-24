@@ -1,5 +1,10 @@
 name: Magnetra 0Magnet Owner Source Differential (READ ONLY ONE SHOT)
 on:
+  pull_request:
+    paths:
+      - scripts/diagnose_0magnet_owner_readonly_20261024.py
+      - scripts/test_diagnose_0magnet_owner_readonly_20261024.py
+      - .github/workflows/0magnet-owner-readonly-20261024.yml
   push:
     branches: [main]
     paths:
@@ -10,8 +15,19 @@ concurrency:
   group: magnetra-0magnet-owner-readonly
   cancel-in-progress: false
 jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Offline safety tests only, no live source requests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_owner_readonly_20261024.py' -v
   compare:
-    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-0magnet-readonly-20261024]')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-0magnet-readonly-20261024]')
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
