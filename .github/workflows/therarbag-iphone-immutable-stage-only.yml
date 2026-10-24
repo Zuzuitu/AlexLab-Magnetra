@@ -1,0 +1,63 @@
+# One-shot owner-approved Cloudflare VERSION UPLOAD ONLY. Never change deployment percentages.
+# The activation event is unique and requires reviewed main plus an exact merge marker.
+name: Magnetra TheRarBg iPhone Immutable Stage Only (ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-iphone-stage-only-20261024.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  immutable-version-upload-only:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-therarbag-iphone-stage-only-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout reviewed main without persisting credentials
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Confirm one-shot activation and exact event
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_MESSAGE" == *'[magnetra-therarbag-iphone-stage-only-20261024]'* ]]
+          test -s docs/release-events/therarbag-iphone-stage-only-20261024.md
+          echo "EXPLICIT_ONESHOT_STAGE_ACTIVATION: PASS"
+      - name: Fail closed on canonical invariants and deployment metadata tests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_therarbag_iphone_stage_20261024.py' -v
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Real Worker and PWA contracts
+        run: |
+          node --test worker/test/*.test.mjs
+          node --check web/app.js
+      - name: Validate Worker bundle only, no upload
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Baseline-gated immutable VERSION UPLOAD only
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_THERARBAG_IPHONE_STAGE_ACTION: CONFIRM_IMMUTABLE_ZERO_TRAFFIC_UPLOAD_20261024
+        run: |
+          set -euo pipefail
+          python3 scripts/stage_therarbag_iphone_20261024.py
+      - name: No deployment, canary, or production exposure
+        run: |
+          echo "IMMUTABLE_VERSION_ONLY: new candidate uploaded and binding-checked"
+          echo "NO_DEPLOYMENT_RECORD_CHANGE: active 100% unchanged"
+          echo "NO_CANARY_NO_PUBLIC_IPHONE_DIAGNOSTIC: separate owner-approved zero-slot needed"
