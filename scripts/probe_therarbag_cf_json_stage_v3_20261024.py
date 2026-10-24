@@ -54,7 +54,12 @@ def main():
   print("DIAGNOSTIC_STOP: NON_JSON_EDGE_RESPONSE")
   return 2
  if not isinstance(body,dict) or body.get("probe")!="THERARBAG_SOURCE_JSON_STAGE_V3":
+  # Finite classification only. Never show body, error, hash, URL or headers.
   print("DIAGNOSTIC_STOP: VERSION_ATTRIBUTION_NOT_PROVEN")
+  print("EDGE_HTTP:",status if status in (200,400,401,403,404,429,500,502,503,530) else "OTHER")
+  print("RESPONSE_SHAPE:",
+    "WORKER_JSON_OTHER" if isinstance(body,dict) and status in (200,400,502)
+    else "OTHER_JSON_RESPONSE")
   return 2
  stage=body.get("stage")
  if stage not in ENUM:
