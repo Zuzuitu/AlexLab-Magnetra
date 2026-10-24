@@ -1,5 +1,15 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET EXACT OWNER URL NOW KNOWN; EXACT DIAGNOSTIC PENDING
+
+**Most recent update; supersedes previous 0Magnet title-prefix-only status below. Preserve historical observations.**
+
+- **Owner exact new evidence:** physical iPhone reproduction says "Eroare sursa.." and supplies ORIGINAL 0Magnet detail URL `https://9mag.net/!lxbV`. The owner previously supplied matching 9mag.net page screenshot showing a magnet and an original infohash. The reported failed URL has HTTPS original host, short-link route `/!lxbV`; `validateLegacyDetail("0magnet", URL)` accepts source-origin, does not reject the exclamation mark. The previous successful owner diagnostic #40105780560 identified a similar name PREFIX only and did not verify this exact short URL, so it does not close this incident.
+- **Existing code:** worker legacy resolver for 0magnet uses `resolution:"input"` and `input#input-magnet`, extracts `value` from original same-origin detail page; compatible with upstream Android `ZeroMagnetDetailsPageParser`. Frontend emits generic Romanian "Sursă indisponibilă" for several unrelated error classes, masking whether this is HTTP restriction, redirection, HTML shape, or browser/cache. **The root cause of the EXACT owner's short-link failure has NOT yet been measured.** Web direct fetch was not available in this assistant environment, so do not represent it as a tested HTTP response.
+- **New guarded evidence gate:** branch `diagnostics/0magnet-exact-lxbv-20261024` stages `scripts/diagnose_0magnet_exact_lxbv_20261024.py`, unit tests, workflow `.github/workflows/0magnet-exact-lxbv-20261024.yml`, and explicit event. One-shot only after 4 CI green: at most one source-scoped public search GET, one exact original detail GET, then one production metadata-only `/api/resolve` POST if source was not blocked/rate limited. Finite statuses/classes only; never publish magnet, hash, full response HTML, secrets, torrent bytes, titles or raw URL in logs. Stop on 429; no challenge bypass, retry, proxy, torrent download, or Flud/Shield device send.
+- **Next:** inspect real source/Worker differential, classify actual exact URL; apply smallest regression-tested 0magnet-only fix only after cause is demonstrated and owner-controlled rollout approved. No PWA code changes/release in diagnostic PR; do not alter known-good TheRarBg 100% version `916d0671-b9c5-432d-8724-aed27bc22c4f` or 0% rollback `139d97f7-4048-4bbb-8e90-80585f1f4b26`, 46 provider IDs, 12 visible/34 hidden, Rock64, DNS, tunnels, Flud/Shield or costs. Last proven split is historical unless reaudited live.
+
+
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET SERVER E2E POSITIVE; IPHONE RECHECK PENDING
 
 **This is the most recent checkpoint. Historical earlier "diagnostic pending" sections remain for provenance but no longer describe the current diagnostic state. TheRarBg iPhone fix remains owner-accepted.**

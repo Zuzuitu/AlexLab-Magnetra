@@ -1,0 +1,46 @@
+name: Magnetra 0Magnet Exact !lxbV Owner Diagnostic (READ ONLY)
+on:
+  pull_request:
+    paths:
+      - scripts/diagnose_0magnet_exact_lxbv_20261024.py
+      - scripts/test_diagnose_0magnet_exact_lxbv_20261024.py
+      - .github/workflows/0magnet-exact-lxbv-20261024.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/0magnet-exact-lxbv-readonly-20261024.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-0magnet-exact-lxbv-source-check
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Invariants and offline safety tests only
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_exact_lxbv_20261024.py' -v
+  exact-owner-diagnostic:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-0magnet-exact-lxbv-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Enforce invariant + no-leaks offline safety suite
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_exact_lxbv_20261024.py' -v
+      - name: Exact owner public GET/metadata-only POST (no torrents or Flud)
+        env:
+          MAGNETRA_0MAGNET_EXACT_APPROVAL: OWNER_EXACT_0MAGNET_LXBV_READONLY_20261024
+        run: |
+          python3 scripts/diagnose_0magnet_exact_lxbv_20261024.py --approved-readonly
