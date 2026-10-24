@@ -1,0 +1,37 @@
+# Read-only status of already staged V3; no version upload or traffic change.
+name: Inspect TheRarBg V3 Marker and Edge Status Only
+on:
+  push:
+    branches:
+      - diagnostics/therarbag-cloudflare-json-egress-20261024
+    paths:
+      - .github/workflows/inspect-therarbag-v3-marker-readonly.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Guard exact immutable Cloudflare active 100 and candidate zero
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,"scripts")
+          from deploy_magnetra_zero_percent import _get_api,_current_deployment,_shares
+          active="36019925-2308-4f99-8223-13854012d372"
+          diagnostic="5f642945-708d-4217-8f46-954b372ef3cb"
+          if _shares(_current_deployment(_get_api("/deployments")))!={active:100,diagnostic:0}:
+              print("STOP: UNKNOWN_CLOUDFLARE_DEPLOYMENT")
+              sys.exit(2)
+          print("ACTIVE_100_DIAGNOSTIC_V3_ZERO: VERIFIED")
+          PY
+      - name: Read finite staged source response status only
+        run: python3 scripts/probe_therarbag_cf_json_stage_v3_20261024.py 5f642945-708d-4217-8f46-954b372ef3cb
