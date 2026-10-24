@@ -15,6 +15,8 @@ def main():
     request=urllib.request.Request("https://index.alexlab.media/api/resolve",
       data=json.dumps({"provider":"therarbag","details":DETAIL},separators=(",",":")).encode("utf-8"),
       headers={
+       "user-agent":"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+       "accept-language":"en-US,en;q=0.9",
        "content-type":"application/json",
        "accept":"application/json",
        "origin":"https://index.alexlab.media",
