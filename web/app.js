@@ -147,7 +147,10 @@ function el(tag,className,text){
 let toastTimer;
 function toast(message){
   clearTimeout(toastTimer);const t=$("toast");t.textContent=message;t.classList.add("show");
-  toastTimer=setTimeout(()=>t.classList.remove("show"),3500);
+  // The opt-in finite forensic string stays visible long enough for an owner
+  // screenshot; normal notifications retain their original 3.5-second timing.
+  const duration=theRarBgDiagnosticMode&&message.includes("[Diagnostic")?20000:3500;
+  toastTimer=setTimeout(()=>t.classList.remove("show"),duration);
 }
 function openDialog(id){$(id).showModal();}
 function closeDialog(id){$(id).close();}
