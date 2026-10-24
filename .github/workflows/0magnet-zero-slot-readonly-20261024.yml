@@ -1,0 +1,51 @@
+name: Magnetra 0Magnet 0 Percent Candidate Evidence (READ ONLY)
+on:
+  pull_request:
+    paths:
+      - scripts/diagnose_0magnet_zero_slot_20261024.py
+      - scripts/test_diagnose_0magnet_zero_slot_20261024.py
+      - .github/workflows/0magnet-zero-slot-readonly-20261024.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/0magnet-zero-slot-readonly-20261024.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-0magnet-zero-readonly
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Strict local-only tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_zero_slot_20261024.py' -v
+  read-only-zero-audit:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-0magnet-zero-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Invariants and unit tests; no Cloudflare writes
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_0magnet_zero_slot_20261024.py' -v
+      - name: Read current 100/0 split and immutable asset/Worker parity
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_0MAGNET_ZERO_READONLY: OWNER_READONLY_0MAGNET_ZERO_SLOT_20261024
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_0magnet_zero_slot_20261024.py --approved-readonly
