@@ -76,7 +76,7 @@ export default {
      if(url===original)return new Response(
        "<html><main><p>Magnet Download</p></main></html>",
        {status:200,headers:{"content-type":"text/html"}});
-     if(url===json)return new Response(JSON.stringify({data:{info_hash:hash}}),
+     if(url===json)return new Response(JSON.stringify({info_hash:hash}),
        {status:200,headers:{"content-type":"application/json"}});
      throw Error("unexpected source request");
    });
