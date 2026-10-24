@@ -1,0 +1,58 @@
+# Unique owner-approved immutable TheRarBg iPhone correction.
+# Never generic Wrangler deploy; no DNS, secret, Flud or Rock64 changes.
+name: Magnetra TheRarBg Details-First iPhone Fix (OWNER ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-details-first-production-20261024.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  guarded-release:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-therarbag-details-first-fix-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify exact owner one-shot activation
+        shell: bash
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$MESSAGE" == *'[magnetra-therarbag-details-first-fix-20261024]'* ]]
+          test -s docs/release-events/therarbag-details-first-production-20261024.md
+      - name: Project invariants and guarded offline release/rollback tests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_therarbag_details_first_20261024.py' -v
+      - name: Node 22 for full original provider/PWA contracts
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify original PWA functionality and real ensureMagnet regression
+        run: |
+          node --test worker/test/*.test.mjs
+          node --check web/app.js
+          node --check worker/src/index.mjs
+      - name: Validate Cloudflare bundle (dry run, no mutation)
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Exact current split then immutable upload 0 to 5 to 100, safe rollback
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_THERARBAG_DETAILS_FIRST_ACTION: CONFIRM_THERARBAG_DETAILS_FIRST_PRODUCTION_20261024
+        run: |
+          set -euo pipefail
+          python3 scripts/release_therarbag_details_first_20261024.py
