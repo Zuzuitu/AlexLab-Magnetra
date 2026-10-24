@@ -70,6 +70,7 @@ export default {
    const original="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
    const json=original+"?format=json";
    const observed=[];
+   const trace={htmlStage:"HTML_NOT_FETCHED",jsonStage:"JSON_NOT_STARTED"};
    const result=await resolveLegacy("therarbag",original,async(url,options)=>{
      observed.push(url);
      if(options.redirect!=="manual")throw Error("fixture redirect policy changed");
@@ -79,7 +80,9 @@ export default {
      if(url===json)return new Response(JSON.stringify({info_hash:hash}),
        {status:200,headers:{"content-type":"application/json"}});
      throw Error("unexpected source request");
-   });
+   },trace);
+   if(trace.htmlStage!=="HTML_NO_BTIH"||trace.jsonStage!=="JSON_VALID")
+     invalid.push({id:"therarbag-runtime-stage-fixture",error:"workerd finite source trace does not match"});
    if(result.magnet!=="magnet:?xt=urn:btih:"+hash||
        JSON.stringify(observed)!==JSON.stringify([original,json])){
      invalid.push({id:"therarbag-official-json-runtime",error:"incorrect same-detail JSON resolution"});

@@ -6,6 +6,22 @@ const tr=(key,args={})=>{
  const translated=globalThis.MagnetraI18n?.t(key,args);
  return translated||String(key).replace(/\{(\w+)\}/g,(_,name)=>String(args[name]??""));
 };
+// Diagnostic mode is explicit, session/URL-scoped and stores no private values.
+const theRarBgDiagnosticMode=typeof location!=="undefined"&&
+ typeof URLSearchParams!=="undefined"&&
+ new URLSearchParams(location.search||"").get("magnetra_diag")==="1";
+function theRarBgDiagnosticSuffix(error){
+ if(!theRarBgDiagnosticMode)return "";
+ const data=error?.magnetraDiagnostic;
+ if(!data||data.build!=="THERARBAG_IPHONE_DIAG_V1")
+   return " [Trace: Worker fără raport]";
+ const stage=value=>typeof value==="string"&&/^[A-Z0-9_]{3,40}$/.test(value)?value:"UNAVAILABLE";
+ const fp=typeof data.detailFingerprint==="string"&&/^[a-f0-9]{12}$/.test(data.detailFingerprint)
+   ?data.detailFingerprint:"unavailable";
+ const time=Number.isFinite(data.elapsedMs)?Math.max(0,Math.min(30000,Math.round(data.elapsedMs))):0;
+ return " [Trace "+data.build+"; URL "+fp+"; HTML "+stage(data.htmlStage)+
+   "; JSON "+stage(data.jsonStage)+"; "+time+"ms]";
+}
 const genericError=(failure)=>{
  const code=String(failure?.code||"").toUpperCase();
  const msg=String(failure?.message||failure?.error||"").toLowerCase();
@@ -40,7 +56,8 @@ function magnetFailureText(item,error){
    EDGE_403:"Magnetra was blocked before receiving a server response (HTTP 403).",
    RESPONSE_NOT_JSON:"Magnetra received a non-JSON response while resolving the magnet."
   };
-  return tr(failures[error?.magnetraCode]||"TheRarBg could not provide this magnet. Open Details to try it on the source site.");
+  return tr(failures[error?.magnetraCode]||"TheRarBg could not provide this magnet. Open Details to try it on the source site.")+
+    theRarBgDiagnosticSuffix(error);
  }
  return genericError(error);
 }
@@ -115,6 +132,8 @@ const api=async(path,options={})=>{
       // Never echo provider exception strings, URLs, magnets or tokens.
       if(typeof data?.code==="string"&&/^[A-Z0-9_]{3,40}$/.test(data.code))
         failure.magnetraCode=data.code;
+      if(theRarBgDiagnosticMode&&data?.diagnostic?.build==="THERARBAG_IPHONE_DIAG_V1")
+        failure.magnetraDiagnostic=data.diagnostic;
     }
     throw failure;
   }
@@ -130,7 +149,10 @@ function el(tag,className,text){
 let toastTimer;
 function toast(message){
   clearTimeout(toastTimer);const t=$("toast");t.textContent=message;t.classList.add("show");
-  toastTimer=setTimeout(()=>t.classList.remove("show"),3500);
+  // The opt-in finite forensic string stays visible long enough for an owner
+  // screenshot; normal notifications retain their original 3.5-second timing.
+  const duration=theRarBgDiagnosticMode&&message.includes("[Trace")?20000:3500;
+  toastTimer=setTimeout(()=>t.classList.remove("show"),duration);
 }
 function openDialog(id){$(id).showModal();}
 function closeDialog(id){$(id).close();}
@@ -280,8 +302,11 @@ async function ensureMagnet(item){
  const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9";
  const source=preferDetails ? item.details : item.magnetSource||item.details;
  if(!source)throw Error(tr("Provider has no supported magnet or details link."));
+ const headers={"content-type":"application/json"};
+ if(item.provider==="therarbag"&&theRarBgDiagnosticMode)
+   headers["x-magnetra-resolve-diagnostic"]="owner-opt-in-20261024-v1";
  const res=await api("/api/resolve",{
-  method:"POST",headers:{"content-type":"application/json"},
+  method:"POST",headers,
   body:JSON.stringify({provider:item.provider,details:source})
  });
  if(!res.magnet?.startsWith("magnet:?"))throw Error(tr("Provider did not return a valid magnet."));

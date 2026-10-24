@@ -71,6 +71,14 @@ async function getSearch(url,env) {
  return json({query:q,category,results,stats,errors,total:results.length,
    excludedOffTopic:stats.reduce((sum,item)=>sum+item.excludedOffTopic,0)});
 }
+// SHA-256 fingerprint of an already-validated public detail link; no raw
+// URL, torrent BTIH or magnet is emitted in opt-in diagnostic responses.
+async function detailFingerprint(value){
+  try{
+    const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest).slice(0,6),n=>n.toString(16).padStart(2,"0")).join("");
+  }catch{return "unavailable";}
+}
 async function resolveMagnet(request,env){
  if(!checkSameOrigin(request))return error("Cross-origin submission not permitted.",403);
  let payload;
@@ -80,14 +88,29 @@ async function resolveMagnet(request,env){
    return error("Provider has no approved deferred magnet resolver.");
  if(typeof details!=="string"||!validateLegacyDetail(provider,details))
    return error("Details URL is not in the provider allowlist.");
+ // No extra fetch, origin, retry, token or logging; opt-in and TheRarBg only.
+ const diagnostic=provider==="therarbag"&&
+   request.headers.get("x-magnetra-resolve-diagnostic")==="owner-opt-in-20261024-v1";
+ const trace=diagnostic?{htmlStage:"HTML_NOT_FETCHED",jsonStage:"JSON_NOT_STARTED"}:null;
+ const started=Date.now();
+ const diagnosticPayload=async()=>trace?{
+   build:"THERARBAG_IPHONE_DIAG_V1",detailFingerprint:await detailFingerprint(details),
+   htmlStage:trace.htmlStage,jsonStage:trace.jsonStage,
+   elapsedMs:Math.max(0,Math.min(30000,Date.now()-started))
+ }:null;
  try{
    const sourceFetch=rock64HtmlFetcher(provider,env)||fetch;
-   const result=await resolveLegacy(provider,details,sourceFetch);
-   return json({provider,magnet:result.magnet});
+   // Preserve the canonical resolver call exactly for ordinary requests.
+   const result=diagnostic
+     ?await resolveLegacy(provider,details,sourceFetch,trace)
+     :await resolveLegacy(provider,details,sourceFetch);
+   return json({provider,magnet:result.magnet,
+     ...(diagnostic?{diagnostic:await diagnosticPayload()}:{})});
  }catch(e){
    if(provider==="therarbag"){
      return json({error:"TheRarBg magnet could not be resolved.",
-       code:classifyTheRarBgResolveError(e)},502);
+       code:classifyTheRarBgResolveError(e),
+       ...(diagnostic?{diagnostic:await diagnosticPayload()}:{})},502);
    }
    return error("Provider could not resolve magnet: "+String(e?.message||e).slice(0,170),502);
  }

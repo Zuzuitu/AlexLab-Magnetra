@@ -5,6 +5,12 @@
 
 **This heading supersedes historical latest-status sections below. Historical sections are preserved for provenance.** Do not interpret older live versions, stale URLs or proposed workflows as current status.
 
+### Next-session P1 diagnostic work — NOT DEPLOYED (24 Oct 2026)
+- A separate branch `diagnostics/therarbag-iphone-optin-20261024` adds owner opt-in tracing for the existing same-card TheRarBg resolver. When the iPhone URL explicitly contains `?magnetra_diag=1`, only TheRarBg `/api/resolve` requests include a bounded diagnostic header; default PWA behavior and all other providers remain unchanged.
+- The Worker response includes finite HTML/JSON stages, diagnostic build label, a truncated SHA-256 of the validated details URL and bounded elapsed milliseconds. These appear in the diagnostic error text only in opt-in mode. No original BTIH, magnet, raw details URL, request body, credentials or upstream HTML are added to diagnostic output or logs. The existing source-owned HTML/JSON resolution and request counts are unchanged.
+- This is **instrumentation, not a demonstrated bug fix**. Do not merge, enable any traffic, modify immutable Cloudflare percentages or claim iPhone success without four green CI gates, fresh bindings/deployment audit, explicit owner rollout approval and an actual iPhone test. The former `36019925@100 / c201cbf9@0` Cloudflare split remains a historical observation pending GET-only verification.
+- A response saying `Worker fără raport` in opt-in mode indicates this debugging code did not answer the request; this alone cannot identify the exact Cloudflare version. Compare selected URL fingerprint and finite stages from the same card to differentiate client/request mismatch from source variability. The real Genshin detail link remains unverified.
+
 ### Repository and current deployment
 - Public GitHub: https://github.com/Zuzuitu/AlexLab-Magnetra; production PWA: https://index.alexlab.media; current main immediately before this documentation update: 04dac669191ff647b5494216ff78e3cbfd39b1ab, PR #152 merged on 24 Oct. Deploy Magnetra PWA was SKIPPED on merge (run #40052634151). Code merged DOES NOT imply code activated.
 - Last independent Cloudflare audit, run https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40052525794: immutable 36019925-2308-4f99-8223-13854012d372 serves 100% normal production traffic; new PR152 code c201cbf9-2080-4a5b-9e40-723a8714d94c is staged at 0% ordinary traffic. Re-audit percentages before action; not guaranteed for all future times.

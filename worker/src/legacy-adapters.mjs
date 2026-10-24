@@ -206,7 +206,9 @@ export function magnetFromTheRarBgSourceMetadata(html){
 // JSON.data.info_hash agrees with the visible original hash and magnet href.
 // No alternate torrent indexer, tracker/cache request, title-based guess,
 // third-party host, HTML challenge bypass, or .torrent download.
-export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch){
+export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch,diagnostic=null){
+  // The optional trace stores finite stages only; it never retains torrent metadata.
+  if(diagnostic)diagnostic.jsonStage="JSON_URL_REJECTED";
   let original;
   try {original=new URL(detailUrl);}catch{return null;}
   if(original.protocol!=="https:"||original.origin!=="https://therarbg.com"||
@@ -215,25 +217,46 @@ export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch){
     return null;
   const jsonUrl=new URL(original);
   jsonUrl.searchParams.set("format","json");
+  if(diagnostic)diagnostic.jsonStage="JSON_FETCHING";
   let response;
   try {
     response=await fetcher(jsonUrl.toString(),{
       method:"GET",redirect:"manual",signal:AbortSignal.timeout(TIMEOUT),
       headers:{...SOURCE_HEADERS,accept:"application/json"}
     });
-  }catch{return null;}
+  }catch{
+    if(diagnostic)diagnostic.jsonStage="JSON_TRANSPORT_FAILED";
+    return null;
+  }
   // Do not follow even same-host redirects for source JSON. The exact detail
   // document is the only source for this fallback.
-  if(response.status!==200||response.headers.get("cf-mitigated")==="challenge"||
-    !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type")||"")||
-    Number(response.headers.get("content-length")||0)>MAX_HTML)
+  if(response.status!==200){
+    if(diagnostic)diagnostic.jsonStage=[403,404,429,500,502,503,504].includes(response.status)
+      ?"JSON_HTTP_"+response.status:response.status>=300&&response.status<400
+      ?"JSON_REDIRECT":"JSON_HTTP_OTHER";
     return null;
+  }
+  if(response.headers.get("cf-mitigated")==="challenge"){
+    if(diagnostic)diagnostic.jsonStage="JSON_CHALLENGE";
+    return null;
+  }
+  if(!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type")||"")){
+    if(diagnostic)diagnostic.jsonStage="JSON_NOT_JSON";
+    return null;
+  }
+  if(Number(response.headers.get("content-length")||0)>MAX_HTML){
+    if(diagnostic)diagnostic.jsonStage="JSON_TOO_LARGE";
+    return null;
+  }
   let payload;
   try {
     const raw=await response.text();
     if(raw.length>MAX_HTML)return null;
     payload=JSON.parse(raw);
-  }catch{return null;}
+  }catch{
+    if(diagnostic)diagnostic.jsonStage="JSON_PARSE_REJECTED";
+    return null;
+  }
   // Axios 'res.data.info_hash' in TheRarBg's public frontend means the
   // HTTP response BODY has a top-level info_hash, not JSON.data.info_hash.
   // The original-source probe also permits a wrapped {data:{info_hash}} form.
@@ -241,17 +264,25 @@ export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch){
   // values instead of searching names, nested recommendations or other URLs.
   const record=payload&&typeof payload==="object"&&!Array.isArray(payload)
     ?payload:null;
-  if(!record||Object.hasOwn(record,"error"))return null;
+  if(!record||Object.hasOwn(record,"error")){
+    if(diagnostic)diagnostic.jsonStage="JSON_SCHEMA_REJECTED";
+    return null;
+  }
   const wrapped=record.data&&typeof record.data==="object"&&!Array.isArray(record.data)
     ?record.data:null;
   const rawHashes=[
     ...(Object.hasOwn(record,"info_hash")?[record.info_hash]:[]),
     ...(wrapped&&Object.hasOwn(wrapped,"info_hash")?[wrapped.info_hash]:[])
   ];
-  if(!rawHashes.length||rawHashes.some(h=>typeof h!=="string"||!/^[a-f0-9]{40}$/i.test(h)))
+  if(!rawHashes.length||rawHashes.some(h=>typeof h!=="string"||!/^[a-f0-9]{40}$/i.test(h))){
+    if(diagnostic)diagnostic.jsonStage="JSON_HASH_MISSING_INVALID";
     return null;
+  }
   const distinct=new Set(rawHashes.map(h=>h.toLowerCase()));
-  if(distinct.size!==1)return null;
+  if(distinct.size!==1){
+    if(diagnostic)diagnostic.jsonStage="JSON_HASH_CONFLICT";
+    return null;
+  }
   const hash=[...distinct][0];
   // Refuse a JSON candidate if any independently labelled BTIH or magnet
   // anchor on the already-fetched original page contradicts this same item.
@@ -264,11 +295,15 @@ export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch){
     ...[...visible.matchAll(/\bInfo\s*Hash\s*:\s*([a-f0-9]{40})\b/gi)].map(x=>x[1]),
     ...[...safe.matchAll(/<a\b[^>]*\bhref\s*=\s*["']magnet:\?xt=urn:btih:([a-f0-9]{40})(?:&|["'])/gi)].map(x=>x[1])
   ];
-  if(ownHashes.some(x=>x.toLowerCase()!==hash.toLowerCase()))return null;
+  if(ownHashes.some(x=>x.toLowerCase()!==hash.toLowerCase())){
+    if(diagnostic)diagnostic.jsonStage="JSON_HTML_CONFLICT";
+    return null;
+  }
+  if(diagnostic)diagnostic.jsonStage="JSON_VALID";
   return "magnet:?xt=urn:btih:"+hash.toLowerCase();
 }
 
-export async function resolveLegacy(id,url,fetcher=fetch){
+export async function resolveLegacy(id,url,fetcher=fetch,diagnostic=null){
   const spec=LEGACY_SPECS[id];
   if(!spec)throw Error("provider not configured");
   const safe=validateLegacyDetail(id,url);
@@ -283,6 +318,7 @@ export async function resolveLegacy(id,url,fetcher=fetch){
     throw Error("provider did not return a magnet redirect");
   }
   const html=await safeProviderHtml(safe,{},fetcher);
+  if(id==="therarbag"&&diagnostic)diagnostic.htmlStage="HTML_FETCHED";
   if(typeof HTMLRewriter==="undefined")throw Error("Cloudflare HTMLRewriter runtime required");
   let magnet=null;
   const selector=spec.magnetDetails||"a[href^='magnet:']";
@@ -297,10 +333,17 @@ export async function resolveLegacy(id,url,fetcher=fetch){
     }
   }});
   await reader.transform(new Response(html,{headers:{"content-type":"text/html"}})).text();
+  if(id==="therarbag"&&diagnostic)diagnostic.htmlStage=magnet?"HTML_ANCHOR_VALID":"HTML_NO_ANCHOR";
   // Strict single-provider fallback; successful detail HTML was fetched via
   // its fixed-origin allowlisted URL with anti-bot and size guards above.
+  // Preserve the reviewed immutable release contract's exact fallback.
   if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgSourceMetadata(html);
-  if(!magnet&&id==="therarbag")magnet=await theRarBgOriginalJsonHash(safe,html,fetcher);
+  if(magnet&&diagnostic&&diagnostic.htmlStage==="HTML_NO_ANCHOR")
+    diagnostic.htmlStage="HTML_METADATA_VALID";
+  if(!magnet&&id==="therarbag"){
+    if(diagnostic)diagnostic.htmlStage="HTML_NO_BTIH";
+    magnet=await theRarBgOriginalJsonHash(safe,html,fetcher,diagnostic);
+  }
   if(!magnet)throw Error("provider details page contains no supported magnet link");
   return {magnet};
 }

@@ -7,7 +7,7 @@ import {webcrypto} from "node:crypto";
 const source=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
 const magnet="magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567";
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json"}});
-function harness(fetcher,initialStorage={}){
+function harness(fetcher,initialStorage={},query=""){
  const storage=new Map(Object.entries(initialStorage));
  const localStorage={
   getItem:key=>storage.get(key)??null,
@@ -28,7 +28,7 @@ function harness(fetcher,initialStorage={}){
  const sandbox={
   document:{getElementById:element,createElement:makeElement,addEventListener(){}},
   localStorage,
-  location:{origin:"https://index.alexlab.media"},
+  location:{origin:"https://index.alexlab.media",search:query},
   fetch:fetcher,crypto:webcrypto,URL,URLSearchParams,AbortController,
   Response,DOMException,Date,Promise,Set,Map,
   setTimeout:(cb)=>setTimeout(cb,0),clearTimeout,
@@ -38,7 +38,8 @@ function harness(fetcher,initialStorage={}){
  renderProviderErrors=()=>{};
  toast=()=>{};
  globalThis.testing={state,search,sendMagnet,ensureMagnet,magnetIdentity,
-  chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg};
+  chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg,
+  magnetFailureText};
  `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element,storage};
 }
@@ -263,4 +264,37 @@ test("OxTorrent/Torrent9 missing canonical details fail closed without contactin
   }),/Provider has no supported magnet or details link/i);
  }
  assert.equal(requests.length,0,"do not send ad/redirect URLs even to the backend");
+});
+
+test("TheRarBg diagnostic mode is explicit and does not change source URL or normal UI",async()=>{
+ const detail="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
+ const seen=[];
+ const diagnostic={build:"THERARBAG_IPHONE_DIAG_V1",detailFingerprint:"0123456789ab",
+  htmlStage:"HTML_NO_BTIH",jsonStage:"JSON_HTTP_503",elapsedMs:31};
+ const fail=async(path,options)=>{
+  assert.equal(path,"/api/resolve");
+  seen.push(options);
+  return json({error:"TheRarBg magnet could not be resolved.",code:"DETAIL_NO_BTIH",
+   diagnostic},502);
+ };
+ const diag=harness(fail,{},"?magnetra_diag=1");
+ const item={provider:"therarbag",details:detail,magnet:null};
+ await assert.rejects(diag.api.ensureMagnet(item),error=>{
+  assert.equal(error.magnetraCode,"DETAIL_NO_BTIH");
+  assert.equal(error.magnetraDiagnostic.detailFingerprint,"0123456789ab");
+  const rendered=diag.api.magnetFailureText(item,error);
+  assert.match(rendered,/HTML_NO_BTIH.*JSON_HTTP_503/);
+  assert.doesNotMatch(rendered,/magnet:\\?|btih:|post-detail/);
+  return true;
+ });
+ assert.equal(seen.length,1);
+ assert.equal(JSON.parse(seen[0].body).details,detail);
+ assert.equal(seen[0].headers["x-magnetra-resolve-diagnostic"],"owner-opt-in-20261024-v1");
+ const plain=harness(fail);
+ await assert.rejects(plain.api.ensureMagnet({provider:"therarbag",details:detail}),error=>{
+  assert.ok(!error.magnetraDiagnostic);
+  assert.doesNotMatch(plain.api.magnetFailureText(item,error),/Diagnostic:/);
+  return true;
+ });
+ assert.equal(seen[1].headers["x-magnetra-resolve-diagnostic"],undefined);
 });
