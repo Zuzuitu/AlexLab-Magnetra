@@ -1,0 +1,44 @@
+# Read-only status of already staged immutable source egress V2.
+# Does not deploy, upload, modify version shares or download any torrent.
+name: Check Staged TheRarBg JSON Egress V2 Read Only
+on:
+  push:
+    branches:
+      - diagnostics/therarbag-cloudflare-json-egress-20261024
+    paths:
+      - .github/workflows/read-therarbag-json-stage-v2.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify immutable active 100 and source stage V2 0 (GET only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,"scripts")
+          from deploy_magnetra_zero_percent import _get_api,_current_deployment,_shares
+          from inspect_magnetra_fix_stage import binding_pairs
+          old="36019925-2308-4f99-8223-13854012d372"
+          candidate="3c9b7808-ffea-4747-bf5f-c49e734eb1c0"
+          if _shares(_current_deployment(_get_api("/deployments")))!={old:100,candidate:0}:
+              print("AUDIT_STOP: DEPLOYMENT_SPLIT_CHANGED")
+              sys.exit(2)
+          required={"ASSETS":"assets","FLUD_RELAY":"service"}
+          for v in (old,candidate):
+              pairs=binding_pairs(_get_api("/versions/"+v))
+              if any((k,t) not in pairs for k,t in required.items()):
+                  print("AUDIT_STOP: BINDINGS_UNVERIFIED")
+                  sys.exit(2)
+          print("ACTIVE_100_DIAGNOSTIC_V2_ZERO: VERIFIED")
+          PY
+      - name: Inspect one exact original JSON egress from staged Worker V2
+        run: python3 scripts/probe_therarbag_cf_json_stage_v2_20261024.py 3c9b7808-ffea-4747-bf5f-c49e734eb1c0
