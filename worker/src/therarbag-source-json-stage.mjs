@@ -5,7 +5,7 @@ import {SOURCE_HEADERS} from "./request-headers.mjs";
 
 const ORIGINAL="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
 const URL=ORIGINAL+"?format=json";
-export const ORIGINAL_JSON_EGRESS_MARKER="THERARBAG_SOURCE_JSON_STAGE_V2";
+export const ORIGINAL_JSON_EGRESS_MARKER="THERARBAG_SOURCE_JSON_STAGE_V3";
 export async function diagnoseOriginalTheRarBgJson(fetcher=fetch){
  let response;
  try{
@@ -34,9 +34,21 @@ export async function diagnoseOriginalTheRarBgJson(fetcher=fetch){
  if(raw.length>3_000_000)return "OVERSIZE";
  let parsed;
  try{parsed=JSON.parse(raw);}catch{return "INVALID_JSON";}
- const entity=parsed?.data;
- if(!entity||typeof entity!=="object"||Array.isArray(entity))return "MISSING_DATA_OBJECT";
- if(typeof entity.info_hash!=="string"||!/^[a-f0-9]{40}$/i.test(entity.info_hash))
-   return "MISSING_OR_INVALID_INFO_HASH";
- return "SOURCE_JSON_VALID";
+ if(parsed===null||typeof parsed!=="object")return "JSON_ROOT_PRIMITIVE";
+ if(Array.isArray(parsed))return "JSON_ROOT_ARRAY";
+ if(Object.hasOwn(parsed,"error")||Object.hasOwn(parsed,"message"))
+   return "JSON_ERROR_ENVELOPE";
+ const nested=parsed.data&&typeof parsed.data==="object"&&!Array.isArray(parsed.data)
+   ?parsed.data:null;
+ const rootHash=typeof parsed.info_hash==="string"&&/^[a-f0-9]{40}$/i.test(parsed.info_hash)
+   ?parsed.info_hash.toLowerCase():null;
+ const nestedHash=nested&&typeof nested.info_hash==="string"&&/^[a-f0-9]{40}$/i.test(nested.info_hash)
+   ?nested.info_hash.toLowerCase():null;
+ if(rootHash&&nestedHash&&rootHash!==nestedHash)return "JSON_HASH_CONFLICT";
+ if(rootHash)return "JSON_ROOT_BTIH_VALID";
+ if(nestedHash)return "JSON_WRAPPED_BTIH_VALID";
+ if(Object.hasOwn(parsed,"info_hash"))return "JSON_ROOT_BTIH_INVALID";
+ if(nested&&Object.hasOwn(nested,"info_hash"))return "JSON_WRAPPED_BTIH_INVALID";
+ if(Object.hasOwn(parsed,"results"))return "JSON_RESULTS_RESPONSE";
+ return "JSON_OBJECT_NO_INFO_HASH";
 }
