@@ -1,5 +1,12 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — PUBLIC GITHUB ACTIONS FREE; 0MAGNET CANDIDATE DIAGNOSTIC STAGED
+
+- GitHub REST API confirmed `Zuzuitu/AlexLab-Magnetra` has `visibility=public`, `private=false`. GitHub standard `ubuntu-latest` hosted Actions are free/unlimited on public repositories; GitHub billing caveat larger runners and artifact storage. Continue CI/deploy infrastructure on GitHub rather than shifting to Rock64 for purported minute exhaustion. Do not use paid runners or APIs.
+- Previously approved #169 release run #40135169179 safely stopped at immutable `763defbe-38aa-4299-acf1-1639a59e7be6@0%`, stable `916d0671-b9c5-432d-8724-aed27bc22c4f@100%`. No 5% or full traffic; physical iPhone 0Magnet still untested. Do not retry spent one-shot.
+- New branch `diagnostics/0magnet-staged-candidate-readonly-20261024` adds bounded stage classification via fixed-origin `/app.js` (old, candidate and public SHA versus reviewed) plus candidate `/api/health` and `/api/providers`, strict live 100/0 and four bindings guard, no writes/log leaks. Run once via unique activation marker after offline tests and four standard CI statuses. Use result to decide whether a separate rollout workflow can reuse existing 0% candidate. NO release triggered by this diagnostic.
+
+
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET RELEASE SAFE STOP AT ZERO TRAFFIC
 
 **This section supersedes earlier "release pending" checkpoint headings below; retain preceding history. DO NOT claim 0Magnet fix is online.**
