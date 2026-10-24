@@ -1,5 +1,18 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET EXACT OWNER DETAILS-FIRST SOURCE FIX STAGED; PRODUCTION UNCHANGED
+
+**Most recent code checkpoint. TheRarBg remains accepted and live. The newly staged 0Magnet fix is NOT YET released or physically retested on iPhone.**
+
+### Exact 0Magnet owner URL confirmed; production read-only original details PASS
+- The owner reproduced "Eroare sursa" on the original 0Magnet source URL `https://9mag.net/!lxbV` in iPhone Safari. Earlier prefix-only 0Magnet audit was insufficient to establish this exact card.
+- [Guarded production original-source audit #40133513283](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40133513283), run on successful docs/diagnostic merge [PR #167](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/167) SHA `d9ef78086fd8b1017cb76daa88ac4144b41551b6`, proves **the exact detail URL** occurred once in the original 0magnet search result; the original search record had **no pre-resolved magnet but did have an auxiliary `magnetSource` URL**. Direct exact original 9mag.net page GET HTTP 200 included valid `input#input-magnet` attribute; production `/api/resolve` with original `details` HTTP 200 yielded a valid BTIH, equal to the source own BTIH (in-memory equality, never logged). No Flud transfer or torrent download occurred.
+- Existing `web/app.js::ensureMagnet` uses `item.magnetSource || item.details` for `0magnet`, giving precedence to the alternate auxiliary URL **even though the exact canonical `details` URL is confirmed good**. This code path is inconsistent with Android original, which resolves `details`. Exact auxiliary POST has not separately been measured to fail; **do not claim a specific HTTP error for that alternate URL**. The owner-facing failure is consistent with the erroneous preference.
+- New guarded branch `fix/0magnet-iphone-owner-details-first-20261024` changes **only** the 0magnet member of the existing proven details-first frontend rule (used already by `therarbag`, `oxtorrent`, `torrent9`). Regression VM tests run actual `ensureMagnet()` on original owner exact URL with misleading auxiliary, validate missing-details fail-closed, already-resolved magnet no fetch, and all other existing provider precedence. Backend parser and HTTP/SSRF allowlists remain unchanged.
+- **Status**: This is a code PR pending all four mandatory CI; it is **not a production fix until separately guarded approved 0%-5%-100% immutable Cloudflare rollout and physical iPhone acceptance**. There is no auto PWA deployment marker in this PR. Do not rerun historical one-shots or change backend, 46 adapters, 12 visible/34 hidden, language UI, Rock64, Flud/Shield, DNS, tunnels, secrets, or costs. Last release-proven production active is `916d0671-b9c5-432d-8724-aed27bc22c4f@100%`, previous rollback `139d97f7-4048-4bbb-8e90-80585f1f4b26@0%`; re-audit Cloudflare live before new rollout.
+- **Next**: All four CI PASS then merge code-only with generic Deploy PWA = SKIPPED, prepare new fresh owner-approved guarded immutable upload/0%-5%-100% release with rollback, verify active asset SHA and original exact same-link resolver. Re-test in Safari on the same 0Magnet 2.26 GB result: `Obține magnet`, `Copiază`, `Distribuie`. Flud/Shield validation is separate.
+
+
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET EXACT OWNER URL NOW KNOWN; EXACT DIAGNOSTIC PENDING
 
 **Most recent update; supersedes previous 0Magnet title-prefix-only status below. Preserve historical observations.**
