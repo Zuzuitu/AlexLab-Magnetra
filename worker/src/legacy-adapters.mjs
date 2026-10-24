@@ -234,10 +234,25 @@ export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch){
     if(raw.length>MAX_HTML)return null;
     payload=JSON.parse(raw);
   }catch{return null;}
-  const entry=payload?.data;
-  if(!entry||typeof entry!=="object"||Array.isArray(entry))return null;
-  const hash=entry.info_hash;
-  if(typeof hash!=="string"||!/^[a-f0-9]{40}$/i.test(hash))return null;
+  // Axios 'res.data.info_hash' in TheRarBg's public frontend means the
+  // HTTP response BODY has a top-level info_hash, not JSON.data.info_hash.
+  // The original-source probe also permits a wrapped {data:{info_hash}} form.
+  // Accept only those two exact forms, and refuse conflicting or malformed
+  // values instead of searching names, nested recommendations or other URLs.
+  const record=payload&&typeof payload==="object"&&!Array.isArray(payload)
+    ?payload:null;
+  if(!record||Object.hasOwn(record,"error"))return null;
+  const wrapped=record.data&&typeof record.data==="object"&&!Array.isArray(record.data)
+    ?record.data:null;
+  const rawHashes=[
+    ...(Object.hasOwn(record,"info_hash")?[record.info_hash]:[]),
+    ...(wrapped&&Object.hasOwn(wrapped,"info_hash")?[wrapped.info_hash]:[])
+  ];
+  if(!rawHashes.length||rawHashes.some(h=>typeof h!=="string"||!/^[a-f0-9]{40}$/i.test(h)))
+    return null;
+  const distinct=new Set(rawHashes.map(h=>h.toLowerCase()));
+  if(distinct.size!==1)return null;
+  const hash=[...distinct][0];
   // Refuse a JSON candidate if any independently labelled BTIH or magnet
   // anchor on the already-fetched original page contradicts this same item.
   const safe=html.replace(/<(script|style|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi," ")
