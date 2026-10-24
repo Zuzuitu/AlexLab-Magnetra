@@ -1,5 +1,17 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET RELEASE SAFE STOP AT ZERO TRAFFIC
+
+**This section supersedes earlier "release pending" checkpoint headings below; retain preceding history. DO NOT claim 0Magnet fix is online.**
+
+- Owner approved guarded immutable 0% -> 5% -> 100% production release with rollback; PR #169 merged as `f22f9737dfdf2f494c1982c2342449c5c4a0be2a` after four green standard CI checks and new release/rollback offline tests.
+- Release GitHub Actions `40135169179` (<https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40135169179>) FAILED SAFELY in the production release step. Exact runtime logs: `REVIEWED_0MAGNET_OWNER_DETAILS_FIRST_SOURCE: PASS`, `CURRENT_BASELINE_916D100_139DZERO_FOUR_BINDINGS: PASS`, uploaded immutable **candidate `763defbe-38aa-4299-acf1-1639a59e7be6`**, `NEW_VERSION_FOUR_IMMUTABLE_BINDINGS_NO_TRAFFIC_CHANGE: PASS`, `FIX_IMMUTABLE_TRAFFIC_ZERO_SLOT: PASS`, then `0MAGNET_RELEASE_STOP_NO_SUCCESS_ASSUMED` and `SAFE_PRIOR_VERSION_STILL_AT_100`. No canary 5% or full 100% occurred. Public production smoke check `40135169173` PASSED.
+- **Last release-observed Cloudflare traffic:** stable current `916d0671-b9c5-432d-8724-aed27bc22c4f@100%`, newly staged `763defbe-38aa-4299-acf1-1639a59e7be6@0%`. Older `139d97f7-4048-4bbb-8e90-80585f1f4b26` was verified at 0% in preflight but the zero-slot deployment now features stable active and new candidate. Do not assert the old second rollback entry remains in the current deployment. Stable TheRarBg remains live.
+- **Root cause NOT VERIFIED:** failure occurred immediately after new zero slot, on entry to `verify_candidate()`, before an `IMMUTABLE_JS_SHA_AND_HEALTH_CATALOG_46: PASS` line, before canonical source metadata resolver, and before canary. The release script deliberately prints only a generic stop status, so failure may be candidate `/app.js` transport/mime/hash, API health/catalogue or edge propagation. No specific root cause may be claimed from existing logs. Do NOT blindly rerun the consumed owner production one-shot.
+- **Next**: exactly bounded read-only diagnosis of staged candidate 763def with Cloudflare API verifying stable 100/new 0 and four binding types, candidate `/app.js` override SHA vs reviewed GitHub `web/app.js` and ordinary public stable asset, plus `/api/health` and `/api/providers` if safe. No source magnet calls until candidate parity is established. If propagation race proven, introduce a bounded unchanged-split asset retry for 0% candidate only, with tests; otherwise fix the actual defect. A NEW guarded and explicitly reviewed activation plan can then reuse the already-staged candidate or stage a newly verified one, preserving rollback; no activation before evidence and gates.
+- Do not touch Rock64, DNS/tunnels, BTDigg/EZTV, FLUD_RELAY, Shield, original TheRarBg fix, 46 provider IDs, 12 visible/34 hidden picker, or paid infrastructure. Safari iPhone physical acceptance of exact 0Magnet `https://9mag.net/!lxbV` remains pending.
+
+
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — 0MAGNET IMMUTABLE PRODUCTION RELEASE OWNER APPROVED; PRE-ACTIVATION
 
 **Owner directly confirmed 24 Oct 2026 the proposal to deploy the proven frontend-only 0Magnet details-first correction at immutable 0% -> 5% -> 100%, with rollback. Approval permits the guarded one-shot process; not proof of completed production activation or iPhone acceptance.**
