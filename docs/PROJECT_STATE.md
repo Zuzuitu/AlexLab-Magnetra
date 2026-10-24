@@ -1,6 +1,20 @@
 # AlexLab Magnetra — Project State
 
 
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — OWNER IPHONE SUCCESS REPORTED; THE RARBG MAGNET FIX ACCEPTED
+
+**This section supersedes the previous 24 Oct 2026 "PHYSICAL IPHONE ACCEPTANCE OPEN" wording below; that earlier section and all other investigation history remain unchanged as historical record.**
+
+### Owner physical iPhone result (24 Oct 2026, Europe/Rome)
+- After confirmed guarded production release [#40100824187](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40100824187) and successful [production smoke #40100824081](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40100824081), the owner returned in the next session with the explicit report **"Ole , functionewza acum!!"** (it works now) immediately following the requested physical iPhone TheRarBg retest. Treat this as **positive owner-reported physical iPhone functional acceptance of the TheRarBg magnet resolver fix**, rather than the earlier GitHub-runner-only verification.
+- **Evidence boundary:** the owner's short confirmation did not individually identify whether **Obține magnet, Copiază and Distribuie** were *all three* tested, nor assert actual Flud-to-Shield acknowledgement or a completed torrent download. Do not fabricate per-button or downstream delivery acceptance. The previously reproducible **TheRarBg wrong-link source precedence** incident is resolved according to the owner's functional report. If a specific untested action later fails, diagnose that action separately.
+- Last independently evidenced production state remains immutable **`916d0671-b9c5-432d-8724-aed27bc22c4f@100%`** with rollback **`139d97f7-4048-4bbb-8e90-80585f1f4b26@0%`**, as recorded by the successful one-shot rollout. The GitHub `main` baseline before this documentation change was **`263a16d2375b9ccbd3bf72d7a8a3557888942020`**. These percentages are **last proven values**, not a newly performed live Cloudflare API query.
+- **No redeploy, rerun or post-acceptance modification** to PWA bundle, Cloudflare version percentages, DNS, tunnels, Rock64 8796/8797/8798, credentials, Companion, Shield or Flud is warranted. Never rerun the one-shot release workflow.
+- **Next work, evidence-first (ordered):** (P1) if the original Genshin 93.2 MB TheRarBg issue persists, obtain the exact same-card `details` from fresh PWA search or user's original URL, then investigate only that record; do not assume Cyberpunk's details/fingerprint/hash applies. (P1) independently verify real Flud/Shield remote receipt and matching acknowledgement, distinguishing PWA queue acceptance from Shield ACK and from download, only with owner-provided device evidence/explicit action. (P2) revisit BTDigg intermittent 504 only with new reproduction and bounded read-only timings; do not assume the already deployed IPv4 transport patch permanently eliminated all timeouts. (P2) plan scoped original-provider regression; the 46 IDs/adapters are preserved, but 46/46 catalog is NOT 46/46 live source health. PWA selector remains 12 visible/34 hidden, Romanian default/Italian optional.
+- **Change scope:** THIS acceptance checkpoint is **documentation only**. No code, release activation marker, traffic change, bindings, monetized services or provider adapter adjustments. Standard four CI checks must pass before merge; automated PWA deployment must be skipped.
+
+
+
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — THE RARBG IPHONE FIX LIVE 100%; PHYSICAL IPHONE ACCEPTANCE OPEN
 
 **This heading supersedes historical latest-status sections below. Historical sections are preserved for provenance.** Do not interpret older live versions, stale URLs or proposed workflows as current status.
