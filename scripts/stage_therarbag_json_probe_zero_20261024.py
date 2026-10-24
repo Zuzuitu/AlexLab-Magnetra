@@ -19,7 +19,7 @@ from inspect_magnetra_fix_stage import binding_pairs
 
 ROOT=Path(__file__).resolve().parents[1]
 ACTIVE="36019925-2308-4f99-8223-13854012d372"
-PREVIOUS_ZERO="8d3f9813-e30f-417b-b9a7-a1247f994e9d"
+PREVIOUS_ZERO="3c9b7808-ffea-4747-bf5f-c49e734eb1c0"
 EXPECTED={
     "ASSETS":{"assets"},
     "BTDIGG_GATEWAY_TOKEN":{"secret_text","secret_key"},
@@ -45,7 +45,7 @@ def upload():
         or 'jsonUrl.searchParams.set("format","json")' not in code
         or 'magnet=await theRarBgOriginalJsonHash' not in code):
         raise StageStop("JSON_SOURCE_REVIEW_GUARD_FAILED")
-    if "20261024-source-stage-v2" not in (ROOT/"worker/src/index.mjs").read_text(encoding="utf-8"):
+    if "20261024-source-stage-v3" not in (ROOT/"worker/src/index.mjs").read_text(encoding="utf-8"):
         raise StageStop("CF_DIAGNOSTIC_SOURCE_MARKER_MISSING")
     cfg=dict(cfg)
     cfg["secrets"]={"required":["BTDIGG_GATEWAY_TOKEN","MAGNETRA_GATEWAY_TOKEN"]}
