@@ -18,7 +18,7 @@ test("one original source request and only a finite safe stage",async()=>{
   return json({data:{info_hash:HASH}});
  });
  assert.equal(calls,1);
- assert.equal(stage,"SOURCE_JSON_VALID");
+ assert.equal(stage,"JSON_WRAPPED_BTIH_VALID");
  assert.doesNotMatch(stage,/magnet|https|a{40}|secret/i);
 });
 test("classify actual HTTP blocks and HTML challenge without leaking response data",async()=>{
@@ -36,6 +36,15 @@ test("classify actual HTTP blocks and HTML challenge without leaking response da
    assert.equal(stage,expected);
    assert.match(stage,/^[A-Z0-9_]{3,45}$/);
  }
+});
+test("unwrapped Axios JSON response is explicitly recognized",async()=>{
+  const h="a".repeat(40);
+  const stage=await diagnoseOriginalTheRarBgJson(async()=>json({info_hash:h}));
+  assert.equal(stage,"JSON_ROOT_BTIH_VALID");
+  assert.equal(await diagnoseOriginalTheRarBgJson(async()=>json([{"info_hash":h}])),"JSON_ROOT_ARRAY");
+  assert.equal(await diagnoseOriginalTheRarBgJson(async()=>json({error:"blocked"})),"JSON_ERROR_ENVELOPE");
+  assert.equal(await diagnoseOriginalTheRarBgJson(async()=>json({results:[]})),"JSON_RESULTS_RESPONSE");
+  assert.equal(await diagnoseOriginalTheRarBgJson(async()=>json({info_hash:h,data:{info_hash:"b".repeat(40)}})),"JSON_HASH_CONFLICT");
 });
 test("network errors are classified without request body or source URI",async()=>{
  const stage=await diagnoseOriginalTheRarBgJson(async()=>{
