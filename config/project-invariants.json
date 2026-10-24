@@ -77,7 +77,8 @@
       ".github/workflows/magnetra-companion-binding-one-shot.yml",
       ".github/workflows/companion-stage-readonly-diagnostic.yml",
       ".github/workflows/companion-v2-zero-only-diagnostic.yml",
-      ".github/workflows/companion-4e47-immutable-promotion.yml"
+      ".github/workflows/companion-4e47-immutable-promotion.yml",
+    ".github/workflows/therarbag-iphone-immutable-stage-only.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
