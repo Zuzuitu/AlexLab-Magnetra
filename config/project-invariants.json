@@ -79,7 +79,8 @@
       ".github/workflows/companion-v2-zero-only-diagnostic.yml",
       ".github/workflows/companion-4e47-immutable-promotion.yml",
     ".github/workflows/therarbag-iphone-immutable-stage-only.yml",
-    ".github/workflows/therarbag-iphone-version-url-readonly.yml"
+    ".github/workflows/therarbag-iphone-version-url-readonly.yml",
+    ".github/workflows/therarbag-iphone-diagnostic-production-20261024.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
