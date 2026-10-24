@@ -7,7 +7,7 @@ const JSON_URL=DETAIL+"?format=json";
 const HASH="a".repeat(40);
 const OTHER="b".repeat(40);
 const dummyHtml="<html><body><div>Magnet Download</div><div>Info Hash: unavailable</div></body></html>";
-const validJson=()=>new Response(JSON.stringify({data:{info_hash:HASH,name:"Public domain fixture"}}),{
+const validJson=()=>new Response(JSON.stringify({info_hash:HASH,name:"Public domain fixture"}),{
   status:200,headers:{"content-type":"application/json"}
 });
 async function withWorkerdRewriterMock(fn){
@@ -71,9 +71,10 @@ test("only the exact fixed original source URL is eligible",async()=>{
  }
 });
 
-test("JSON must contain top-level data.info_hash and strict source-owned v1 BTIH",async()=>{
+test("JSON accepts strict original response root or wrapped info_hash only",async()=>{
  for(const body of [
-  "{}",JSON.stringify({info_hash:HASH}),
+  "{}",JSON.stringify({results:[{info_hash:HASH}]}),
+  JSON.stringify({error:"upstream error",info_hash:HASH}),
   JSON.stringify({data:{info_hash:"z".repeat(40)}}),
   JSON.stringify({data:[{info_hash:HASH}]}),
   JSON.stringify({data:{info_hash:OTHER.slice(0,39)}}),
@@ -83,6 +84,34 @@ test("JSON must contain top-level data.info_hash and strict source-owned v1 BTIH
   const got=await theRarBgOriginalJsonHash(DETAIL,dummyHtml,
     async()=>new Response(body,{status:200,headers:{"content-type":"application/json"}}));
   assert.equal(got,null);
+ }
+});
+
+test("TheRarBg original top-level info_hash works without a JSON data wrapper",async()=>{
+ for(const body of [
+  {info_hash:HASH,name:"Original TheRarBg"},
+  {data:{info_hash:HASH,name:"Original TheRarBg"}},
+  {info_hash:HASH.toUpperCase(),data:{info_hash:HASH}}
+ ]){
+  const response=await theRarBgOriginalJsonHash(DETAIL,dummyHtml,async()=>
+    new Response(JSON.stringify(body),{status:200,headers:{"content-type":"application/json"}}));
+  assert.equal(response,"magnet:?xt=urn:btih:"+HASH);
+ }
+});
+
+test("ambiguous, malformed or error-envelope hashes are rejected",async()=>{
+ for(const body of [
+  {info_hash:HASH,data:{info_hash:OTHER}},
+  {info_hash:HASH,data:{info_hash:"z".repeat(40)}},
+  {info_hash:"z".repeat(40),data:{info_hash:HASH}},
+  {info_hash:null,data:{info_hash:HASH}},
+  {error:"forbidden",info_hash:HASH},
+  {results:[{info_hash:HASH}]},
+  [{info_hash:HASH}]
+ ]){
+  const response=await theRarBgOriginalJsonHash(DETAIL,dummyHtml,async()=>
+    new Response(JSON.stringify(body),{status:200,headers:{"content-type":"application/json"}}));
+  assert.equal(response,null);
  }
 });
 
