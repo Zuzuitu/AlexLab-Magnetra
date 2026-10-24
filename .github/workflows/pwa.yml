@@ -24,6 +24,8 @@ jobs:
         run: node --test worker/test/*.test.mjs
       - name: Offline TheRarBg iPhone immutable stage-only release gates
         run: python3 -m unittest discover -s scripts -p 'test_therarbag_iphone_stage_20261024.py' -v
+      - name: Offline TheRarBg iPhone Version URL read-only gates
+        run: python3 -m unittest discover -s scripts -p 'test_therarbag_iphone_version_url_20261024.py' -v
       - name: Offline GET-only Flud Companion Cloudflare account and binding audit tests
         run: python3 -m unittest discover -s scripts -p 'test_inspect_companion_binding_readonly.py' -v
       - name: Offline owner-gated immutable Flud Companion rollout and 401 probe tests
