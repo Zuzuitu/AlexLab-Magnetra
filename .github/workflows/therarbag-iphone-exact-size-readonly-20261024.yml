@@ -1,0 +1,33 @@
+name: TheRarBg Exact 352MB iPhone Card (GET ONLY ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-exact-size-readonly-20261024.md
+
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-exact-size-readonly
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-iphone-exact-card-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify owner-only, GET-only diagnostic code tests
+        shell: bash
+        env:
+          MERGE_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$MERGE_MESSAGE" == *'[magnetra-iphone-exact-card-readonly-20261024]'* ]]
+          test -s docs/release-events/therarbag-exact-size-readonly-20261024.md
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_therarbag_iphone_exact_size_20261024.py' -v
+      - name: One bounded canonical search for exact title and size, no source detail fetch
+        run: python3 scripts/diagnose_therarbag_iphone_exact_size_20261024.py --approved-readonly
