@@ -1,0 +1,59 @@
+# Owner-approved exclusive production diagnostic for one-user Magnetra PWA.
+# Exact preflight 36019925@100/c201cbf9@0; immutable 139d candidate already uploaded.
+# Only a one-shot review/commit marker may change Cloudflare version percentages.
+name: Magnetra TheRarBg iPhone Diagnostic 0-5-100 (OWNER ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-iphone-diagnostic-production-20261024.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  controlled-live-test:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-iphone-diagnostic-release-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout approved immutable main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exact one-shot owner activation
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_MESSAGE" == *'[magnetra-iphone-diagnostic-release-20261024]'* ]]
+          test -s docs/release-events/therarbag-iphone-diagnostic-production-20261024.md
+      - name: Canonical invariants and offline guarded release tests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_therarbag_iphone_diagnostic_20261024.py' -v
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: All PWA, Worker, original provider and opt-in contracts
+        run: |
+          node --test worker/test/*.test.mjs
+          node --check worker/src/index.mjs
+          node --check web/app.js
+      - name: Verify Cloudflare bundle without uploading or deploying
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Immutable 0 to 5 to 100 with rollback, version integrity and original-source trace
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_IPHONE_DIAGNOSTIC_RELEASE_ACTION: CONFIRM_IPHONE_DIAGNOSTIC_PRODUCTION_0_5_100_20261024
+        run: |
+          set -euo pipefail
+          python3 scripts/release_therarbag_iphone_diagnostic_20261024.py
