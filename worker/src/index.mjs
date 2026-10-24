@@ -4,6 +4,7 @@ import {classifyProviderError,directSearchUrl} from "./provider-recovery.mjs";
 import {LEGACY_SPECS} from "./legacy-specs.mjs";
 import {resolveLegacy,validateLegacyDetail,theRarBgOriginalJsonHash} from "./legacy-adapters.mjs";
 import {classifyTheRarBgResolveError} from "./therarbag-resolve-errors.mjs";
+import {diagnoseOriginalTheRarBgJson,ORIGINAL_JSON_EGRESS_MARKER} from "./therarbag-source-json-stage.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {filterRelevance} from "./query-relevance.mjs";
@@ -82,6 +83,12 @@ async function resolveMagnet(request,env){
    return error("Details URL is not in the provider allowlist.");
  try{
    const sourceFetch=rock64HtmlFetcher(provider,env)||fetch;
+   if(provider==="therarbag"&&
+     details==="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/"&&
+     request.headers.get("x-magnetra-source-json-diagnostic")==="20261024-source-stage-v2"){
+     const stage=await diagnoseOriginalTheRarBgJson(sourceFetch);
+     return json({probe:ORIGINAL_JSON_EGRESS_MARKER,stage});
+   }
    // Diagnostic candidate only, fixed exact public record and opt-in header.
    // This does NOT return magnet URI, raw hash, URL, title or fetched JSON.
    // It forces only one official same-detail JSON source GET in Cloudflare egress.
