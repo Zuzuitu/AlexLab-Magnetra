@@ -3,7 +3,8 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch,call,SimpleNamespace
+from unittest.mock import patch,call
+from types import SimpleNamespace
 import release_therarbag_details_first_20261024 as r
 
 CANDIDATE="11111111-1111-4111-8111-111111111111"
