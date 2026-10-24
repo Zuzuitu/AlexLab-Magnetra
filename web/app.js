@@ -7,17 +7,19 @@ const tr=(key,args={})=>{
  return translated||String(key).replace(/\{(\w+)\}/g,(_,name)=>String(args[name]??""));
 };
 // Diagnostic mode is explicit, session/URL-scoped and stores no private values.
-const theRarBgDiagnosticMode=new URLSearchParams(location.search||"").get("magnetra_diag")==="1";
+const theRarBgDiagnosticMode=typeof location!=="undefined"&&
+ typeof URLSearchParams!=="undefined"&&
+ new URLSearchParams(location.search||"").get("magnetra_diag")==="1";
 function theRarBgDiagnosticSuffix(error){
  if(!theRarBgDiagnosticMode)return "";
  const data=error?.magnetraDiagnostic;
  if(!data||data.build!=="THERARBAG_IPHONE_DIAG_V1")
-   return " [Diagnostic: Worker fără raport]";
+   return " [Trace: Worker fără raport]";
  const stage=value=>typeof value==="string"&&/^[A-Z0-9_]{3,40}$/.test(value)?value:"UNAVAILABLE";
  const fp=typeof data.detailFingerprint==="string"&&/^[a-f0-9]{12}$/.test(data.detailFingerprint)
    ?data.detailFingerprint:"unavailable";
  const time=Number.isFinite(data.elapsedMs)?Math.max(0,Math.min(30000,Math.round(data.elapsedMs))):0;
- return " [Diagnostic "+data.build+"; URL "+fp+"; HTML "+stage(data.htmlStage)+
+ return " [Trace "+data.build+"; URL "+fp+"; HTML "+stage(data.htmlStage)+
    "; JSON "+stage(data.jsonStage)+"; "+time+"ms]";
 }
 const genericError=(failure)=>{
@@ -149,7 +151,7 @@ function toast(message){
   clearTimeout(toastTimer);const t=$("toast");t.textContent=message;t.classList.add("show");
   // The opt-in finite forensic string stays visible long enough for an owner
   // screenshot; normal notifications retain their original 3.5-second timing.
-  const duration=theRarBgDiagnosticMode&&message.includes("[Diagnostic")?20000:3500;
+  const duration=theRarBgDiagnosticMode&&message.includes("[Trace")?20000:3500;
   toastTimer=setTimeout(()=>t.classList.remove("show"),duration);
 }
 function openDialog(id){$(id).showModal();}
