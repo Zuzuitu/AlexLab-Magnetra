@@ -19,7 +19,7 @@ from inspect_magnetra_fix_stage import binding_pairs
 
 ROOT=Path(__file__).resolve().parents[1]
 ACTIVE="36019925-2308-4f99-8223-13854012d372"
-PREVIOUS_ZERO="8c79bf41-40b0-4c2b-96a1-9506b706bf8a"
+PREVIOUS_ZERO="8d3f9813-e30f-417b-b9a7-a1247f994e9d"
 EXPECTED={
     "ASSETS":{"assets"},
     "BTDIGG_GATEWAY_TOKEN":{"secret_text","secret_key"},
@@ -45,7 +45,7 @@ def upload():
         or 'jsonUrl.searchParams.set("format","json")' not in code
         or 'magnet=await theRarBgOriginalJsonHash' not in code):
         raise StageStop("JSON_SOURCE_REVIEW_GUARD_FAILED")
-    if "THERARBAG_CLOUDFLARE_SOURCE_JSON_V1" not in (ROOT/"worker/src/index.mjs").read_text(encoding="utf-8"):
+    if "20261024-source-stage-v2" not in (ROOT/"worker/src/index.mjs").read_text(encoding="utf-8"):
         raise StageStop("CF_DIAGNOSTIC_SOURCE_MARKER_MISSING")
     cfg=dict(cfg)
     cfg["secrets"]={"required":["BTDIGG_GATEWAY_TOKEN","MAGNETRA_GATEWAY_TOKEN"]}
@@ -58,7 +58,7 @@ def upload():
         try:
             p=subprocess.run(["npx","--yes","wrangler@4.102.0","versions","upload",
                "--config",str(path),"--keep-vars",
-               "--message","TheRarBg read-only JSON egress diagnostic candidate only (zero traffic)"],
+               "--message","TheRarBg JSON egress finite-stage diagnostic candidate only (zero traffic)"],
                cwd=ROOT,capture_output=True,text=True,timeout=220,check=False)
         except (OSError,subprocess.TimeoutExpired):
             raise StageStop("CANDIDATE_UPLOAD_TRANSPORT_FAILED") from None
