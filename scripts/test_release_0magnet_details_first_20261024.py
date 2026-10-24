@@ -99,7 +99,7 @@ class ReleaseTests(unittest.TestCase):
     deploy.assert_not_called()
 
  def test_main_guards_rollback_on_runtime_failure(self):
-  with patch.dict(os.environ,{"MAGNETRA_THERARBAG_DETAILS_FIRST_ACTION":r.ACTION}),patch.object(r,"release",side_effect=r.Stop("safe")),patch.object(r,"rollback_if_safe") as rollback:
+  with patch.dict(os.environ,{"MAGNETRA_0MAGNET_DETAILS_FIRST_ACTION":r.ACTION}),patch.object(r,"release",side_effect=r.Stop("safe")),patch.object(r,"rollback_if_safe") as rollback:
    self.assertEqual(r.main(),1)
    rollback.assert_called_once()
 
