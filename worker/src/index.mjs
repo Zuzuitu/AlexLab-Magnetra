@@ -100,7 +100,10 @@ async function resolveMagnet(request,env){
  }:null;
  try{
    const sourceFetch=rock64HtmlFetcher(provider,env)||fetch;
-   const result=await resolveLegacy(provider,details,sourceFetch,trace);
+   // Preserve the canonical resolver call exactly for ordinary requests.
+   const result=diagnostic
+     ?await resolveLegacy(provider,details,sourceFetch,trace)
+     :await resolveLegacy(provider,details,sourceFetch);
    return json({provider,magnet:result.magnet,
      ...(diagnostic?{diagnostic:await diagnosticPayload()}:{})});
  }catch(e){
