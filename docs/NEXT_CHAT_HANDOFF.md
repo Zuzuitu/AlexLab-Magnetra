@@ -5,6 +5,13 @@
 
 **This heading supersedes historical latest-status sections below. Historical sections are preserved for provenance.** Do not interpret older live versions, stale URLs or proposed workflows as current status.
 
+### 24 Oct 2026 — Live iPhone diagnosis authorization / newest status (release pending)
+- Owner is sole current PWA user and approved testing `index.alexlab.media` directly. Cloudflare Preview URLs read-only check #40058531928: DISABLED, so no separate version URL is available without changing settings (not changed).
+- PR #154 opt-in finite tracing merged `86e84ff`, PR #155 guarded immutable version upload merged `5cd950fd`, upload run #40058004336 PASS: candidate `139d97f7-4048-4bbb-8e90-80585f1f4b26`; active 36019925@100/previous c201cbf9@0 still unchanged at that run; four bindings verified. PR #156 read-only version URL audit merged `b6fef040`, disabled preview confirmed; previous `[deploy-pwa]` automations all skipped.
+- New guarded release branch `release/therarbag-iphone-diagnostic-100-20261024` implements reviewed source/binding/baseline guards, exact 0/5/100 version-only promotion and bounded canary/runtime checks with safety rollback to prior 100. Until the NEW workflow successfully completes and public `app.js` hash matches, **do not tell owner to test as new diagnostic**. Unique marker `[magnetra-iphone-diagnostic-release-20261024]` for one-shot workflow ONLY; no `[deploy-pwa]` marker.
+- If fully successful owner uses `https://index.alexlab.media/?magnetra_diag=1` on iPhone and attempts the SAME failing TheRarBg card. Capture `[Trace THERARBAG_IPHONE_DIAG_V1; URL ...; HTML ...; JSON ...; ...ms]`. Never print real magnet/hash/raw original page; source resolution may still intermittently fail, this is diagnostic, not fix.
+
+
 ### Next-session P1 diagnostic work — NOT DEPLOYED (24 Oct 2026)
 - A separate branch `diagnostics/therarbag-iphone-optin-20261024` adds owner opt-in tracing for the existing same-card TheRarBg resolver. When the iPhone URL explicitly contains `?magnetra_diag=1`, only TheRarBg `/api/resolve` requests include a bounded diagnostic header; default PWA behavior and all other providers remain unchanged.
 - The Worker response includes finite HTML/JSON stages, diagnostic build label, a truncated SHA-256 of the validated details URL and bounded elapsed milliseconds. These appear in the diagnostic error text only in opt-in mode. No original BTIH, magnet, raw details URL, request body, credentials or upstream HTML are added to diagnostic output or logs. The existing source-owned HTML/JSON resolution and request counts are unchanged.
