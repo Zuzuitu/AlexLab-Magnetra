@@ -1,0 +1,49 @@
+name: Magnetra NoNameClub Exact Owner Source Diagnostic (READ ONLY)
+on:
+  pull_request:
+    paths:
+      - scripts/diagnose_nonameclub_owner_exact_20261025.py
+      - scripts/test_diagnose_nonameclub_owner_exact_20261025.py
+      - .github/workflows/nonameclub-owner-readonly-20261025.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/nonameclub-owner-readonly-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-nonameclub-owner-source-readonly
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: No network, no torrent, no sensitive output in offline tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_nonameclub_owner_exact_20261025.py' -v
+  owner-exact-readonly:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-nonameclub-owner-readonly-20261025]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check all source invariants and offline owner bounds
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_nonameclub_owner_exact_20261025.py' -v
+      - name: Compare exact public original HTML against production resolver once
+        env:
+          MAGNETRA_NONAMECLUB_OWNER_READONLY: OWNER_NONAMECLUB_EXACT_READONLY_20261025
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_nonameclub_owner_exact_20261025.py --owner-readonly
