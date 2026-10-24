@@ -230,10 +230,22 @@ export async function theRarBgOriginalJsonHash(detailUrl,html,fetcher=fetch,diag
   }
   // Do not follow even same-host redirects for source JSON. The exact detail
   // document is the only source for this fallback.
-  if(response.status!==200||response.headers.get("cf-mitigated")==="challenge"||
-    !/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type")||"")||
-    Number(response.headers.get("content-length")||0)>MAX_HTML){
-    if(diagnostic)diagnostic.jsonStage="JSON_RESPONSE_REJECTED";
+  if(response.status!==200){
+    if(diagnostic)diagnostic.jsonStage=[403,404,429,500,502,503,504].includes(response.status)
+      ?"JSON_HTTP_"+response.status:response.status>=300&&response.status<400
+      ?"JSON_REDIRECT":"JSON_HTTP_OTHER";
+    return null;
+  }
+  if(response.headers.get("cf-mitigated")==="challenge"){
+    if(diagnostic)diagnostic.jsonStage="JSON_CHALLENGE";
+    return null;
+  }
+  if(!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type")||"")){
+    if(diagnostic)diagnostic.jsonStage="JSON_NOT_JSON";
+    return null;
+  }
+  if(Number(response.headers.get("content-length")||0)>MAX_HTML){
+    if(diagnostic)diagnostic.jsonStage="JSON_TOO_LARGE";
     return null;
   }
   let payload;
