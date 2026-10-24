@@ -85,7 +85,7 @@ async function resolveMagnet(request,env){
    const sourceFetch=rock64HtmlFetcher(provider,env)||fetch;
    if(provider==="therarbag"&&
      details==="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/"&&
-     request.headers.get("x-magnetra-source-json-diagnostic")==="20261024-source-stage-v2"){
+     request.headers.get("x-magnetra-source-json-diagnostic")==="20261024-source-stage-v3"){
      const stage=await diagnoseOriginalTheRarBgJson(sourceFetch);
      return json({probe:ORIGINAL_JSON_EGRESS_MARKER,stage});
    }
