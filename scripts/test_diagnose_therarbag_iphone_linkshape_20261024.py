@@ -12,7 +12,7 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(d.source_shape(base + "?source=listing"), "QUERY_PRESENT")
         self.assertEqual(d.source_shape(base.replace("95bf8b", "xx yy")), "ID_PATTERN_REJECTED")
         self.assertEqual(d.source_shape(base.replace("therarbg.com", "evil.invalid")), "INVALID_HTTPS_HOST")
-        self.assertEqual(d.source_shape(base + "x" * 500), "SLUG_TOO_LONG")
+        self.assertEqual(d.source_shape(base[:-1] + "x" * 500 + "/"), "SLUG_TOO_LONG")
         self.assertEqual(d.source_shape("https://therarbg.com/post-detail/one"), "PATH_SEGMENTS_DIFFER")
 
     def test_user_fingerprint_match_and_sanitized_summary(self):
