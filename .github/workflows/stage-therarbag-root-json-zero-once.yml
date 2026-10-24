@@ -1,0 +1,49 @@
+# One-shot immutable version stage; user traffic remains 36019925 100%.
+# Only replaces 5f642945 diagnostic at 0% with tested PR152 code.
+name: TheRarBg Root JSON Fix Candidate Zero Only
+on:
+  push:
+    branches:
+      - release/therarbag-root-json-zero-20261024
+    paths:
+      - .github/workflows/stage-therarbag-root-json-zero-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-root-json-zero-once
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Source invariant and exact JSON root fallback tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m py_compile scripts/stage_therarbag_root_json_zero_20261024.py scripts/probe_therarbag_root_json_candidate_20261024.py
+          node --test worker/test/therarbag-original-json-fallback.test.mjs
+          node --test worker/test/therarbag-source-owned-hash-resolve.test.mjs
+      - name: Cloudflare account and current binding audit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/inspect_companion_binding_readonly.py
+      - name: Stage PR152 code at 0% with production unchanged
+        id: stage
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          THERARBAG_STAGE_APPROVAL: ZERO_ONLY_EXACT_36019925
+        run: python3 scripts/stage_therarbag_root_json_zero_20261024.py
+      - name: One source-hash-matched immutable Resolve probe
+        env:
+          CANDIDATE: ${{ steps.stage.outputs.candidate }}
+        run: python3 scripts/probe_therarbag_root_json_candidate_20261024.py "$CANDIDATE"
