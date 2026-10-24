@@ -302,8 +302,12 @@ async function ensureMagnet(item){
  // exposed both details and magnetSource; magnetSource was the EXACT rejected
  // iPhone trace URL while the original same-result details URL resolved to a
  // verified magnet. Use the provider's validated details page first.
- // Keep all other 43 providers' source precedence unchanged.
- const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9"||item.provider==="therarbag";
+ // Exact original owner 0Magnet /!lxbV (read-only run #40133513283):
+ // this card has an auxiliary magnetSource but its original details URL yields
+ // a verified BTIH through the current production /api/resolve endpoint.
+ // Choose this source-owned detail, not its alternate listing link.
+ // Keep all remaining 42 providers' source precedence unchanged.
+ const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9"||item.provider==="therarbag"||item.provider==="0magnet";
  const source=preferDetails ? item.details : item.magnetSource||item.details;
  if(!source)throw Error(tr("Provider has no supported magnet or details link."));
  const headers={"content-type":"application/json"};
