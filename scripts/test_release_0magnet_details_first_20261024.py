@@ -25,9 +25,12 @@ class ReleaseTests(unittest.TestCase):
    release.assert_not_called()
    rollback.assert_not_called()
 
- def test_new_0magnet_guard_accepts_proven_four_source_rule(self):
+ def test_historical_0magnet_release_guard_rejects_later_nonameclub_source_change(self):
+  # The successful 0Magnet one-shot release was consumed. It must not be
+  # silently reused against a changed source tree; preserve its pinned guard.
   with patch.object(r,"validate_source",return_value={"name":"alexlab-magnetra"}) as validate:
-   self.assertEqual(r.source_guard(),{"name":"alexlab-magnetra"})
+   with self.assertRaisesRegex(r.Stop,"REVIEWED_0MAGNET_DETAILS_FIRST_SOURCE_MISMATCH"):
+    r.source_guard()
    validate.assert_called_once_with()
 
  def test_preflight_exact_owner_version_four_bindings_and_account(self):
