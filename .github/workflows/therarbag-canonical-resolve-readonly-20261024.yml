@@ -1,0 +1,32 @@
+name: TheRarBg Canonical Owner Resolve (READ ONLY ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-canonical-resolve-readonly-20261024.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-owner-canonical-readonly
+  cancel-in-progress: false
+jobs:
+  compare:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-iphone-canonical-resolve-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Enforce explicit owner source-read and offline tests
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_MESSAGE" == *'[magnetra-iphone-canonical-resolve-readonly-20261024]'* ]]
+          test -s docs/release-events/therarbag-canonical-resolve-readonly-20261024.md
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_therarbag_iphone_canonical_resolve_20261024.py' -v
+      - name: Exactly one current result GET and one owner original resolver POST, no Flud
+        run: python3 scripts/diagnose_therarbag_iphone_canonical_resolve_20261024.py --approved-readonly
