@@ -32,6 +32,8 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_diagnose_therarbag_iphone_linkshape_20261024.py' -v
       - name: Offline same-owner screenshot 352.7 MB exact-card readonly audit
         run: python3 -m unittest discover -s scripts -p 'test_diagnose_therarbag_iphone_exact_size_20261024.py' -v
+      - name: Offline same-owner canonical and live magnetSource guard
+        run: python3 -m unittest discover -s scripts -p 'test_diagnose_therarbag_iphone_canonical_resolve_20261024.py' -v
       - name: Offline GET-only Flud Companion Cloudflare account and binding audit tests
         run: python3 -m unittest discover -s scripts -p 'test_inspect_companion_binding_readonly.py' -v
       - name: Offline owner-gated immutable Flud Companion rollout and 401 probe tests
