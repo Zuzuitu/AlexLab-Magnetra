@@ -1,5 +1,14 @@
 # AlexLab Magnetra — Project State
 
+## LATEST MANDATORY CHECKPOINT — 25 OCT 2026 — NONAMECLUB EXACT PAGE RESOLVES LIVE; SEARCH CARD IDENTITY STILL UNDER INVESTIGATION
+
+- Owner physically confirms **0Magnet iPhone works** on immutable Cloudflare live `763defbe-38aa-4299-acf1-1639a59e7be6@100%`. Previously working TheRarBg image `916d0671-b9c5-432d-8724-aed27bc22c4f@0%` retained for rollback. Do not touch these versions or claim the new issue is 0Magnet.
+- Owner reproduces generic NoNameClub `Sursă indisponibilă` on physical Safari PWA while original NoNameClub Lupin (2026) public detail URL is `https://nnmclub.to/forum/viewtopic.php?t=1896364`. Original source screenshot has a magnet icon and torrent button, no signed-in account.
+- **Completed exact original-source differential**: [#40140578589](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40140578589) SUCCESS, diagnostic PR #175 integrated at main `7322b95bd2074fe5cdb4762fa53c448ec51dfca0`. Public original URL HTTP 200 with `a[href^='magnet:']` valid anchor, production Cloudflare `/api/resolve` exact URL HTTP 200 and valid BTIH, source BTIH matches Worker result in-memory. No cookie/login, torrent, Flud or secret output. This proves existing NoNameClub parser and resolver **work for exact original link at audit time**, not that iPhone clicked same details URL.
+- **Remaining uncertainty**: PWA search card's `details` field may differ from owner original URL; or Safari used stale cached app.js or saw a transient network/server error. New bounded branch `diagnostics/nonameclub-owner-card-match-20261025` checks exact same-card link identity from `/api/search` (one or two fixed `Lupin` queries) and one metadata-only resolver POST if exact match found. No new production code, traffic split, torrent/magnet/log leaks or device actions. Four CI checks + offline tests and unique owner read-only marker required. Source HTTP parser must not be changed without negative evidence.
+- **Separate UI bug**: NoNameClub Cyrillic torrent names in screenshot render as Unicode replacement glyphs `�`, likely text charset parsing problem; do not conflate with magnet resolution. Investigate independently once root cause of iPhone failure is determined.
+
+
 ## LATEST MANDATORY CHECKPOINT — 25 OCT 2026 — 0MAGNET IPHONE OWNER ACCEPTED; NONAMECLUB ORIGINAL LINK INCIDENT INVESTIGATION
 
 - **Owner physical acceptance:** new 0Magnet details-first fix live at immutable `763defbe-38aa-4299-acf1-1639a59e7be6@100%` is confirmed working on iPhone by owner ("Fixuo0magnet functionewza"). Previously proven release run [#40138203726](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40138203726) passed new 100% live JS SHA and 46 catalog. The previous known-good TheRarBg version `916d0671-b9c5-432d-8724-aed27bc22c4f@0%` remains rollback, not active traffic. No need to repeat 0Magnet testing unless regression is observed.
