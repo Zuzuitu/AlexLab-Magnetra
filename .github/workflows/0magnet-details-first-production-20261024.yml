@@ -1,0 +1,76 @@
+# Owner-approved one-shot 0Magnet original-details-first PWA release.
+# Actual Cloudflare release only on reviewed main + unique commit marker.
+# Standard web/app.js auto deploy remains disabled; do not rerun.
+name: Magnetra 0Magnet Details-First Production (OWNER ONE SHOT)
+on:
+  pull_request:
+    paths:
+      - scripts/release_0magnet_details_first_20261024.py
+      - scripts/test_release_0magnet_details_first_20261024.py
+      - .github/workflows/0magnet-details-first-production-20261024.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/0magnet-details-first-production-20261024.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+jobs:
+  offline-safety-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Invariants and release simulation (NO Cloudflare writes)
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_0magnet_details_first_20261024.py' -v
+  guarded-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-0magnet-details-first-release-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable reviewed main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check explicitly authorized one-shot commit
+        shell: bash
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$MESSAGE" == *'[magnetra-0magnet-details-first-release-20261024]'* ]]
+          test -s docs/release-events/0magnet-details-first-production-20261024.md
+      - name: Project invariants and rollback fail-closed unit tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_0magnet_details_first_20261024.py' -v
+      - name: Node 22 original provider and PWA regression suite
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real PWA ensureMagnet and provider contracts
+        run: |
+          set -euo pipefail
+          node --test worker/test/*.test.mjs
+          node --check web/app.js
+          node --check worker/src/index.mjs
+      - name: Cloudflare source bundle dry run (does not activate)
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Exact live preflight, immutable upload 0%, 5%, 100% and rollback
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_0MAGNET_DETAILS_FIRST_ACTION: CONFIRM_0MAGNET_OWNER_RELEASE_20261024
+        run: |
+          set -euo pipefail
+          python3 scripts/release_0magnet_details_first_20261024.py
