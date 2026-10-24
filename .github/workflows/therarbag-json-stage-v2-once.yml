@@ -1,0 +1,48 @@
+# One guarded 0%-only replacement of the previous diagnostic candidate.
+# No main push, no 5/100% release, no torrent downloads.
+name: Magnetra TheRarBg JSON Egress Stage V2 at Zero Only
+on:
+  push:
+    branches:
+      - diagnostics/therarbag-cloudflare-json-egress-20261024
+    paths:
+      - .github/workflows/therarbag-json-stage-v2-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-json-egress-stage-v2-once
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify safety invariants and offline finite-stage tests
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m py_compile scripts/stage_therarbag_json_probe_zero_20261024.py scripts/probe_therarbag_cf_json_stage_v2_20261024.py
+          node --test worker/test/therarbag-source-json-stage.test.mjs
+          node --test worker/test/therarbag-original-json-fallback.test.mjs
+      - name: Verify active Cloudflare Worker and bindings (GET ONLY)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/inspect_companion_binding_readonly.py
+      - name: Upload diagnostic Worker and replace only 0% candidate
+        id: stage
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          THERARBAG_STAGE_APPROVAL: ZERO_ONLY_EXACT_36019925
+        run: python3 scripts/stage_therarbag_json_probe_zero_20261024.py
+      - name: Classify real Cloudflare outbound TheRarBg JSON without source data
+        env:
+          CANDIDATE: ${{ steps.stage.outputs.candidate }}
+        run: python3 scripts/probe_therarbag_cf_json_stage_v2_20261024.py "$CANDIDATE"
