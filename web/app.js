@@ -298,8 +298,12 @@ async function ensureMagnet(item){
  // points to a noncanonical download/ad route on every sampled listing
  // (50 OxTorrent + 20 Torrent9). The source-owned details page resolves
  // genuine BTIH magnets through the fixed-origin HTML gateway.
- // Keep all other 44 providers' source precedence unchanged.
- const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9";
+ // Owner's actual iPhone TheRarBg incident (#40085002856): the listing
+ // exposed both details and magnetSource; magnetSource was the EXACT rejected
+ // iPhone trace URL while the original same-result details URL resolved to a
+ // verified magnet. Use the provider's validated details page first.
+ // Keep all other 43 providers' source precedence unchanged.
+ const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9"||item.provider==="therarbag";
  const source=preferDetails ? item.details : item.magnetSource||item.details;
  if(!source)throw Error(tr("Provider has no supported magnet or details link."));
  const headers={"content-type":"application/json"};
