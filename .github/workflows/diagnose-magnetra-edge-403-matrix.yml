@@ -1,0 +1,26 @@
+# Only safe requests: /api/health GET and disallowed /api/resolve POST.
+# No Cloudflare credentials, Worker deploys, original-source fetches or magnets.
+name: Magnetra 403 Edge Classification (READ ONLY)
+on:
+  push:
+    branches:
+      - diagnostics/edge-403-request-matrix-20261024
+    paths:
+      - .github/workflows/diagnose-magnetra-edge-403-matrix.yml
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    if: github.repository == 'Zuzuitu/AlexLab-Magnetra'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate invariants and diagnostic syntax
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m py_compile scripts/diagnose_edge_403_matrix_20261024.py
+      - name: Six harmless fixed-origin request classifications
+        run: python3 scripts/diagnose_edge_403_matrix_20261024.py
