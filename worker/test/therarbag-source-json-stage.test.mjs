@@ -28,7 +28,7 @@ test("classify actual HTTP blocks and HTML challenge without leaking response da
   [new Response("go elsewhere",{status:302,headers:{"location":"https://evil.invalid"}}),"HTTP_REDIRECT"],
   [new Response("<html>challenge</html>",{status:200,headers:{"content-type":"text/html"}}),"HTML_NOT_JSON"],
   [json({data:{info_hash:HASH}},{"cf-mitigated":"challenge"}),"SOURCE_CHALLENGE"],
-  [json({data:{info_hash:"x"}}),"MISSING_OR_INVALID_INFO_HASH"],
+  [json({data:{info_hash:"x"}}),"JSON_WRAPPED_BTIH_INVALID"],
   [json({payload:{info_hash:HASH}}),"MISSING_DATA_OBJECT"],
   [new Response("{not-json",{status:200,headers:{"content-type":"application/json"}}),"INVALID_JSON"],
  ]){
