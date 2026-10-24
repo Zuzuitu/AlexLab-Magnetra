@@ -1,5 +1,51 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 04:06 EUROPE/ROME — THERARBAG ROOT JSON CORRECTED, IPHONE E2E STILL OPEN
+
+**This heading supersedes historical latest-status sections below. Historical sections are preserved for provenance.** Do not interpret older live versions, stale URLs or proposed workflows as current status.
+
+### Repository and current deployment
+- Public GitHub: https://github.com/Zuzuitu/AlexLab-Magnetra; production PWA: https://index.alexlab.media; current main immediately before this documentation update: 04dac669191ff647b5494216ff78e3cbfd39b1ab, PR #152 merged on 24 Oct. Deploy Magnetra PWA was SKIPPED on merge (run #40052634151). Code merged DOES NOT imply code activated.
+- Last independent Cloudflare audit, run https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40052525794: immutable 36019925-2308-4f99-8223-13854012d372 serves 100% normal production traffic; new PR152 code c201cbf9-2080-4a5b-9e40-723a8714d94c is staged at 0% ordinary traffic. Re-audit percentages before action; not guaranteed for all future times.
+- All four required binding names/types audited on both versions: ASSETS (assets), BTDIGG_GATEWAY_TOKEN and MAGNETRA_GATEWAY_TOKEN (secret), FLUD_RELAY (service). Never print their values. The prior Flud Companion version 4e4730a1 was superseded by 36019925 after PR #151; run #40035839690 confirmed 100%, 46 catalog and bindings. A PR #151 squash commit inadvertently contained the [deploy-pwa] marker, triggering a 100% rollout. NEVER repeat a release marker in a non-release merge message.
+- Original Android/API provider inventory: 46/46 adapters preserved; PWA only 12 visible / 34 intentionally hidden, Romanian default, Italian optional. Do not resurrect the hidden sources or delete provider IDs. BTDigg Rock64 source has intermittent 504/timeout and later recovery; do not claim permanent repair. Preserve BTDigg gateway 8796, central magnetra gateway 8798, existing tunnel, DNS, Cloudflare secrets and service, no paid infrastructure. Flud queued/relay HTTP success is not physical Shield ACK.
+
+### User incident, real source URL and release work in this session
+- iPhone user saw TheRarBg DETAIL_NO_BTIH on Obtain Magnet and Share; in web/app.js Share/Copy invokes ensureMagnet, so that error is the same resolver failure, not an independently proven share bug. Prior 22 Oct Genshin 93.2 MB FLAC card failed; its exact detail URL remains UNVERIFIED. Never borrow a Cyberpunk hash for Genshin.
+- User-supplied Cyberpunk exact detail URL: https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/ . Screenshot on original site shows Magnet Download, .torrent File, Copy Magnet and Info Hash.
+- Read-only exact HTML run #40033086217: HTTP 200, 160985 bytes, one original Info Hash label, one magnet href, zero input-value BTIH. Therefore the input-value hypothesis for this exact page is NOT SUPPORTED; PR #149 stays DRAFT and must not be merged as a fix.
+- PR #140 exact bounded no-leak HTML diagnosis MERGED as a88cbdc75354c623f8ab56ead7f0ba8b0336c1ca. PR #150 Worker HTML-shape diagnostic stays DRAFT; remote-preview failed initialization, no Cloudflare live proof from it.
+- Real Cloudflare workerd test discovered HTMLRewriter returns magnet href retaining &amp; query delimiters; PR #151 normalizes HTML ampersand entities only for source-owned TheRarBg magnets. Merged as 3cd418221bc29e113abd48d85b44bd25704d56ec; all 4 CI green. BUT iPhone still reported failure afterward; do not equate this patch with full DETAIL_NO_BTIH fix.
+- Original-source GitHub read-only comparison run #40037986215: original HTML-labelled BTIH, original magnet and same-detail ?format=json infohash all agree. The TheRarBg public frontend uses Axios res.data.info_hash: Axios res.data is the HTTP JSON BODY, not a JSON object named data. Earlier proposed fallback incorrectly required payload.data.info_hash.
+- Owner Rock64 first original JSON GET: HTTP 200 / application/json / data object false / error field false. Nested-only INFO HASH VALID false was a BAD TEST of the correct field; it did not show root infohash missing. The real Cloudflare egress V2 diagnostic #40048285028 also saw HTTP 200 valid JSON but MISSING_DATA_OBJECT due to nested-only assumption.
+- Confirmed real Cloudflare egress V3 #40052397701: immutable V3 marker verified, HTTP 200, JSON_ROOT_BTIH_VALID. This demonstrates original root-level infohash exists from Cloudflare itself.
+- PR #152 corrects fallback AFTER HTML resolution fails: one same-origin exact detail ?format=json bounded GET; accept strict original 40-hex BTIH at root or wrapped data if non-conflicting; reject mismatches with already fetched original HTML hash/magnet, redirects, invalid JSON, foreign host, oversized payload and challenge; no torrent download or alternate indexer. Unit tests and real workerd fixture passed all four required PR CI checks. Merged as 04dac669191ff647b5494216ff78e3cbfd39b1ab. This CODE is not yet live on the 100% version.
+- New PR152 immutable candidate staged at 0% in run #40052525794: c201cbf9-2080-4a5b-9e40-723a8714d94c, all four bindings verified, production 36019925 remains 100%, source JSON hash matching candidate magnet. But legacy production ALSO returned magnet correctly on that GitHub runner.
+- **Final user Rock64 exact two-version test on 24 Oct around 04:06 Europe/Rome**: 
+  SURSA ORIGINALA: 200 True
+  ACTUALA HTTP: 200 MAGNET VALID: True HASH CORECT: True COD: OK
+  NOUA HTTP: 200 MAGNET VALID: True HASH CORECT: True COD: OK
+  Thus both current production and zero-traffic candidate resolved this same Cyberpunk URL correctly FROM ROCK64. This is NOT evidence of a differential or a completed fix for intermittent iPhone PWA failure. Real iPhone same-card acceptance is still OPEN.
+- Python default-UA HTTP 403 was an ingress client classification, not necessarily TheRarBg source. Fixed-origin six-request test #40047996718: default Python 403 for /api/health; browser-UA /api/health 200 and invalid details /api/resolve 400 on both version selections. Browser-User-Agent enables version attributed diagnostics; do not confuse edge 403 and Worker source 403.
+
+### Mandatory action plan for next chat
+P0. Read current main, AGENTS.md, docs/PROJECT_STATE.md, docs/NEXT_CHAT_HANDOFF.md and config/project-invariants.json; recheck deployment GET-only. Main commit and 100/0 version are observations at this checkpoint. Respect active 100% current version; do not promote candidate solely from Rock64 tests since baseline was also successful.
+P1. Investigate iPhone PWA exact failing result end-to-end: ensureMagnet item provider and details/magnetSource, JSON POST URL/body, HTTP response/error stage, source record ID, optional service-worker/iOS cached JS, and Share/Copy/Get Magnet route behavior. Compare EXACT same item.details and network path with Rock64 successful request. No assumed cache bug; add minimal explicit opt-in privacy-safe diagnostics only if necessary, no hash/token/raw HTML output. For prior Genshin failure do not invent detail URL.
+P2. Reproduce intermittent DETAIL_NO_BTIH under controlled single requests; classify status, source HTML/JSON shape and exact immutable Worker invoked. Validate UI labels and fallback errors without silently substituting other provider BTIH. Test genuine iPhone PWA once a candidate is safely exposed via approved canary; distinguish screenshot failure before or after new code activation.
+P3. If a verified cause remains, make minimal branch/PR with tests: valid JSON root/wrapped, conflicts, malformed/error envelopes, same-origin redirects and SSRF guards, original same-detail fallback, Share/Copy absent-magnet UI, old/new timing. Do not claim success from only unit tests or unrelated GitHub-runner successes.
+P4. Only with owner authorization and fresh Cloudflare metadata canary new reviewed immutable version 0% -> 5% -> 100%, fail closed on any binding, catalog, PWA assets, BTDigg, Flud synthetic relay or E2E regression; preserve last 100% immutable version as rollback at 0%. No stale release markers, no generic wrangler deploy, no accidental [deploy-pwa] in commit messages, no DNS/Tunnel/Rock64 change. Code-only docs/checkpoint updates must not deploy.
+P5. After actual owner iPhone success verify Genshin exact original too if available, then update checkpoint and clean up obsolete branch-only diagnostics without removing audit evidence. Keep BTDigg intermittent timeout and Flud physical Shield ACK distinct, unverified issues.
+
+### Hard engineering invariants
+- Public repo GitHub Actions standard runners can run without purchasing private-repo minute quotas; preserve existing free/cost protections.
+- Material code via branch + PR and all four checks: PWA/provider contracts, technical invariants, Android Debug, Android Staging. Documentation updates in guarded PR too; never direct-main.
+- Do not remove 46 provider identities or activate the 34 hidden sources; RO default, IT optional, existing UX. No open proxy, paid sources, CAPTCHAs or anti-bot bypass, unsafe redirects, unrestricted retries, guessed or cross-source hashes, real torrents or private magnet logs, tokens in client, new tunnels, Rock64 service modifications, PWA cache purge without proof.
+- Record evidence provenance: exact user screenshots, Rock64 output, GitHub Actions run IDs, Cloudflare immutable percentage/binding audits. Do not conflate code merge, staged 0%, GitHub HTTP 200, mobile E2E or source availability.
+
+---
+
+
 ## LATEST INCIDENT / MANDATORY HANDOFF — 22 OCT 2026 18:56 EUROPE/ROME — THE RARBG STILL FAILS AFTER a088
 
 **Outcome: FUNCTIONAL FAILURE CONFIRMED ON OWNER'S IPHONE. NO FURTHER SPECULATIVE RELEASE.**
