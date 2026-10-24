@@ -1,4 +1,5 @@
 # One-shot finite diagnostic: original source JSON root vs wrapped shape.
+# Offline stage V3 assertions synchronized with finite enum classifier.
 # Existing Cloudflare 36019925 must remain 100%, v2 diagnostic is 0%.
 # Uploads a reviewed V3 0% replacement only; no main push or live rollout.
 name: TheRarBg Original JSON Schema V3 Zero Only
