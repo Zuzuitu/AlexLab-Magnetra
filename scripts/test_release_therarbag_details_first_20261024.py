@@ -25,9 +25,13 @@ class ReleaseTests(unittest.TestCase):
    release.assert_not_called()
    rollback.assert_not_called()
 
- def test_source_guard_preserves_three_details_first_and_existing_others(self):
+ def test_historical_one_shot_fails_closed_after_new_0magnet_selection_rule(self):
+  # Historical 2026-10-24 TheRarBg release was already consumed. Its pinned
+  # source guard MUST reject any later app.js modification, including the
+  # independently reviewed new 0Magnet details-first rule. Never rerun it.
   with patch.object(r,"validate_source",return_value={"name":"alexlab-magnetra"}) as validate:
-   self.assertEqual(r.source_guard(),{"name":"alexlab-magnetra"})
+   with self.assertRaisesRegex(r.Stop,"REVIEWED_THERARBAG_DETAILS_FIRST_SOURCE_MISMATCH"):
+    r.source_guard()
    validate.assert_called_once_with()
 
  def test_preflight_exact_owner_version_four_bindings_and_account(self):
