@@ -17,6 +17,7 @@ from deploy_magnetra_auto_pause_once import Stop, ROOT, uploaded_version_id
 from inspect_magnetra_fix_stage import binding_pairs
 from inspect_companion_binding_readonly import (
     account_list, verify_account_scripts, validated_source,
+    Stop as CompanionStop,
 )
 
 ACTIVE = "36019925-2308-4f99-8223-13854012d372"
@@ -121,6 +122,8 @@ def upload_only(config):
 def run():
     config = validate_source()
     before = guard_baseline()
+    if read_split()["id"] != before["id"]:
+        raise Stop("DEPLOYMENT_CHANGED_BEFORE_UPLOAD")
     # This is the ONLY Cloudflare write: create a version, not a deployment.
     candidate = upload_only(config)
     verify_binding_payload(candidate, _get_api("/versions/" + candidate))
@@ -139,7 +142,7 @@ def main():
         return 2
     try:
         return run()
-    except (Stop, ValueError, TypeError, KeyError, OSError):
+    except (Stop, CompanionStop, ValueError, TypeError, KeyError, OSError):
         print("STAGE_ONLY_STOP_UNVERIFIED: no deliberate traffic change attempted")
         return 1
 
