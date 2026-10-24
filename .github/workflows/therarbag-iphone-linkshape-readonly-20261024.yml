@@ -1,0 +1,36 @@
+# Owner-provided iPhone trace SHA is a non-secret correlation key.
+# GET-only canonical search, two bounded queries maximum; no source downloads.
+name: TheRarBg iPhone Same-Card URL Shape (READ ONLY ONE SHOT)
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/therarbag-iphone-linkshape-readonly-20261024.md
+
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-therarbag-linkshape-readonly
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-therarbag-iphone-linkshape-readonly-20261024]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify one-shot marker and source guards
+        shell: bash
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$MESSAGE" == *'[magnetra-therarbag-iphone-linkshape-readonly-20261024]'* ]]
+          test -s docs/release-events/therarbag-iphone-linkshape-readonly-20261024.md
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_therarbag_iphone_linkshape_20261024.py' -v
+      - name: GET-only production search; no resolve and no modification
+        run: python3 scripts/diagnose_therarbag_iphone_linkshape_20261024.py --approved-readonly

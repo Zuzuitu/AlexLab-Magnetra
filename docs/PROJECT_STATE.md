@@ -4,6 +4,12 @@
 ## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 04:06 EUROPE/ROME — THERARBAG ROOT JSON CORRECTED, IPHONE E2E STILL OPEN
 
 **This heading supersedes historical latest-status sections below. Historical sections are preserved for provenance.** Do not interpret older live versions, stale URLs or proposed workflows as current status.
+### 24 Oct 2026 11:04 Europe/Rome — real iPhone diagnosis REPRODUCED; link identity mismatch
+- Owner real screenshot after guarded release #40059873546 confirms production diagnostic `THERARBAG_IPHONE_DIAG_V1` and still-failing first TheRarBg Cyberpunk Edgerunners 2 card: 352.7 MB, 78 seeds, 27 peers, `HTML_NO_BTIH`, `JSON_URL_REJECTED`, 55ms, validated details URL SHA256-12 `b12d9fd36aa0`. iPhone failure **NOT FIXED**; runtime instrumentation **CONFIRMED**.
+- The previously supplied original-source canonical Cyberpunk URL `https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/` hashes to `3b00bf511347`: it is **not the exact same URL string** as current live first-card details. Do not reuse that distinct source URL's hash as same-card evidence.
+- `worker/src/legacy-adapters.mjs::theRarBgOriginalJsonHash` sets `JSON_URL_REJECTED` **before JSON fetch** if URL has search params/auth/fragment/incorrect strict path or host; first-level `validateLegacyDetail` accepts same-origin URLs with query/search. This discrepancy is a strong candidate, NOT yet exact cause; no patch until exact same-card shape observed.
+- Read-only new PR branch `diagnostics/therarbag-iphone-result-url-shape-20261024` computes first 12hex SHA256 of each exact PWA search `details` value, compares user-supplied fingerprint, logs **only** safe URL shape category. At most two fixed canonical production GET search calls, no POST resolve or mutation. One-shot workflow marker `[magnetra-therarbag-iphone-linkshape-readonly-20261024]`, all CI required before merge. If no matching card, STOP and request exact `Detalii` URL without guessing. Only after evidence fix with regression + reviewed immutable staged release; owner iPhone acceptance still pending.
+
 
 ### 24 Oct 2026 — Owner approves direct production iPhone diagnostic rollout (PENDING RELEASE)
 - Owner confirmed Magnetra PWA is currently used only by the owner, and explicitly authorized controlled testing at the canonical `https://index.alexlab.media` address; dedicated Cloudflare Version URLs are disabled as confirmed by GET-only workflow #40058531928. This authorization does not by itself establish production success.
