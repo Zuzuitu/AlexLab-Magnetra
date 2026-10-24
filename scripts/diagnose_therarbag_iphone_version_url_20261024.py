@@ -121,7 +121,7 @@ def proof():
         health = json.loads(raw_health)
     except ValueError:
         raise Stop("VERSION_URL_HEALTH_JSON_INVALID") from None
-    if health.get("ok") is not True or health.get("ported") != 46 or health.get("total") != 46:
+    if not isinstance(health, dict) or health.get("ok") is not True or health.get("ported") != 46 or health.get("total") != 46:
         raise Stop("VERSION_URL_HEALTH_PARITY_FAILED")
     mime_js, raw_js = fixed_preview_get(host, "/app.js",
                                        accept="text/javascript,application/javascript",
