@@ -15,5 +15,29 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - name: Compare staged original JSON probe HTTP code, no writes
+      - name: Verify current 100% and JSON diagnostic candidate 0% (read only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,"scripts")
+          from deploy_magnetra_zero_percent import _current_deployment,_get_api,_shares
+          from inspect_magnetra_fix_stage import binding_pairs
+          active="36019925-2308-4f99-8223-13854012d372"
+          staged="8d3f9813-e30f-417b-b9a7-a1247f994e9d"
+          current=_shares(_current_deployment(_get_api("/deployments")))
+          if current!={active:100,staged:0}:
+              print("DIAGNOSTIC_STOP: UNREVIEWED_VERSION_SPLIT")
+              sys.exit(2)
+          required={"ASSETS":"assets","FLUD_RELAY":"service"}
+          for version in (active,staged):
+              meta=binding_pairs(_get_api("/versions/"+version))
+              if not all((k,v) in meta for k,v in required.items()):
+                  print("DIAGNOSTIC_STOP: BINDINGS_UNVERIFIED")
+                  sys.exit(2)
+          print("ACTIVE_100_DIAGNOSTIC_0: VERIFIED")
+          PY
+      - name: Classify TheRarBg JSON from diagnostic Worker with verified browser headers
         run: python3 scripts/probe_therarbag_cf_json_egress_20261024.py 8d3f9813-e30f-417b-b9a7-a1247f994e9d
