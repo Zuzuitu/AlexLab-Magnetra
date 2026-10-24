@@ -1,6 +1,6 @@
 # AlexLab Magnetra — Project State
 
-## 24 Oct 2026 — P1 0Magnet (9mag.net) iPhone "Sursă indisponibilă" investigation, NOT FIXED
+## LATEST MANDATORY CHECKPOINT — 24 OCT 2026 — OWNER 0MAGNET DIAGNOSTIC PENDING; THE RARBG FIX ACCEPTED
 
 - **User evidence**: real Safari screenshots: PWA 0Magnet result "Little.House.on.the.Prairie.2026.S01.720p.10bit.WEBRip.2CH.x265.HEVC-PSA" (2.26 GB) shows "Obține magnet" and then generic "Sursă indisponibilă". The owner visits the original 9mag.net detail page, which visibly displays a magnet and Info Hash. This does not prove what static server HTML reached Cloudflare or what HTTP status the original upstream returned to the Worker.
 - **Confirmed implementation**: 0magnet has fixed origin https://9mag.net and an input-type deferred resolver with selector input#input-magnet, reading the value attribute of original detail HTML. This matches the Android ZeroMagnet implementation. The PWA currently collapses multiple failures into the same generic error; the code does NOT establish a failed selector or blocked upstream.
