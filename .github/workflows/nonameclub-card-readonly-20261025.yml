@@ -1,0 +1,49 @@
+name: Magnetra NoNameClub Owner Search Card Identity (READ ONLY)
+on:
+  pull_request:
+    paths:
+      - scripts/diagnose_nonameclub_card_exact_20261025.py
+      - scripts/test_diagnose_nonameclub_card_exact_20261025.py
+      - .github/workflows/nonameclub-card-readonly-20261025.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/nonameclub-card-readonly-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-nonameclub-card-readonly
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Source invariants and no-network test suite
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_nonameclub_card_exact_20261025.py' -v
+  owner-readonly-card:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-nonameclub-card-readonly-20261025]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Project invariant guards + offline tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_diagnose_nonameclub_card_exact_20261025.py' -v
+      - name: Bounded exact-card PWA provider GET and same-card metadata-only POST
+        env:
+          MAGNETRA_NONAMECLUB_CARD_READONLY: OWNER_NONAMECLUB_EXACT_CARD_MATCH_READONLY_20261025
+        run: |
+          set -euo pipefail
+          python3 scripts/diagnose_nonameclub_card_exact_20261025.py --owner-readonly
