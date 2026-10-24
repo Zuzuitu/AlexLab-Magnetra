@@ -41,7 +41,7 @@ test("opt-in TheRarBg failure classifies HTML and rejected original JSON, withou
   assert.equal(body.code,"DETAIL_NO_BTIH");
   assert.equal(body.diagnostic.build,"THERARBAG_IPHONE_DIAG_V1");
   assert.equal(body.diagnostic.htmlStage,"HTML_NO_BTIH");
-  assert.equal(body.diagnostic.jsonStage,"JSON_RESPONSE_REJECTED");
+  assert.equal(body.diagnostic.jsonStage,"JSON_HTTP_503");
   assert.match(body.diagnostic.detailFingerprint,/^(?:[a-f0-9]{12}|unavailable)$/);
   assert.ok(body.diagnostic.elapsedMs>=0);
   assert.doesNotMatch(JSON.stringify(body.diagnostic),/magnet:|btih:|post-detail|therarbg\.com|upstream secret|password|token/i);
