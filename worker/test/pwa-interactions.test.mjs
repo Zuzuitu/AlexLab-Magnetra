@@ -270,7 +270,7 @@ test("TheRarBg diagnostic mode is explicit and does not change source URL or nor
  const detail="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
  const seen=[];
  const diagnostic={build:"THERARBAG_IPHONE_DIAG_V1",detailFingerprint:"0123456789ab",
-  htmlStage:"HTML_NO_BTIH",jsonStage:"JSON_RESPONSE_REJECTED",elapsedMs:31};
+  htmlStage:"HTML_NO_BTIH",jsonStage:"JSON_HTTP_503",elapsedMs:31};
  const fail=async(path,options)=>{
   assert.equal(path,"/api/resolve");
   seen.push(options);
@@ -283,7 +283,7 @@ test("TheRarBg diagnostic mode is explicit and does not change source URL or nor
   assert.equal(error.magnetraCode,"DETAIL_NO_BTIH");
   assert.equal(error.magnetraDiagnostic.detailFingerprint,"0123456789ab");
   const rendered=diag.api.magnetFailureText(item,error);
-  assert.match(rendered,/HTML_NO_BTIH.*JSON_RESPONSE_REJECTED/);
+  assert.match(rendered,/HTML_NO_BTIH.*JSON_HTTP_503/);
   assert.doesNotMatch(rendered,/magnet:\\?|btih:|post-detail/);
   return true;
  });
