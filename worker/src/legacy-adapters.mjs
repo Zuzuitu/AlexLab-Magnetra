@@ -4,6 +4,10 @@ import {LEGACY_SPECS,legacySearchUrl} from "./legacy-specs.mjs";
 const MAX_HTML = 3_000_000;
 const TIMEOUT = 11_000;
 function allowedExternal(url,host,base=host) {
+  // Absent optional anchors must remain absent. URL(undefined, base)
+  // otherwise synthesizes a same-origin "/undefined" link, which NoNameClub
+  // search exposed as magnetSource even though it has no such selector.
+  if(typeof url!=="string"||!url.trim())return null;
   try {
     const u=new URL(url,base);
     const expected=new URL(host);

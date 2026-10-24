@@ -306,8 +306,13 @@ async function ensureMagnet(item){
  // this card has an auxiliary magnetSource but its original details URL yields
  // a verified BTIH through the current production /api/resolve endpoint.
  // Choose this source-owned detail, not its alternate listing link.
- // Keep all remaining 42 providers' source precedence unchanged.
- const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9"||item.provider==="therarbag"||item.provider==="0magnet";
+ // Live NoNameClub owner card #40141421228 exposed a fabricated auxiliary
+ // source ("undefined" optional href coerced into a same-origin URL).
+ // Original owner details https://nnmclub.to/forum/viewtopic.php?t=1896364
+ // resolves to a valid BTIH via the existing production Worker.
+ // Keep the original source-owned details first even for old cached cards.
+ // Keep all remaining 41 providers' source precedence unchanged.
+ const preferDetails=item.provider==="oxtorrent"||item.provider==="torrent9"||item.provider==="therarbag"||item.provider==="0magnet"||item.provider==="nonameclub";
  const source=preferDetails ? item.details : item.magnetSource||item.details;
  if(!source)throw Error(tr("Provider has no supported magnet or details link."));
  const headers={"content-type":"application/json"};
