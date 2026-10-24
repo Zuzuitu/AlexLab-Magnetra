@@ -336,10 +336,10 @@ export async function resolveLegacy(id,url,fetcher=fetch,diagnostic=null){
   if(id==="therarbag"&&diagnostic)diagnostic.htmlStage=magnet?"HTML_ANCHOR_VALID":"HTML_NO_ANCHOR";
   // Strict single-provider fallback; successful detail HTML was fetched via
   // its fixed-origin allowlisted URL with anti-bot and size guards above.
-  if(!magnet&&id==="therarbag"){
-    magnet=magnetFromTheRarBgSourceMetadata(html);
-    if(magnet&&diagnostic)diagnostic.htmlStage="HTML_METADATA_VALID";
-  }
+  // Preserve the reviewed immutable release contract's exact fallback.
+  if(!magnet&&id==="therarbag")magnet=magnetFromTheRarBgSourceMetadata(html);
+  if(magnet&&diagnostic&&diagnostic.htmlStage==="HTML_NO_ANCHOR")
+    diagnostic.htmlStage="HTML_METADATA_VALID";
   if(!magnet&&id==="therarbag"){
     if(diagnostic)diagnostic.htmlStage="HTML_NO_BTIH";
     magnet=await theRarBgOriginalJsonHash(safe,html,fetcher,diagnostic);
