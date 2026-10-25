@@ -36,9 +36,19 @@ ORIGINAL = "https://nnmclub.to/forum/viewtopic.php?t=1896364"
 SEARCH_PATH = "/api/search?q=Lupin&category=all&providers=nonameclub"
 TEMP_CONFIG = ROOT / "worker/.wrangler-45-indexers-50-results-once.jsonc"
 MAX_BYTES = 1200000
+APP_BLOB_SHA = "eb98cfe79e1a9edb48b6e3d650d7eed81ed7c3a4"
 NEW = None
 
 def source_guard():
+    # Pin the already-reviewed 45-source application to prevent a future
+    # unrelated main change from being silently included in this one-shot release.
+    try:
+        reviewed=subprocess.run(["git","hash-object","web/app.js"],cwd=ROOT,
+            capture_output=True,text=True,timeout=8,check=False)
+    except (OSError,subprocess.TimeoutExpired):
+        raise Stop("REVIEWED_PWA_BLOB_CHECK_UNVERIFIED") from None
+    if reviewed.returncode or reviewed.stdout.strip()!=APP_BLOB_SHA:
+        raise Stop("REVIEWED_PWA_SOURCE_CHANGED")
     config = validate_source()
     pwa=(ROOT/"web/app.js").read_text(encoding="utf8")
     adapter=(ROOT/"worker/src/legacy-adapters.mjs").read_text(encoding="utf8")
