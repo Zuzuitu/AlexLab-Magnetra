@@ -319,7 +319,7 @@ def release():
     return 0
 
 def main():
-    if os.environ.get("MAGNETRA_CURATED_11_PAGING_50_RELEASE_ACTION")!=ACTION:
+    if os.environ.get("MAGNETRA_CURATED_11_RELEASE_ACTION")!=ACTION:
         print("EXPLICIT_CURATED_11_PAGING_50_OWNER_PRODUCTION_ACTION_MISSING")
         return 2
     try:
