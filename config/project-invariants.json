@@ -92,7 +92,8 @@
     ".github/workflows/0magnet-promote-verified-zero-20261025.yml",
     ".github/workflows/nonameclub-owner-readonly-20261025.yml",
     ".github/workflows/nonameclub-card-readonly-20261025.yml",
-    ".github/workflows/nonameclub-production-20261025.yml"
+    ".github/workflows/nonameclub-production-20261025.yml",
+    ".github/workflows/ios-pwa-safe-area-production-20261025.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
