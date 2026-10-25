@@ -174,7 +174,7 @@ def candidate_http(path,version,body=None):
     req=urllib.request.Request(BASE+path,method="POST" if body is not None else "GET",
                                data=data,headers=headers)
     try:
-        with urllib.request.build_opener(NoRedirect()).open(req,timeout=30 if data else 18) as response:
+        with urllib.request.build_opener(NoRedirect()).open(req,timeout=30 if data else 28 if path in POSITIVE_PATHS.values() else 18) as response:
             status,typ=response.status,response.headers.get("content-type","")
             raw=response.read(MAX_BYTES+1)
     except urllib.error.HTTPError as e:
@@ -221,7 +221,8 @@ def prove_original_positive_searches(version):
         if (status!=200 or not isinstance(rows,list) or not 1<=len(rows)<=100
             or not isinstance(stats,list) or len(stats)!=1 or
             stats[0].get("provider")!=provider or stats[0].get("ok") is not True
-            or stats[0].get("count")!=len(rows) or errors!=[]):
+            or stats[0].get("count")!=len(rows) or errors!=[] or
+            stats[0].get("cacheMode")=="stale"):
             raise Stop("SOURCE_"+provider.upper()+"_GENUINE_POSITIVE_NOT_PROVEN")
         for row in rows:
             magnet=row.get("magnet") if isinstance(row,dict) else None
