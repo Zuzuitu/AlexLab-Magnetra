@@ -295,7 +295,7 @@ def release():
     return 0
 
 def main():
-    if os.environ.get("MAGNETRA_NONAMECLUB_RELEASE_ACTION")!=ACTION:
+    if os.environ.get("MAGNETRA_IOS_PWA_RELEASE_ACTION")!=ACTION:
         print("EXPLICIT_IOS_PWA_OWNER_PRODUCTION_ACTION_MISSING")
         return 2
     try:
