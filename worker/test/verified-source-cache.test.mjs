@@ -47,3 +47,13 @@ test("unrelated provider traffic is unaffected by cache",async()=>{
  await c.search("knaben","ubuntu","all",f);
  assert.equal(calls,2);
 });
+
+test("a confirmed source-empty response retires its former positive cache",async()=>{
+ let now=0;const c=createVerifiedSourceCache(()=>now);
+ await c.search("thepiratebay","ubuntu","all",async()=>[{id:"tpb:1",name:"original"}]);
+ now=FRESH_MS+2;
+ const empty=await c.search("thepiratebay","ubuntu","all",async()=>[]);
+ assert.equal(empty.items.length,0);
+ now+=1;
+ await assert.rejects(()=>c.search("thepiratebay","ubuntu","all",async()=>{throw Error("provider HTTP 504")}),/504/);
+});
