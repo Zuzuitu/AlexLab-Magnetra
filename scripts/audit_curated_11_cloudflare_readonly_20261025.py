@@ -11,10 +11,10 @@ import sys
 import urllib.error
 import urllib.request
 
-from deploy_magnetra_auto_pause_once import ROOT, UUID, NoRedirect
+from deploy_magnetra_auto_pause_once import ROOT, UUID, NoRedirect, Stop as ReleaseStop
 from deploy_magnetra_zero_percent import _get_api, _current_deployment, _shares
 from inspect_companion_binding_readonly import (
-    account_list, verify_account_scripts, validated_source
+    account_list, verify_account_scripts, validated_source, Stop as AccountStop
 )
 from stage_therarbag_iphone_20261024 import verify_binding_payload
 
@@ -123,7 +123,7 @@ def run():
 def main():
     try:
         return run()
-    except (Stop, ValueError, TypeError, KeyError, UnicodeError, json.JSONDecodeError):
+    except (Stop, ReleaseStop, AccountStop, ValueError, TypeError, KeyError, UnicodeError, json.JSONDecodeError):
         print("CURATED_11_BASELINE_PREFLIGHT: STOP_UNVERIFIED_NO_WRITES",flush=True)
         return 1
 
