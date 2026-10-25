@@ -39,9 +39,9 @@ test("source-selection UI never treats all implemented adapters as verified work
  assert.ok(html.includes('id="selectAllProviders"'));
  assert.ok(html.includes('Selectează toate'));
  assert.ok(!html.includes('Selectează sursele verificate'));
- const hiddenMatch=src.match(/const hiddenIndexerIds=new Set\\((\\[[^\\n]*\\])\\);/);
- assert.ok(hiddenMatch);
- const hidden=JSON.parse(hiddenMatch[1]);
+ const hiddenLine=src.split("\n").find(line=>line.startsWith("const hiddenIndexerIds=new Set("));
+ assert.ok(hiddenLine);
+ const hidden=JSON.parse(hiddenLine.slice("const hiddenIndexerIds=new Set(".length,-2));
  assert.equal(hidden.length,35);
  for(const id of ["subsplease","ytsmx","animetosho","mikanproject"])assert.ok(hidden.includes(id));
  assert.ok(src.includes('const ids=selectableProviders().map(p=>p.id);'));
