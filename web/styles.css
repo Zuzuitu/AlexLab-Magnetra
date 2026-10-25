@@ -33,3 +33,17 @@
 .language-picker select:focus-visible{outline:2px solid #83a9ff;outline-offset:2px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:440px){.header-actions{gap:7px}.language-picker select{padding:8px 10px;min-width:60px}}
+
+/* iOS Add-to-Home-Screen standalone: the translucent status bar overlaps
+   the web viewport. Reserve its top safe area before the actual masthead.
+   No changes to ordinary Safari browser tabs or desktop page geometry. */
+@media (max-width:760px) and (display-mode:standalone){
+  .site-shell{padding-top:max(60px,env(safe-area-inset-top,0px))}
+}
+/* Older iOS builds expose navigator.standalone but may not match display-mode. */
+@media (max-width:760px){
+  html.ios-standalone .site-shell{padding-top:max(60px,env(safe-area-inset-top,0px))}
+  .masthead .header-actions{position:relative;z-index:1;flex-shrink:0}
+  .masthead #settingsButton{width:44px;height:44px;min-width:44px;min-height:44px}
+  .masthead #languageSelect{min-height:44px}
+}
