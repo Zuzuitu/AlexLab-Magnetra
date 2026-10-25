@@ -1,0 +1,21 @@
+name: Magnetra Public Repository Full History Exposure Audit
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exposure-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify project security invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Scan reachable public Git history and reject newly added IP literals (redacted)
+        env:
+          MAGNETRA_AUDIT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/audit_public_repo_history_20261025.py

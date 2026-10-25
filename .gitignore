@@ -26,3 +26,23 @@ local.properties
 **/credentials.json
 **/*-credentials.json
 worker/.wrangler-*-once.jsonc
+
+# Security audit: additional local secret and generated-data exclusions.
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+service-account*.json
+*.token
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.log
+*.ipa
+*.apk
+*.aab
+.wrangler/
+.cloudflare/
+.cloudflared/
+worker/.wrangler-*.jsonc
