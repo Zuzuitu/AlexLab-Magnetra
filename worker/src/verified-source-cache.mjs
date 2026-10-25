@@ -29,6 +29,7 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
   const work=(async()=>{
    try{
     const items=await fetchResults();
+    if(Array.isArray(items)&&items.length===0)entries.delete(k);
     if(Array.isArray(items)&&items.length>0&&items.length<=100){
      const size=JSON.stringify(items).length;
      if(size>0&&size<=MAX_SERIALIZED_BYTES){
