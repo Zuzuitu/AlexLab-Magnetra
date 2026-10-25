@@ -1,5 +1,14 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## SOURCE RESILIENCE PATCH — 25 OCTOBER 2026 — PR #209 (CODE ONLY, NOT DEPLOYED)
+
+Owner iPhone 18:44 screenshot confirms BTDigg 1/11 selected, zero results and BTDigg timeout; it does NOT show a separate ThePirateBay error response, so TPB's live cause remains unproven. Real source mismatch: `rock64/btdigg_gateway.py` has a 12-second source deadline, `worker/src/btdigg-rock64.mjs` has a 16-second tunnel budget, but shared `worker/src/legacy-adapters.mjs` cut off BTDigg at 11 seconds before the tunnel could legitimately finish. PR #209 increases ONLY BTDigg's upper bound to 18 seconds; all other legacy providers retain 11 seconds.
+
+Original-provider source result resilience uses an optional, bounded, same-isolate exact-query+category cache ONLY for BTDigg and ThePirateBay, populated by previously successful real adapters (never fabricated or another provider). 4min fresh, max 20min stale on one failed source request, max 12 entries/160KB each, single-flight, no source retries/alternate trackers/proxies or credentials. API warnings and UI RO/IT clearly mark stale results as **not live**. New SW cache v10, tests for cache expiry/provider isolation, no unintended removal of hidden 35/PWA visible 11, 50/page or 46 backend/Android identities.
+
+**State:** Source code PR only. Never claim live source recovery without independently verified production postflight, original provider positive samples and controlled immutable deployment 0%→5%→100% with rollback. No Rock64, tunnel, DNS, Cloudflare credentials, Flud or paid-service changes. Third-party uptime cannot be guaranteed, and empty cache cannot restore unknown/unavailable original results.
+
+
 ## VERIFIED LIVE CHECKPOINT — 25 OCT 2026 — OWNER-CORRECTED CURATED 11 INDEXERS / SELECT-DESELECT / 50-RESULT PAGES NOW ONLINE
 
 **This is the authoritative current state. Supersedes earlier headings that say the curated 11 PWA is merely prepared, remains at 0%, or still shows 45 selectable indexers in production. Preserve older stages as historical evidence, not current state.**
