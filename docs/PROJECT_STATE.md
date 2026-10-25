@@ -1,5 +1,14 @@
 # AlexLab Magnetra — Project State
 
+## LIVE PUBLICATION INCIDENT — 25 OCT 2026 — PWA 45/50 DIRECTLY DEPLOYED, PROGRESSIVE RELEASE NOT EXECUTED
+
+- **Verified actual deployment, not merely merged code:** GitHub Actions run [#40198390168](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40198390168) ran Wrangler's direct `deploy` successfully at main `eb3f3c13011e8321434d11a3fed8d38ded541336`; Wrangler reported deployed Worker version `8d9c19f4-ca38-428b-888e-757ef578c829`. Post-deploy HTTPS/PWA/API smoke and the 46-provider audit both concluded SUCCESS. The released source includes 45 selectable PWA indexers (SubsPlease omitted) and 50-result pagination. This is CI/Worker deploy evidence, **not** a new owner iPhone physical test.
+- **Progressive release DID NOT occur:** separate guarded workflow [#40198390119](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40198390119) failed in the approval-file step before checkout; all Cloudflare upload/percentage steps of that workflow were skipped. The generic `deploy-pwa.yml` instead interpreted a literal `[deploy-pwa]` appearing inside the explanatory commit body as an activation marker and bypassed the intended canary. Do not describe this release as 0→5→100 tested.
+- **Traffic and rollback caution:** the direct Wrangler publish had no independently checked, immutable 100/0 deployment snapshot after release. Its actual live traffic split, retained rollback version and full live asset hashes require read-only postflight verification before any new Cloudflare write. The old one-shot release script expects an obsolete pre-deploy baseline and MUST NOT be blindly re-run. Do not re-upload or perform a second promotion simply to repair this historical release order.
+- **Safeguard follow-up:** PR #200 (pending CI/review at time of this checkpoint) restricts push deploy activation to an explicit marker at the **start of the commit subject**, fixes checkout-before-owner-file validation, and adds read-only public JS/CSS/i18n/sw SHA verification. No production rollout or secret changes are part of PR #200. Future production releases still require guarded, independently checked staged/canary/release with rollback.
+- **Source of truth:** default branch, action logs, actual Cloudflare deployment and public assets must be independently checked at execution time. Treat all older release snapshots below as historical evidence, not current traffic.
+
+
 ## CURRENT OWNER DECISION — 25 OCT 2026 — 45 PWA INDEXERS AND 50-RESULT PAGES (CODE PREPARED, NOT DEPLOYED)
 
 **This current owner-approved interface specification overrides the historical 12-visible/34-hidden PWA picker rule below, but does not retroactively change historical release records or existing live Cloudflare traffic.**
