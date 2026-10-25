@@ -1,0 +1,59 @@
+# Postrelease incident evidence. READ ONLY: no Wrangler, no deploy, no magnets.
+name: Magnetra 45 Indexers Read-only Public Postflight
+on:
+  pull_request:
+    paths:
+      - scripts/audit_pwa_45_50_live_readonly_20261025.py
+      - scripts/test_audit_pwa_45_50_readonly_20261025.py
+      - .github/workflows/pwa-45-50-public-postflight-readonly-20261025.yml
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/pwa-45-50-postrelease-readonly-audit-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-postrelease-readonly-audit
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Offline safety and read-only audit regression checks
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_audit_pwa_45_50_readonly_20261025.py' -v
+  live-audit:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-pwa-postrelease-readonly-20261025]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify owner-approved event and read-only source
+        shell: bash
+        env:
+          EVENT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_audit_pwa_45_50_readonly_20261025.py' -v
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            [[ "$EVENT_MESSAGE" == *'[magnetra-pwa-postrelease-readonly-20261025]'* ]]
+            test -s docs/release-events/pwa-45-50-postrelease-readonly-audit-20261025.md
+          fi
+      - name: Check public static content and current Cloudflare deployment/bindings without writing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_pwa_45_50_live_readonly_20261025.py

@@ -95,7 +95,8 @@
       ".github/workflows/nonameclub-production-20261025.yml",
       ".github/workflows/ios-pwa-safe-area-production-20261025.yml",
       ".github/workflows/public-exposure-history-audit-20261025.yml",
-      ".github/workflows/pwa-45-indexers-50-production-20261025.yml"
+      ".github/workflows/pwa-45-indexers-50-production-20261025.yml",
+      ".github/workflows/pwa-45-50-public-postflight-readonly-20261025.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -990,7 +991,14 @@
       "previous_verified_active_version": "76a15eae-5c8c-41a2-bace-adb9b2460933",
       "previous_verified_rollback_version": "24642346-9db0-4cea-a56e-12e30f35569f",
       "current_cloudflare_split_must_be_reverified": true,
-      "production_activation_status": "NOT_TRIGGERED"
+      "production_activation_status": "STANDARD_DEPLOY_EXECUTED_WITHOUT_GUARDED_CANARY",
+      "actual_standard_deploy_run": 40198390168,
+      "actual_standard_deploy_conclusion": "success",
+      "intended_guarded_run": 40198390119,
+      "intended_guarded_conclusion": "failure_before_checkout",
+      "controlled_0_5_100_not_executed": true,
+      "postrelease_rollback_split_unverified": true,
+      "postrelease_readonly_audit_workflow": ".github/workflows/pwa-45-50-public-postflight-readonly-20261025.yml"
     }
   }
 }
