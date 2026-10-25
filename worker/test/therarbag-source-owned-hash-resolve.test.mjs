@@ -63,6 +63,66 @@ test("source-endorsed iTorrents .torrent link provides BTIH even when visible la
   assert.equal(magnetFromTheRarBgSourceMetadata(withSpan),"magnet:?xt=urn:btih:"+HASH);
 });
 
+// Public TheRarBg detail screenshot shows the action row labelled Torrent:
+// with Magnet Download, .torrent File, Copy Magnet and Info Hash. A hash
+// stored solely in that field's input value must be source-owned, never a
+// hash borrowed from the page's related posts or from scripts.
+const inputRow=(hash=HASH)=>"<table><tr><th>Torrent:</th><td>"+
+  "<a>Magnet Download</a> <a>.torrent File</a> <button>Copy Magnet</button>"+
+  "<div><strong>Info Hash:</strong> <input readonly value='"+hash+"'></div>"+
+  "</td></tr></table>";
+
+test("TheRarBg original Info Hash input value supplies a source-owned BTIH",()=>{
+  assert.equal(magnetFromTheRarBgInfoHash(inputRow()),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow()),"magnet:?xt=urn:btih:"+HASH);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow(HASH.toUpperCase())),
+    "magnet:?xt=urn:btih:"+HASH);
+});
+
+test("TheRarBg input fallback refuses unlabelled, unrelated, script-only, and malformed hashes",()=>{
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow().replace("Info Hash:","Other Hash:")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow().replace("Magnet Download","Other Action")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow().replace("Copy Magnet","Other Action")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow("z".repeat(40))),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata("<script>"+inputRow()+"</script>"),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(
+    "<h2>Similar Posts:</h2><div>Info Hash:<input value='"+HASH+"'></div>"),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(
+    inputRow().replace("<input readonly", "</td></tr><tr><td><input readonly")),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(
+    inputRow()+ "<input value='"+"b".repeat(40)+"'>"),
+    "magnet:?xt=urn:btih:"+HASH);
+});
+
+test("TheRarBg rejects ambiguous source input, text and cache-link evidence",()=>{
+  const second="b".repeat(40);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow()+inputRow(second)),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow()+"<p>Info Hash: "+second+"</p>"),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow()+cacheLink(second)),null);
+  assert.equal(magnetFromTheRarBgSourceMetadata(inputRow()+cacheLink()),"magnet:?xt=urn:btih:"+HASH);
+});
+
+test("one exact TheRarBg detail HTML input value resolves without other source requests",async()=>{
+  const prior=globalThis.HTMLRewriter;
+  class FakeHTMLRewriter {on(){return this} transform(response){return response}}
+  globalThis.HTMLRewriter=FakeHTMLRewriter;
+  let calls=0;
+  try{
+    const detailUrl="https://therarbg.com/post-detail/95bf8b/2026-10-20-cyberpunk-edgerunners-2-original-series-soundtrack-flac-44-1khz-24bit/";
+    const result=await resolveLegacy("therarbag",detailUrl,async(url,options)=>{
+      calls++;
+      assert.equal(url,detailUrl);
+      assert.equal(options.redirect,"manual");
+      return new Response(inputRow(),{status:200,headers:{"content-type":"text/html"}});
+    });
+    assert.equal(result.magnet,"magnet:?xt=urn:btih:"+HASH);
+    assert.equal(calls,1);
+  }finally{
+    if(prior===undefined)delete globalThis.HTMLRewriter;
+    else globalThis.HTMLRewriter=prior;
+  }
+});
+
 test("source-endorsed cache hash must agree with any labelled original hash",()=>{
   assert.equal(magnetFromTheRarBgSourceMetadata(cacheLink().replace("<input readonly value=''>",HASH)),
     "magnet:?xt=urn:btih:"+HASH);
