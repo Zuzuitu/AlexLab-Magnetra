@@ -18,6 +18,38 @@ const CATEGORIES=new Set(["all","movies","series","apps","games","books","music"
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:JSON_HEADERS});
 function error(message,status=400){return json({error:message},status);}
+
+// Exact, method-scoped routes only. Public health/catalog and PWA assets are untouched.
+// Cloudflare's Rate Limiting API is per-location, approximate and keyed by
+// the edge-supplied client address + route (never a token, query, or magnet).
+const GUARDED_API_ROUTES=new Set([
+ "GET /api/search",
+ "POST /api/resolve",
+ "POST /api/companion/magnet",
+ "POST /api/companion/status"
+]);
+async function apiRateLimit(request,pathname,env){
+ if(!GUARDED_API_ROUTES.has(request.method+" "+pathname))return null;
+ const limiter=env?.MAGNETRA_API_RATE;
+ // Preserve existing offline tests/local development without an injected binding.
+ // Production deploy MUST include MAGNETRA_API_RATE in wrangler.jsonc.
+ if(!limiter)return null;
+ if(typeof limiter.limit!=="function")
+   return error("API protection is unavailable.",503);
+ const actor=request.headers.get("cf-connecting-ip")||"unknown";
+ try{
+   const decision=await limiter.limit({key:request.method+":"+pathname+":"+actor});
+   if(decision?.success===true)return null;
+   if(decision?.success===false)return new Response(
+     JSON.stringify({error:"Too many requests. Try again shortly."}),
+     {status:429,headers:{...JSON_HEADERS,"retry-after":"60"}}
+   );
+   return error("API protection is unavailable.",503);
+ }catch{
+   // No raw exceptions, client IPs, tokens or gateway configuration in responses.
+   return error("API protection is unavailable.",503);
+ }
+}
 async function safeBody(request,max=15000){
   if(Number(request.headers.get("content-length")||0)>max)throw Error("request too large");
   const t=await request.text();
@@ -194,6 +226,8 @@ async function companion(request,action,env){
 export default {
  async fetch(request,env){
    const url=new URL(request.url);
+   const denied=await apiRateLimit(request,url.pathname,env);
+   if(denied)return denied;
    if(url.pathname==="/api/health" && request.method==="GET")return json({ok:true,product:"AlexLab Magnetra",ported:PROVIDERS.filter(x=>x.ported).length,total:PROVIDERS.length});
    if(url.pathname==="/api/providers" && request.method==="GET")return json({providers:PROVIDERS.map(p=>({...p,lastAudit:auditFor(p.id),recovery:recoveryFor(p.id)})),audit:{observedAt:SOURCE_AUDIT.observedAt,query:SOURCE_AUDIT.query,workflowRunId:SOURCE_AUDIT.workflowRunId}});
    if(url.pathname==="/api/recovery-plan" && request.method==="GET")return json({summary:recoverySummary(),providers:recoveryPlan()});
