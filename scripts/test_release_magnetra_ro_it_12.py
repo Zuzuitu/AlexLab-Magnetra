@@ -30,10 +30,18 @@ class ReleaseGuards(unittest.TestCase):
             current.assert_not_called()
             deploy.assert_not_called()
 
-    def test_reviewed_ro_it_and_exact_12_picker_source(self):
-        cfg=m.guard_source()
-        self.assertEqual(cfg["name"],"alexlab-magnetra")
-        self.assertEqual(cfg["assets"]["binding"],"ASSETS")
+    def test_historical_12_picker_release_must_refuse_current_45_picker(self):
+        # Historical one-shot deployment must NEVER upload a new 45-indexer
+        # UI under the obsolete 12-indexer activation marker.
+        with self.assertRaisesRegex(m.Stop,"REVIEWED_RO_IT_12_PICKER_SOURCE_MISMATCH"):
+            m.guard_source()
+
+    def reviewed_historical_config(self):
+        # Synthetic reviewed baseline for offline rollout/rollback simulations.
+        # The actual guard_source above always remains fail-closed on current main.
+        return {"name":"alexlab-magnetra","main":"src/index.mjs",
+                "routes":[{"pattern":"index.alexlab.media","custom_domain":True}],
+                "assets":{"directory":"../web","binding":"ASSETS"}}
 
     def test_unexpected_live_split_must_not_upload(self):
         with patch.object(m,"current",side_effect=m.Stop("UNKNOWN_LIVE_SPLIT")), \
@@ -44,7 +52,8 @@ class ReleaseGuards(unittest.TestCase):
             write.assert_not_called()
 
     def test_positive_stage_canary_full_checks_i18n_and_46_catalog(self):
-        with patch.object(m,"current",return_value=DEP0) as current, \
+        with patch.object(m,"guard_source",return_value=self.reviewed_historical_config()), \
+             patch.object(m,"current",return_value=DEP0) as current, \
              patch.object(m,"bindings"), patch.object(m,"old_js_guard") as sha, \
              patch.object(m,"stable"),patch.object(m,"upload_version",return_value=NEW), \
              patch.object(m,"_wrangler_deploy",side_effect=[True,True,True]) as writes, \
@@ -67,7 +76,8 @@ class ReleaseGuards(unittest.TestCase):
             self.assertEqual([c.args[0] for c in catalog.call_args_list],[NEW,None])
 
     def test_new_assets_mismatch_ends_before_canary(self):
-        with patch.object(m,"current",return_value=DEP0), \
+        with patch.object(m,"guard_source",return_value=self.reviewed_historical_config()), \
+             patch.object(m,"current",return_value=DEP0), \
              patch.object(m,"bindings"),patch.object(m,"old_js_guard"), \
              patch.object(m,"stable"),patch.object(m,"upload_version",return_value=NEW), \
              patch.object(m,"_wrangler_deploy",return_value=True) as writes, \
