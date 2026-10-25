@@ -23,5 +23,34 @@ class Tests(unittest.TestCase):
             with self.assertRaises(release.Stop):
                 release.candidate_http(path, "11111111-1111-4111-8111-111111111111")
 
+    def test_real_positive_results_must_belong_to_each_original_source(self):
+        magnet = "magnet:?xt=urn:btih:" + "a" * 40
+        def positive(path, version):
+            self.assertEqual(version, "11111111-1111-4111-8111-111111111111")
+            provider = {v: k for k, v in release.POSITIVE_PATHS.items()}[path]
+            return (200, {
+                "results": [{"provider": provider, "name": "Ubuntu", "magnet": magnet}],
+                "stats": [{"provider": provider, "count": 1, "ok": True}],
+                "errors": [],
+            })
+        with patch.object(release, "candidate_http", side_effect=positive) as probe:
+            release.prove_original_positive_searches("11111111-1111-4111-8111-111111111111")
+            self.assertEqual(probe.call_count, 2)
+
+    def test_stale_or_misattributed_results_do_not_authorize_deploy(self):
+        magnet = "magnet:?xt=urn:btih:" + "b" * 40
+        source = {"results": [{"provider": "btdigg", "name": "Ubuntu", "magnet": magnet}],
+                  "stats": [{"provider": "btdigg", "count": 1, "ok": True,
+                             "cacheMode": "stale"}],
+                  "errors": []}
+        with patch.object(release, "candidate_http", return_value=(200, source)):
+            with self.assertRaises(release.Stop):
+                release.prove_original_positive_searches("11111111-1111-4111-8111-111111111111")
+        source["stats"][0].pop("cacheMode")
+        source["results"][0]["provider"] = "thepiratebay"
+        with patch.object(release, "candidate_http", return_value=(200, source)):
+            with self.assertRaises(release.Stop):
+                release.prove_original_positive_searches("11111111-1111-4111-8111-111111111111")
+
 if __name__ == "__main__":
     unittest.main()
