@@ -32,12 +32,15 @@ test("provider endpoint conveys timestamped audit metadata and all 46 source sta
 test("source-selection UI never treats all implemented adapters as verified working",()=>{
  const src=readFileSync(new URL("../../web/app.js",import.meta.url),"utf-8");
  const html=readFileSync(new URL("../../web/index.html",import.meta.url),"utf-8");
- assert.match(src,/id="selectWorking"|\$\("selectWorking"\)/);
+ assert.doesNotMatch(src,/id="selectWorking"|\$\("selectWorking"\)/);
  assert.match(src,/p\.lastAudit\?\.state==="results"/);
  assert.match(src,/\$\("selectAllProviders"\)/);
  assert.ok(!src.includes('state.selected=new Set(state.providers.filter(p=>p.ported).map(p=>p.id));\n  save(STORAGE.selected,[...state.selected]);renderProviders();updateProviderCount();\n });'),"old misleading Select working handler is forbidden");
  assert.ok(html.includes('id="selectAllProviders"'));
- assert.ok(html.includes('Selectează sursele verificate'));
+ assert.ok(html.includes('Selectează toate'));
+ assert.ok(!html.includes('Selectează sursele verificate'));
+ assert.ok(src.includes('const hiddenIndexerIds=new Set(["subsplease"])'));
+ assert.ok(src.includes('const ids=selectableProviders().map(p=>p.id);'));
  assert.ok(!html.includes('not live uptime'), 'audit diagnostics are not displayed in the UI');
 });
 
