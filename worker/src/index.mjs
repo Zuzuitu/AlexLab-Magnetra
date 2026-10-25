@@ -8,6 +8,7 @@ import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {filterRelevance} from "./query-relevance.mjs";
 import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
+import {verifiedSourceCache} from "./verified-source-cache.mjs";
 import {rock64EZTVFetcher} from "./eztv-rock64.mjs";
 import {rock64HtmlFetcher} from "./html-rock64.mjs";
 
@@ -43,16 +44,18 @@ async function getSearch(url,env) {
    if(ids.includes(id))htmlFetchers[id]=rock64HtmlFetcher(id,env);
  }
  catch(e){return error(String(e?.message||e),503);}
- const results=[],errors=[],stats=[];
+ const results=[],errors=[],stats=[],warnings=[];
  // Bounded concurrency reduces load on providers and keeps resource consumption predictable.
  for(let i=0;i<ids.length;i+=3){
    const batch=await Promise.all(ids.slice(i,i+3).map(async id=>{
      try {
        const sourceFetch=id==="btdigg"&&btdiggFetcher?btdiggFetcher:
         id==="eztvx"&&eztvFetcher?eztvFetcher:htmlFetchers[id]||fetch;
-       const found=await searchProvider(id,q,category,sourceFetch);
+       const {items:found,cache}=await verifiedSourceCache.search(id,q,category,
+         ()=>searchProvider(id,q,category,sourceFetch));
        const {matches,excluded}=filterRelevance(found,q);
-       return {provider:id,results:matches,count:matches.length,rawCount:found.length,excluded};
+       return {provider:id,results:matches,count:matches.length,
+         rawCount:found.length,excluded,cache};
      } catch(e){
        const reason=classifyProviderError(e);
        return {provider:id,results:[],count:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
@@ -61,14 +64,20 @@ async function getSearch(url,env) {
    }));
    for(const item of batch){
      stats.push({provider:item.provider,count:item.count,rawCount:item.rawCount,
-       excludedOffTopic:item.excluded,ok:!item.error});
+       excludedOffTopic:item.excluded,ok:!item.error,
+       ...(item.cache?{cacheMode:item.cache.mode,cacheAgeSeconds:item.cache.ageSeconds}: {})});
      if(item.error)errors.push({provider:item.provider,error:item.error,
        code:item.code,message:item.message,retryable:item.retryable,openUrl:item.openUrl});
-     results.push(...item.results);
+     if(item.cache?.mode==="stale"){
+       warnings.push({provider:item.provider,code:"CACHED_AFTER_SOURCE_FAILURE",
+         ageSeconds:item.cache.ageSeconds});
+     }
+     results.push(...item.results.map(row=>item.cache
+       ?{...row,cachedAgeSeconds:item.cache.ageSeconds}:row));
    }
  }
  // Preserve source identities and identical hashes across providers for traceability.
- return json({query:q,category,results,stats,errors,total:results.length,
+ return json({query:q,category,results,stats,errors,warnings,total:results.length,
    excludedOffTopic:stats.reduce((sum,item)=>sum+item.excludedOffTopic,0)});
 }
 // SHA-256 fingerprint of an already-validated public detail link; no raw

@@ -104,7 +104,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set()};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[]};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -468,6 +468,11 @@ function renderResults(){
    for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?tr("{n} seeders",{n:item.seeders}):null,item.peers!==null&&item.peers!==undefined?tr("{n} peers",{n:item.peers}):null,item.date?String(item.date).slice(0,10):null]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));
    }
+   if(Number.isFinite(item.cachedAgeSeconds)){
+    info.append(el("span","meta-dot","·"),
+     el("span","",tr("Saved source result ({n} min old)",{
+      n:Math.max(1,Math.ceil(item.cachedAgeSeconds/60))})));
+   }
    body.append(title,info);
    const actions=el("div","result-actions");
    const sendButton=addAction(actions,companionLabels.get(item.id)||tr("Send to Flud"),function(){sendMagnet(item,this)},"send");
@@ -501,11 +506,25 @@ function renderResults(){
    card.append(body,actions);root.append(card);
  }
 }
-function renderProviderErrors(failures){
+function renderProviderErrors(failures,warnings=[]){
  const root=$("providerErrors");root.replaceChildren();
  // Hidden indexers never appear in the failure/alternative panel either.
  const visibleFailures=failures.filter(f=>!hiddenIndexerIds.has(f.provider));
- if(!visibleFailures.length)return;
+ const visibleWarnings=warnings.filter(w=>!hiddenIndexerIds.has(w.provider)&&
+  w.code==="CACHED_AFTER_SOURCE_FAILURE"&&Number.isFinite(w.ageSeconds));
+ if(!visibleFailures.length&&!visibleWarnings.length)return;
+ if(!visibleFailures.length){
+  const notice=el("div","failed-sources",
+   tr("Saved authentic results shown because the source is temporarily unavailable."));
+  for(const warning of visibleWarnings){
+   const name=state.providers.find(p=>p.id===warning.provider)?.name||warning.provider;
+   notice.append(el("p","failed-sources-note",
+    tr("{source}: saved results from {n} minutes ago; not live.",{
+     source:name,n:Math.max(1,Math.ceil(warning.ageSeconds/60))})));
+  }
+  root.append(notice);
+  return;
+ }
  const details=el("details","failed-sources");
  if(visibleFailures.length<=2)details.open=true;
  const summary=el("summary","failed-sources-title",tr("{n} source(s) unavailable · See alternatives",{n:visibleFailures.length}));
@@ -554,6 +573,12 @@ function renderProviderErrors(failures){
   }else search();
  });
  details.append(alternatives);
+ for(const warning of visibleWarnings){
+  const name=state.providers.find(p=>p.id===warning.provider)?.name||warning.provider;
+  details.append(el("p","failed-sources-note",
+   tr("{source}: saved results from {n} minutes ago; not live.",{
+    source:name,n:Math.max(1,Math.ceil(warning.ageSeconds/60))})));
+ }
  root.append(details);
 }
 async function search(){
@@ -567,7 +592,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast(tr("Select at least one indexer."));return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.excludedOffTopic=0;
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.excludedOffTopic=0;state.cacheWarnings=[];
  $("searchButton").disabled=false;$("searchButton").textContent=tr("Cancel search ×");
  $("notice").textContent=tr("Searching {n} indexers…",{n:ids.length});$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -594,6 +619,7 @@ async function search(){
      const quality=(data.stats||[]).find(s=>s.provider===id);
      state.excludedOffTopic+=Math.max(0,Number(quality?.excludedOffTopic)||0);
      for(const e of data.errors||[])failures.push(e);
+     for(const w of data.warnings||[])state.cacheWarnings.push(w);
      const observed=(data.stats||[]).find(s=>s.provider===id);
      if(observed)state.sessionAudit[id]={
       state:observed.ok?(observed.count>0?"results":"empty-unverified"):"error",
@@ -622,7 +648,7 @@ async function search(){
     renderResults();
     renderProviders(); // Update session-only observations; no extra provider calls.
     $("notice").textContent=tr("Searched {done}/{all} indexers · {n} relevant matches.",{done:completed,all:ids.length,n:state.items.length});
-    renderProviderErrors(failures);
+    renderProviderErrors(failures,state.cacheWarnings);
    }
   }));
   if(!controller.signal.aborted){
