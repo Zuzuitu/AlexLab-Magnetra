@@ -3,6 +3,9 @@ import {LEGACY_SPECS,legacySearchUrl} from "./legacy-specs.mjs";
 
 const MAX_HTML = 3_000_000;
 const TIMEOUT = 11_000;
+// Rock64's original BTDigg upstream has a 12s budget, the protected tunnel 16s.
+// Only BTDigg requires a longer outer deadline; other 45 adapters retain 11s.
+const BTDIGG_WORKER_TIMEOUT = 18_000;
 function allowedExternal(url,host,base=host) {
   // Absent optional anchors must remain absent. URL(undefined, base)
   // otherwise synthesizes a same-origin "/undefined" link, which NoNameClub
@@ -34,10 +37,12 @@ function fromHashUrl(url,kind){
   }
   return null;
 }
-export async function safeProviderHtml(url,options={},fetcher=fetch){
+export async function safeProviderHtml(url,options={},fetcher=fetch,timeoutMs=TIMEOUT){
+  if(!Number.isInteger(timeoutMs)||timeoutMs<1_000||timeoutMs>BTDIGG_WORKER_TIMEOUT)
+    throw Error("Invalid bounded provider timeout");
   const res=await fetchProviderSameOrigin(url,{
     ...options,redirect:"manual",
-    signal:AbortSignal.timeout(TIMEOUT),
+    signal:AbortSignal.timeout(timeoutMs),
     headers:{...SOURCE_HEADERS,"accept":"text/html,application/xhtml+xml",...(options.headers||{})}
   },fetcher);
   if(!res.ok)throw Error("provider HTTP "+res.status);
@@ -93,7 +98,8 @@ export async function legacySearch(id,query,category,fetcher=fetch){
     options={method:"POST",headers:{"X-Requested-With":"XMLHttpRequest","accept":"application/json"}};
   }
   if(spec.headers)options.headers={...(options.headers||{}),...spec.headers};
-  let html=await safeProviderHtml(url,options,fetcher);
+  let html=await safeProviderHtml(url,options,fetcher,
+    id==="btdigg"?BTDIGG_WORKER_TIMEOUT:TIMEOUT);
   if(spec.method==="POST_JSON_HTML"){
     let obj;try{obj=JSON.parse(html);}catch{throw Error("provider returned invalid JSON");}
     if(typeof obj?.contenido!=="string")throw Error("provider JSON missing contenido HTML");
