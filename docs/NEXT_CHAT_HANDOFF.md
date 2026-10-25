@@ -1,5 +1,10 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 25 OCT 2026 — CURATED 11 STAGED IMMUTABLE RECOVERED IN READ-ONLY TEST; VERSION-ONLY RESUME READY
+
+Run #40215194370: exact old 8d9c@100, new 7475 immutable uploaded and zero-slot @0 PASS, immediate candidate verification did not complete; no 5/100 activation. New GET-only run #40215819101 subsequently showed **old 8d9c@100 / candidate 7475@0**, four binding types, exact app/CSS/i18n/sw/HTML, health and 46 original provider IDs **ALL PASS**. The first transient failure stage/root cause is not proven; do not reupload just to fix timing. Owner continuation authorizes separately gated version-only 0→5→100 using existing candidate, with original NoNameClub magnet E2E before canary and old active retained as rollback. Publication is pending the guarded resume run result, not yet proven live.
+
+
 ## CURATED 11/50 GUARDED RELEASE STOPPED SAFELY AT 0% — 25 OCT 2026
 
 GitHub Actions #40215194370: source and exact old `8d9c19f4…@100%` preflight PASS; new candidate immutable `74754dac-1842-47b2-8e6f-92a10731f124` uploaded with four binding types PASS; 0% staging PASS. Next candidate verification did not complete. No verified 5% or 100% promotion. Do NOT rerun upload/whole workflow. Prepare GET-only inspection of static candidate assets and original catalog; keep source and results private, do not change production or assert rollback without independent GET.

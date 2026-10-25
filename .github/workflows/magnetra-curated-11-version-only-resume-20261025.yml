@@ -1,0 +1,52 @@
+name: Magnetra Curated 11 Version Only Resume (GUARDED)
+on:
+  pull_request:
+    paths:
+      - scripts/resume_curated_11_immutable_20261025.py
+      - scripts/test_resume_curated_11_immutable_20261025.py
+      - .github/workflows/magnetra-curated-11-version-only-resume-20261025.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/magnetra-curated-11-version-only-resume-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-project-invariants.py
+      - run: python3 -m unittest discover -s scripts -p 'test_resume_curated_11_immutable_20261025.py' -v
+  resume:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, '[magnetra-curated-11-version-only-resume-20261025] ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Owner-approved immutable source, invariants and offline resume checks
+        run: |
+          set -euo pipefail
+          test -s docs/release-events/magnetra-curated-11-version-only-resume-20261025.md
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_resume_curated_11_immutable_20261025.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify original PWA/provider and Companion contracts
+        run: node --test worker/test/*.test.mjs
+      - name: Version-only 0 percent to 5 percent to 100 percent, rollback guarded
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_CURATED_11_RESUME_ACTION: CONFIRM_CURATED_11_VERSION_ONLY_RESUME_20261025
+        run: python3 scripts/resume_curated_11_immutable_20261025.py
