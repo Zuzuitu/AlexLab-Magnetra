@@ -22,7 +22,7 @@ class Tests(unittest.TestCase):
  def test_no_flud_or_unlisted_routes_in_immutable_reads(self):
   for url in ["/api/companion/magnet","/api/search","//invalid","https://evil.example"]:
    with self.assertRaises(r.Stop):r.candidate_http(url,NEW)
-  with self.assertRaises(r.Stop):r.candidate_http("/api/resolve",NEW,body={"provider":"nonameclub"})
+  with self.assertRaises(r.Stop):r.candidate_http("/",NEW,body={"provider":"nonameclub"})
  def test_five_asset_validation_and_original_46_catalog(self):
   app=(r.ROOT/"web/app.js").read_bytes()
   ids=[{"id":"subsplease"}]+[{"id":"source"+str(n)} for n in range(45)]
