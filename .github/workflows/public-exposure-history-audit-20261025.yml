@@ -1,0 +1,23 @@
+name: Magnetra Public Repository Full History Exposure Audit
+on:
+  pull_request:
+    paths:
+      - scripts/audit_public_repo_history_20261025.py
+      - .github/workflows/public-exposure-history-audit-20261025.yml
+      - config/project-invariants.json
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exposure-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify project security invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Scan reachable public Git history (strictly redacted summary)
+        run: python3 scripts/audit_public_repo_history_20261025.py
