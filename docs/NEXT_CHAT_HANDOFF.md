@@ -1,5 +1,13 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## POSTRELEASE FACTS — 25 OCT 2026 — 45 INDEXERS / 50 RESULTS PUBLICATION AND READ-ONLY AUDIT
+
+- **Source:** PR #196 merged, `main` commit `c962da6d7a2e44df8846012c2001cefcade7c41c`; 45 PWA-selectable indexers, SubsPlease excluded, one Select All action, client-side pagination of 50. Backend/Android registry retains 46 adapters. GitHub tests passed.
+- **Production action observed, not the intended release sequence:** PR #197 added a fail-closed immutable 0%→5%→100% release. PR #198 then created an explicit activation commit `eb3f3c13011e8321434d11a3fed8d38ded541336`. The guarded run **#40198390119 failed before checkout**, because the event-file existence check preceded `actions/checkout`; it executed no Cloudflare deployment steps. Independently, the pre-existing generic `deploy-pwa.yml` workflow saw the activation message's substring `[deploy-pwa]` inside its text and **did deploy directly**, run **#40198390168 success**. That run passed 189 Node tests, production HTTPS/manifest/health/catalog smoke and a 46-source benign audit (15 results / 15 empty-unverified / 16 provider errors / 0 request errors). A generic successful deployment does **not** prove a preserved zero-percent rollback slot or an immutable staged canary.
+- **Postrelease recovery:** rectify the guarded workflow checkout ordering but do not rerun the production activation. A separate dedicated **read-only** workflow (no stage/deploy or magnet sending) verifies five exact public asset SHA-256 values, the unchanged 46-entry API catalog, the account + four existing runtime bindings, the actual active immutable version and the live deployment split. Refuse conclusions if these cannot be confirmed. Treat existing Cloudflare split and rollback retention as **UNVERIFIED until this audit completes**. No request to revert or shift traffic is authorized by this checkpoint.
+- **Acceptance:** online publication was observed via GitHub Actions and public smoke, but the physical owner iPhone UI test remains pending. Never label 45 source adapters as 45 working sources; published health audit is one dated benign sample, not a live source guarantee.
+
+
 ## CURRENT OWNER DECISION — 25 OCT 2026 — 45 PWA INDEXERS AND 50-RESULT PAGES (CODE PREPARED, NOT DEPLOYED)
 
 **This current owner-approved interface specification overrides the historical 12-visible/34-hidden PWA picker rule below, but does not retroactively change historical release records or existing live Cloudflare traffic.**
