@@ -1,0 +1,57 @@
+# New release-only workflow. Never reuse the obsolete 45/50 baseline.
+name: Magnetra Curated 11 and 50 Results (GUARDED PRODUCTION)
+on:
+  pull_request:
+    paths:
+      - scripts/release_curated_11_indexers_50_20261025.py
+      - scripts/test_release_curated_11_indexers_50_20261025.py
+      - .github/workflows/magnetra-curated-11-50-production-20261025.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/magnetra-curated-11-production-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-project-invariants.py
+      - run: python3 -m unittest discover -s scripts -p 'test_release_curated_11_indexers_50_20261025.py' -v
+  guarded-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, '[magnetra-curated-11-owner-release-20261025] ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check owner activation file, source and unit guard
+        run: |
+          set -euo pipefail
+          test -s docs/release-events/magnetra-curated-11-production-20261025.md
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_curated_11_indexers_50_20261025.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Provider, PWA and protected Companion tests
+        run: node --test worker/test/*.test.mjs
+      - name: Validate reviewed bundle without publishing
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Immutable stage, 0 percent, 5 percent, 100 percent; guarded rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_CURATED_11_RELEASE_ACTION: CONFIRM_MAGNETRA_CURATED_11_PRODUCTION_20261025
+        run: |
+          set -euo pipefail
+          python3 scripts/release_curated_11_indexers_50_20261025.py
