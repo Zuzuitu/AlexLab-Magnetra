@@ -1,6 +1,11 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
-## CURRENT AUTHORITATIVE CHECKPOINT — 25 OCT 2026 — NONAMECLUB FIX NOW LIVE AT 100%; IPHONE ACCEPTANCE PENDING
+## CURRENT AUTHORITATIVE CHECKPOINT — 25 OCT 2026 — NONAMECLUB FIX LIVE AND OWNER-ACCEPTED; PUBLIC REPO SECURITY GUARD ACTIVE
+
+**LATEST OWNER ACCEPTANCE (after 100% release):** Owner physically retested the NoNameClub source on iPhone and confirmed it works. This supersedes all older lines stating physical post-release acceptance is pending. Do not request a redundant retest unless a new regression occurs.
+
+**SECURITY CHECKPOINT:** Public repository audit on 25 Oct found two tracked documentation files containing private LAN address literals; these were redacted from current `main` by merged [PR #185](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/185), commit `9d1b0c2200cf877de813e9c4c71797468768190a`. The same PR adds sensitive-file `.gitignore` coverage and a sanitized current-tree secret/private-address guard under canonical Technical memory invariants; no Cloudflare/Rock64/Flud/DNS changes. A separate [PR #184](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/184) ran an extensive read-only full Git-history audit (7,249 blobs, no high-confidence credential/key formats detected), but is still OPEN and must be reconciled with PR #185 before integrating its ongoing history workflow. Historical LAN addresses remain retrievable in old Git objects despite current docs redaction. Public gateway hostnames are intentional technical metadata, not proof of exposing the residential public IP. `main` branch protection/rulesets were not enabled at the time of audit; configure PR+CI protection separately.
+
 
 **This supersedes all earlier headings claiming the NoNameClub fix is staged, not approved, or not online. Those headings below are historical only.**
 
