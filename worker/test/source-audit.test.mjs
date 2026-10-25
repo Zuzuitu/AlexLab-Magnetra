@@ -39,7 +39,11 @@ test("source-selection UI never treats all implemented adapters as verified work
  assert.ok(html.includes('id="selectAllProviders"'));
  assert.ok(html.includes('Selectează toate'));
  assert.ok(!html.includes('Selectează sursele verificate'));
- assert.ok(src.includes('const hiddenIndexerIds=new Set(["subsplease"])'));
+ const hiddenMatch=src.match(/const hiddenIndexerIds=new Set\\((\\[[^\\n]*\\])\\);/);
+ assert.ok(hiddenMatch);
+ const hidden=JSON.parse(hiddenMatch[1]);
+ assert.equal(hidden.length,35);
+ for(const id of ["subsplease","ytsmx","animetosho","mikanproject"])assert.ok(hidden.includes(id));
  assert.ok(src.includes('const ids=selectableProviders().map(p=>p.id);'));
  assert.ok(!html.includes('not live uptime'), 'audit diagnostics are not displayed in the UI');
 });
