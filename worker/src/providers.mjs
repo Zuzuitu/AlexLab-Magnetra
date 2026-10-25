@@ -7,6 +7,9 @@ import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "./html-adapters.mjs";
 // These adapters intentionally use fixed endpoints, never a user-selected proxy URL.
 const MAX_RESULTS = 100;
 const REQUEST_TIMEOUT_MS = 11000;
+// ThePirateBay uses its original apibay.org endpoint; grant only this public API
+// a slightly longer bounded deadline without affecting the other 45 adapters.
+const TPB_API_TIMEOUT_MS = 16000;
 const KNABEN_CATEGORIES = { music:1000000,series:2000000,movies:3000000,apps:4000000,porn:5000000,anime:6000000,games:7000000,books:9000000,other:10000000 };
 
 function clean(value) { return String(value ?? "").trim(); }
@@ -48,10 +51,12 @@ function normalize(item,provider) {
   };
 }
 const parsed=(xs,id)=>xs.map(x=>normalize(x,id)).filter(Boolean).slice(0,MAX_RESULTS);
-async function requestJson(url, options={}, fetcher=fetch) {
+async function requestJson(url, options={}, fetcher=fetch,timeoutMs=REQUEST_TIMEOUT_MS) {
+  if(!Number.isInteger(timeoutMs)||timeoutMs<1000||timeoutMs>TPB_API_TIMEOUT_MS)
+    throw Error("Invalid bounded JSON API timeout");
   const response=await fetchProviderSameOrigin(url,{
     ...options,
-    signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal:AbortSignal.timeout(timeoutMs),
     headers:{...SOURCE_HEADERS,"accept":"application/json",...(options.headers||{})}
   },fetcher);
   if(!response.ok)throw Error("provider HTTP "+response.status);
@@ -116,7 +121,7 @@ export const adapters=Object.freeze({
   },
   async thepiratebay(q,category,fetcher) {
     const t={apps:300,books:601,games:400,movies:200,series:200,music:101,porn:500,other:600};
-    const d=await requestJson("https://apibay.org/q.php?q="+encodeURIComponent(q)+"&cat="+(t[category]||0),{},fetcher);
+    const d=await requestJson("https://apibay.org/q.php?q="+encodeURIComponent(q)+"&cat="+(t[category]||0),{},fetcher,TPB_API_TIMEOUT_MS);
     if(!Array.isArray(d))throw Error("unexpected TPB response shape");
     return parsed(d.filter(x=>x.name!=="No results returned").map(x=>({id:x.id,name:x.name,magnet:magnetFromHash(x.info_hash),size:bytes(x.size),seeders:x.seeders,peers:x.leechers,date:x.added?new Date(Number(x.added)*1000).toISOString():null,details:"https://thepiratebay.org/description.php?id="+encodeURIComponent(x.id)})),"thepiratebay");
   },
