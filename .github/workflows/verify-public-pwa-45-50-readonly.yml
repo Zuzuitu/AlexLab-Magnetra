@@ -1,0 +1,21 @@
+name: Verify Live Magnetra PWA Assets (READ ONLY)
+on:
+  pull_request:
+    paths:
+      - .github/workflows/deploy-pwa.yml
+      - .github/workflows/pwa-45-indexers-50-production-20261025.yml
+      - .github/workflows/verify-public-pwa-45-50-readonly.yml
+      - scripts/check_public_pwa_45_50_readonly.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-public:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-project-invariants.py
+      - run: python3 scripts/check_public_pwa_45_50_readonly.py
