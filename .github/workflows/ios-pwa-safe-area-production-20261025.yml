@@ -4,7 +4,7 @@ on:
     paths:
       - scripts/release_ios_pwa_safe_area_20261025.py
       - scripts/test_release_ios_pwa_safe_area_20261025.py
-      - .github/workflows/nonameclub-production-20261025.yml
+      - .github/workflows/ios-pwa-safe-area-production-20261025.yml
   push:
     branches: [main]
     paths:
@@ -27,7 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check-project-invariants.py
-          python3 -m unittest discover -s scripts -p 'test_release_nonameclub_source_fix_20261025.py' -v
+          python3 -m unittest discover -s scripts -p 'test_release_ios_pwa_safe_area_20261025.py' -v
   guarded-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-ios-pwa-safearea-owner-approve-production-20261025]')
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check-project-invariants.py
-          python3 -m unittest discover -s scripts -p 'test_release_nonameclub_source_fix_20261025.py' -v
+          python3 -m unittest discover -s scripts -p 'test_release_ios_pwa_safe_area_20261025.py' -v
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
