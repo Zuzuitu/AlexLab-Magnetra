@@ -18,7 +18,7 @@ class TestReadOnly(unittest.TestCase):
 
     def test_single_active_and_rollback_slot(self):
         payload={"id":"deployment-a"}
-        with patch.object(a,"_get_api",side_effect=[{"result":{"deployments":[{"id":"deployment-a","created_on":"2026-10-25T00:00:00Z","versions":[{"version_id":ACTIVE,"percentage":100},{"version_id":ZERO,"percentage":0}]}],"success":True}},{"success":True},{"success":True},{"result":{"deployments":[{"id":"deployment-a","created_on":"2026-10-25T00:00:00Z","versions":[{"version_id":ACTIVE,"percentage":100},{"version_id":ZERO,"percentage":0}]}],"success":True}}]),patch.object(a,"verify_binding_payload") as bindings:
+        with patch.object(a,"_get_api",side_effect=[{"success":True,"result":{"deployments":[{"id":"deployment-a","created_on":"2026-10-25T00:00:00Z","versions":[{"version_id":ACTIVE,"percentage":100},{"version_id":ZERO,"percentage":0}]}]}},{"success":True},{"success":True},{"success":True,"result":{"deployments":[{"id":"deployment-a","created_on":"2026-10-25T00:00:00Z","versions":[{"version_id":ACTIVE,"percentage":100},{"version_id":ZERO,"percentage":0}]}]}}]),patch.object(a,"verify_binding_payload") as bindings:
             active,zero=a.observe_split()
             self.assertEqual(active,ACTIVE)
             self.assertEqual(zero,[ZERO])
