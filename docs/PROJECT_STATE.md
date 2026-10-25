@@ -1,5 +1,10 @@
 # AlexLab Magnetra — Project State
 
+## CURATED 11/50 GUARDED RELEASE STOPPED SAFELY AT 0% — 25 OCT 2026
+
+GitHub Actions #40215194370: source and exact old `8d9c19f4…@100%` preflight PASS; new candidate immutable `74754dac-1842-47b2-8e6f-92a10731f124` uploaded with four binding types PASS; 0% staging PASS. Next candidate verification did not complete. No verified 5% or 100% promotion. Do NOT rerun upload/whole workflow. Prepare GET-only inspection of static candidate assets and original catalog; keep source and results private, do not change production or assert rollback without independent GET.
+
+
 ## RELEASE PREPARATION — 25 OCT 2026 — CURATED 11/50 (NOT ACTIVATED)
 
 - Owner-corrected UI: 11 visible / 35 hidden PWA sources (including SubsPlease), original 46 API and Android adapters untouched; bulk Select all / Deselect all with persistence, 50 results/page.
