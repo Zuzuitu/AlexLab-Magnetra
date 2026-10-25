@@ -1195,7 +1195,7 @@ def check_web_parity_and_companion(config: dict) -> None:
                 fail("PWA default sources diverged from API/project invariants")
         frontend_content = frontend.read_text(encoding="utf-8")
         if 'p.lastAudit?.state==="results"' not in frontend_content:
-            fail("last-audit result selection must exclude sources with unverified uptime")
+            fail("the dated provider audit must remain distinct from live session status")
         if '$("selectAllProviders")' not in frontend_content:
             fail("full all-46 indexer selection must remain independently available")
         if 'state.audit=audit||null' not in frontend_content:
@@ -1204,34 +1204,55 @@ def check_web_parity_and_companion(config: dict) -> None:
         if "auditFor(p.id)" not in endpoint_content:
             fail("provider API must expose the last known audit source metadata")
 
-    # Curated PWA UI does not remove the protected original 46 source adapters.
-    # Owner expressly requested 17 known failing IDs invisible/unselectable.
+    # The owner explicitly reopened the complete PWA catalogue on 2026-10-25,
+    # except SubsPlease. All 46 canonical API/Android adapters remain.
     curation = nested(config, "pwa_indexer_curation")
     if curation:
         hidden_ids = curation.get("hidden_ids", [])
         priority_ids = curation.get("priority_visible_ids", [])
-        if (len(hidden_ids) != 34 or len(set(hidden_ids)) != 34
-                or curation.get("visible_picker_count") != 12
+        if (hidden_ids != ["subsplease"]
+                or curation.get("hidden_from_picker_and_pwa_search_count") != 1
+                or curation.get("visible_picker_count") != 45
                 or curation.get("original_adapter_ids_retained") != 46
                 or priority_ids[:3] != ["btdigg", "torrent9", "oxtorrent"]
-                or "btdigg" in hidden_ids or not {"eztvx","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks"}.issubset(hidden_ids)):
-            fail("PWA curated indexers lost owner-approved exclusions/defaults")
+                or not curation.get("do_not_reenable_by_clicking_select_all")):
+            fail("PWA source selection must retain 45 indexers, excluding only SubsPlease")
         picker_text = frontend.read_text(encoding="utf-8")
         html_text = (ROOT / "web/index.html").read_text(encoding="utf-8")
-        for marker in ('const hiddenIndexerIds=new Set([',
+        for marker in ('const hiddenIndexerIds=new Set(["subsplease"]);',
                        'function selectableProviders()',
                        'const valid=new Set(selectableProviders().map(p=>p.id))',
                        'const ids=selectableProviders().map(p=>p.id);',
                        'orderedProviders(selectableProviders())',
                        'const visibleFailures=failures.filter(f=>!hiddenIndexerIds.has(f.provider))'):
             if marker not in picker_text:
-                fail("PWA picker must reject hidden sources at every entry point: " + marker)
-        for id_ in hidden_ids:
-            if '"' + id_ + '"' not in picker_text:
-                fail("PWA picker exclusion ID absent: " + id_)
+                fail("PWA picker lost a source-selection safety guard: " + marker)
         if ('id="selectAllProviders">Selectează toate' not in html_text
-                or 'Select all 46' in html_text):
-            fail("PWA bulk action must never imply hidden sources can be selected")
+                or 'id="selectWorking"' in html_text
+                or '$("selectWorking")' in picker_text):
+            fail("PWA must expose one owner-approved Select All action only")
+        if '"subsplease"' not in picker_text:
+            fail("SubsPlease must be excluded from the PWA")
+
+    pagination = nested(config, "pwa_results_pagination")
+    if pagination:
+        if (pagination.get("page_size") != 50
+                or pagination.get("client_side_only") is not True
+                or pagination.get("all_fetched_matches_retained") is not True
+                or pagination.get("sort_before_paginating") is not True):
+            fail("PWA result pagination invariants changed")
+        html_text = (ROOT / "web/index.html").read_text(encoding="utf-8")
+        frontend_text = frontend.read_text(encoding="utf-8")
+        for marker in ("const RESULTS_PER_PAGE=50;",
+                       'const sorted=sortItems(items);',
+                       'function renderPagination(total)',
+                       'state.resultsPage=1',
+                       'sorted.slice((state.resultsPage-1)*RESULTS_PER_PAGE,state.resultsPage*RESULTS_PER_PAGE)'):
+            if marker not in frontend_text:
+                fail("PWA 50-result page contract missing: " + marker)
+        if ('id="resultsPagination"' not in html_text
+                or 'sorted.slice(0,400)' in frontend_text):
+            fail("PWA result pagination must preserve all matching results")
 
     headers_path = ROOT / "worker" / "src" / "request-headers.mjs"
     require_file(headers_path)
