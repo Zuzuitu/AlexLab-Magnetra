@@ -1,5 +1,18 @@
 # AlexLab Magnetra — Project State
 
+## CURRENT AUTHORITATIVE CHECKPOINT — 25 OCT 2026 — NONAMECLUB FIX NOW LIVE AT 100%; IPHONE ACCEPTANCE PENDING
+
+**This supersedes all earlier headings claiming the NoNameClub fix is staged, not approved, or not online. Those headings below are historical only.**
+
+- Owner's early iPhone retest reported `Sursă indisponibilă` **before** the new NoNameClub release went live. Do not misclassify this pre-release failure as a failed post-release acceptance test.
+- GitHub `main` activation commit `fa98ad0a4240bb6fb781cc21ad9b820f4e5d6da2`, following clean reconciled preparation PR #181 (merge SHA `046e1a934e1f09cebf6f5221b0fd32b4e31e280c`) and separate owner approval PR #182.
+- **PRODUCTION RELEASE SUCCESS**: GitHub Actions https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40144716270 concluded SUCCESS. Actual immutable candidate Cloudflare Worker version `24642346-9db0-4cea-a56e-12e30f35569f` achieved **100% traffic**. Previously working 0Magnet version `763defbe-38aa-4299-acf1-1639a59e7be6` remains the rollback target at 0%. Historical TheRarBg `916d0671-b9c5-432d-8724-aed27bc22c4f` was previous inactive version before this release; do not infer it remains in the currently active split.
+- The actual release (not just mocked offline tests) reported preflight exact baseline + all four bindings PASS, immutable candidate JS SHA and health/catalogue 46 PASS, exact original NoNameClub `https://nnmclub.to/forum/viewtopic.php?t=1896364` magnet resolution PASS, `Lupin` search card with `magnetSource` null PASS, canary 0%→5%→100% PASS, live public corrected `app.js` SHA/catalogue 46 PASS.
+- No automatic Flud/Shield magnet submission, torrent download, DNS/Rock64/Cloudflare tunnel modification, paid API or credential disclosure. 0Magnet and TheRarBg fixes remain preserved.
+- **NEXT ACTION**: Owner must physically retest iPhone Safari/PWA `https://index.alexlab.media`: select NoNameClub, search `Lupin`, select same `Lupin (2026)` approximately 20.4 GB result, `Obține magnet` and `Copiază`. Do not declare iPhone acceptance until user reports success **after** release. If still failing, inspect stale PWA cache/version and actual result without assuming parser failure.
+- Independent follow-up after acceptance: identify correct source charset for Cyrillic names containing `�` and add regression coverage; keep out of completed magnet release. Never reuse the one-shot release marker.
+
+
 ## CURRENT AUTHORITATIVE CHECKPOINT — 25 OCT 2026 — 0MAGNET OWNER-ACCEPTED; NONAMECLUB CODE FIX MERGED, PRODUCTION RELEASE RESERVED FOR NEXT CHAT
 
 **Supersedes all older "0Magnet pending" / "NoNameClub diagnostic only" headings below; those are history, not current state. In this session the owner explicitly confirmed ("Confirm da dar intrun alt chat") to proceed with the NoNameClub production fix in a NEW CHAT, and requested only the canonical checkpoint update plus a complete downloadable handoff now. Therefore DO NOT trigger a Cloudflare release, add an activation marker, send magnets to devices, or merge PR #179 with a release marker during this chat. Starting the next chat with the attached prompt is the intended authorization to continue the guarded release subject to fresh preflight.**
