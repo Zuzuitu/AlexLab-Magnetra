@@ -1,0 +1,69 @@
+name: Magnetra iOS Standalone Header Production (OWNER APPROVAL REQUIRED)
+on:
+  pull_request:
+    paths:
+      - scripts/release_ios_pwa_safe_area_20261025.py
+      - scripts/test_release_ios_pwa_safe_area_20261025.py
+      - .github/workflows/nonameclub-production-20261025.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/ios-pwa-safe-area-production-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Security invariants and offline rollback tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_nonameclub_source_fix_20261025.py' -v
+  guarded-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[magnetra-ios-pwa-safearea-owner-approve-production-20261025]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify unique owner-approved main commit
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          [[ "$MESSAGE" == *'[magnetra-ios-pwa-safearea-owner-approve-production-20261025]'* ]]
+          test -s docs/release-events/ios-pwa-safe-area-production-20261025.md
+      - name: Run safety suite before any writes
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_nonameclub_source_fix_20261025.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real PWA and all provider regressions
+        run: |
+          set -euo pipefail
+          node --test worker/test/*.test.mjs
+          node --check web/app.js
+          node --check worker/src/index.mjs
+      - name: Production bundle dry-run only
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Owner-approved iOS safe-area Cloudflare immutable 0-5-100 with rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_NONAMECLUB_RELEASE_ACTION: CONFIRM_MAGNETRA_IOS_HOME_SCREEN_RELEASE_20261025
+        run: |
+          set -euo pipefail
+          python3 scripts/release_ios_pwa_safe_area_20261025.py
