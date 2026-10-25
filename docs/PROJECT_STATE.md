@@ -1,5 +1,13 @@
 # AlexLab Magnetra — Project State
 
+## RELEASE PREPARATION — 25 OCT 2026 — CURATED 11/50 (NOT ACTIVATED)
+
+- Owner-corrected UI: 11 visible / 35 hidden PWA sources (including SubsPlease), original 46 API and Android adapters untouched; bulk Select all / Deselect all with persistence, 50 results/page.
+- Independent read-only Cloudflare audit [run #40213908118](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40213908118), active immutable `8d9c19f4-ca38-428b-888e-757ef578c829` **100%**, NO second version at 0%; four binding name/types PASS. Earlier NoNameClub version at 0% in mocked unit test output is NOT the live state. Current public app.js SHA prefix `1160fa81597ce6ca` corresponds to previous 45 indexers; original catalog remains 46.
+- New `scripts/release_curated_11_indexers_50_20261025.py` and separate guarded workflow prepare exact-source immutable upload --keep-vars, 0% stage, five static assets (HTML modulo only Cloudflare beacon), original 46 catalog, source-owned NoNameClub magnet check, 5% canary, full 100%, public asset hashes and checked rollback old 8d9c@100 if failure. Unknown splits stop rather than blind rollback. No new paid services, Rock64, DNS or Flud changes.
+- **This preparation PR must not activate production.** A distinct owner-reviewed PR with one unique event file and subject marker is required before Cloudflare writes. No direct `[deploy-pwa]` marker; no obsolete 45/50 workflow replay.
+
+
 ## OWNER CORRECTION — 25 OCT 2026 — 11 CURATED PWA INDEXERS + SELECT/DESELECT (CODE ONLY)
 
 **Supersedes the earlier 45-visible/1-hidden picker instructions here, not historical production evidence. This change is not yet deployed.**

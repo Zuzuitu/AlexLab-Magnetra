@@ -97,7 +97,8 @@
       ".github/workflows/public-exposure-history-audit-20261025.yml",
       ".github/workflows/pwa-45-indexers-50-production-20261025.yml",
       ".github/workflows/verify-public-pwa-45-50-readonly.yml",
-      ".github/workflows/magnetra-curated-11-cloudflare-readonly-20261025.yml"
+      ".github/workflows/magnetra-curated-11-cloudflare-readonly-20261025.yml",
+      ".github/workflows/magnetra-curated-11-50-production-20261025.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
