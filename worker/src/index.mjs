@@ -72,7 +72,7 @@ async function getSearch(url,env) {
        warnings.push({provider:item.provider,code:"CACHED_AFTER_SOURCE_FAILURE",
          ageSeconds:item.cache.ageSeconds});
      }
-     results.push(...item.results.map(row=>item.cache?.mode==="stale"
+     results.push(...item.results.map(row=>item.cache
        ?{...row,cachedAgeSeconds:item.cache.ageSeconds}:row));
    }
  }
