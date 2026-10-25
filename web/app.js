@@ -1,4 +1,9 @@
 "use strict";
+// Older iOS Home Screen builds expose standalone mode via navigator.standalone.
+// Add a layout-only class; no pairing, search or network behavior changes.
+if(typeof navigator!=="undefined"&&navigator.standalone===true&&typeof document!=="undefined"){
+  document.documentElement.classList.add("ios-standalone");
+}
 const $=id=>document.getElementById(id);
 const currentLanguage=()=>globalThis.MagnetraI18n?.language==="it"?"it-IT":"ro-RO";
 // Only localized strings are shown in the live PWA. Fallback supports offline tests.
