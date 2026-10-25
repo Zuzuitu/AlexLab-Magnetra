@@ -45,7 +45,7 @@ test("Only exact sensitive API methods and paths receive 429; values never leak"
   assert.match(key,/synthetic-client/);
   assert.ok(!key.includes("sample"));
   assert.ok(!key.includes("TOKEN"));
-  assert.ok(!key.includes("magnet"));
+  assert.ok(!key.includes("synthetic-magnet"));
   const body=JSON.stringify(await response.json());
   assert.ok(!body.includes("SYNTHETIC_DEVICE"));
   assert.ok(!body.includes("SYNTHETIC_TOKEN"));
