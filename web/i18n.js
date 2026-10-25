@@ -2,6 +2,15 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
+  "Results pages":{"ro":"Pagini rezultate","it":"Pagine dei risultati"},
+  "Previous page":{"ro":"← Anterioară","it":"← Precedente"},
+  "Next page":{"ro":"Următoarea →","it":"Successiva →"},
+  "Page {page} of {pages} · {start}–{end} of {total}":{
+    "ro":"Pagina {page} din {pages} · {start}–{end} din {total}",
+    "it":"Pagina {page} di {pages} · {start}–{end} di {total}"
+  },
+  "Selected all {n} indexers.":{"ro":"Selectate toate cele {n} surse.","it":"Selezionate tutte le {n} fonti."},
+
   "Date TV:": {
     "ro": "Date TV:",
     "it": "Dati TV:"
