@@ -1204,35 +1204,40 @@ def check_web_parity_and_companion(config: dict) -> None:
         if "auditFor(p.id)" not in endpoint_content:
             fail("provider API must expose the last known audit source metadata")
 
-    # The owner explicitly reopened the complete PWA catalogue on 2026-10-25,
-    # except SubsPlease. All 46 canonical API/Android adapters remain.
+    # Owner-corrected UI: restore 34 formerly hidden providers, plus SubsPlease.
+    # Original 46 API/Android adapter identities stay intact.
     curation = nested(config, "pwa_indexer_curation")
     if curation:
+        expected_hidden = ["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease"]
         hidden_ids = curation.get("hidden_ids", [])
         priority_ids = curation.get("priority_visible_ids", [])
-        if (hidden_ids != ["subsplease"]
-                or curation.get("hidden_from_picker_and_pwa_search_count") != 1
-                or curation.get("visible_picker_count") != 45
+        if (hidden_ids != expected_hidden
+                or curation.get("hidden_from_picker_and_pwa_search_count") != 35
+                or curation.get("visible_picker_count") != 11
                 or curation.get("original_adapter_ids_retained") != 46
                 or priority_ids[:3] != ["btdigg", "torrent9", "oxtorrent"]
+                or curation.get("bulk_select_deselect_toggle") is not True
+                or curation.get("explicit_empty_selection_persists") is not True
                 or not curation.get("do_not_reenable_by_clicking_select_all")):
-            fail("PWA source selection must retain 45 indexers, excluding only SubsPlease")
+            fail("PWA must preserve the 11 curated indexers with 35 excluded sources")
         picker_text = frontend.read_text(encoding="utf-8")
         html_text = (ROOT / "web/index.html").read_text(encoding="utf-8")
-        for marker in ('const hiddenIndexerIds=new Set(["subsplease"]);',
+        for marker in ("const hiddenIndexerIds=new Set([\"anirena\",\"bt4g\",\"bitsearch\",\"extdotto\",\"eztvx\",\"filemood\",\"limetorrents\",\"nyaasi\",\"1337x\",\"tokyotoshokan\",\"torrentdatabase\",\"torrentdownloadinfo\",\"torrentdownloads\",\"torrentkitty\",\"uindex\",\"xxxclub\",\"torrentz\",\"animetosho\",\"mikanproject\",\"bangumimoe\",\"btsow\",\"dmhy\",\"linuxtracker\",\"mypornclub\",\"nekobt\",\"sukebeinyaa\",\"ytsmx\",\"anilibria\",\"blueroms\",\"epublibre\",\"megapeer\",\"rutorinfo\",\"xxxtracker\",\"fitgirlrepacks\",\"subsplease\"]);",
                        'function selectableProviders()',
                        'const valid=new Set(selectableProviders().map(p=>p.id))',
                        'const ids=selectableProviders().map(p=>p.id);',
+                       'function toggleAllProviders()',
+                       'function updateSelectAllButton()',
+                       'stored.length===0',
+                       'state.selected.clear();',
                        'orderedProviders(selectableProviders())',
                        'const visibleFailures=failures.filter(f=>!hiddenIndexerIds.has(f.provider))'):
             if marker not in picker_text:
-                fail("PWA picker lost a source-selection safety guard: " + marker)
+                fail("PWA picker lost a curation/toggle guard: " + marker)
         if ('id="selectAllProviders">Selectează toate' not in html_text
                 or 'id="selectWorking"' in html_text
                 or '$("selectWorking")' in picker_text):
-            fail("PWA must expose one owner-approved Select All action only")
-        if '"subsplease"' not in picker_text:
-            fail("SubsPlease must be excluded from the PWA")
+            fail("PWA must expose the one Select All / Deselect All toggle")
 
     pagination = nested(config, "pwa_results_pagination")
     if pagination:

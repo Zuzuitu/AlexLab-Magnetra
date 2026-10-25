@@ -10,6 +10,8 @@ const DICTIONARY={
     "it":"Pagina {page} di {pages} · {start}–{end} di {total}"
   },
   "Selected all {n} indexers.":{"ro":"Selectate toate cele {n} surse.","it":"Selezionate tutte le {n} fonti."},
+  "Deselected all {n} indexers.":{"ro":"Deselectate toate cele {n} surse.","it":"Deselezionate tutte le {n} fonti."},
+  "Deselect all available":{"ro":"Deselectează toate","it":"Deseleziona tutte"},
 
   "Date TV:": {
     "ro": "Date TV:",

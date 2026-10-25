@@ -101,7 +101,7 @@ test("paused provider metadata survives browser restart, while manual selection 
  h.storage.set("magnetra.providers.v1",JSON.stringify(["knaben","ytsmx"]));
  h.storage.set("magnetra.paused-indexers.v1",JSON.stringify(["torrent9","ytsmx"]));
  h.chooseProviders();
- assert.deepEqual([...h.state.selected].sort(),["knaben","ytsmx"]);
+ assert.deepEqual([...h.state.selected].sort(),["knaben"]);
  assert.deepEqual([...h.state.pausedIds],["torrent9"]);
  assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer\(s\)/);
 });

@@ -69,9 +69,9 @@ function magnetFailureText(item,error){
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
-// Owner-approved PWA-only exclusion: SubsPlease is not selectable or searchable.
-// All original 46 backend/Android adapters remain intact for compatibility.
-const hiddenIndexerIds=new Set(["subsplease"]);
+// Owner correction: restore 34 formerly hidden PWA IDs and additionally hide SubsPlease.
+// 11 curated visible sources; original 46 backend/Android adapters remain intact.
+const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease"]);
 const RESULTS_PER_PAGE=50;
 const BTDIGG_MIN_GAP_MS=5500;
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
@@ -210,7 +210,10 @@ function chooseProviders(){
  }
  const valid=new Set(selectableProviders().map(p=>p.id));
  state.selected=new Set([...state.selected].filter(x=>valid.has(x)));
- if(!state.selected.size)state.selected=new Set(preferred.filter(x=>valid.has(x)));
+ // A saved [] is an explicit Deselect All and must survive a PWA reload.
+ // Restore defaults only on first use or when an old nonempty list became hidden-only.
+ if(!state.selected.size&&!(Array.isArray(stored)&&stored.length===0))
+  state.selected=new Set(preferred.filter(x=>valid.has(x)));
  const recorded=load(STORAGE.paused,[]);
  state.pausedIds=new Set((Array.isArray(recorded)?recorded:[])
   .filter(id=>valid.has(id)&&!state.selected.has(id)));
@@ -218,7 +221,30 @@ function chooseProviders(){
  savePausedSources();
  updateProviderCount();
 }
-function updateProviderCount(){$("providerCount").textContent=String(state.selected.size)+"/"+selectableProviders().length;}
+function updateSelectAllButton(){
+ const ids=selectableProviders().map(p=>p.id);
+ const allSelected=ids.length>0&&ids.every(id=>state.selected.has(id));
+ $("selectAllProviders").textContent=tr(allSelected?"Deselect all available":"Select all available");
+}
+function updateProviderCount(){
+ $("providerCount").textContent=String(state.selected.size)+"/"+selectableProviders().length;
+ updateSelectAllButton();
+}
+function toggleAllProviders(){
+ const ids=selectableProviders().map(p=>p.id);
+ const allSelected=ids.length>0&&ids.every(id=>state.selected.has(id));
+ if(allSelected){
+  state.selected.clear();
+  save(STORAGE.selected,[]);
+  toast(tr("Deselected all {n} indexers.",{n:ids.length}));
+ }else{
+  state.selected=new Set(ids);
+  unpauseSources(ids);
+  save(STORAGE.selected,ids);
+  toast(tr("Selected all {n} indexers.",{n:ids.length}));
+ }
+ renderProviders();updateProviderCount();
+}
 // Prioritize sources with real AlexLab gateway/resolve work and proved adapters.
 // UI ordering does not affect original provider IDs, source attribution or uptime.
 const priorityIndexerIds=[
@@ -634,7 +660,7 @@ async function status(){
 }
 function switchLanguage(locale){
  if(!globalThis.MagnetraI18n?.set(locale))return;
- renderProviders();renderResults();savePausedSources();
+ renderProviders();renderResults();savePausedSources();updateSelectAllButton();
  if(!state.searching)$("searchButton").textContent=tr("Search →");
  else $("searchButton").textContent=tr("Cancel search ×");
  const chip=$("companionChip");
@@ -694,13 +720,7 @@ function init(){
   $("viewBookmarks").firstChild.textContent=state.bookmarksMode?tr("Back to search")+" ":tr("☆ Bookmarks")+" ";
   renderResults();
  });
- $("selectAllProviders").addEventListener("click",()=>{
-  const ids=selectableProviders().map(p=>p.id);
-  state.selected=new Set(ids);
-  unpauseSources(ids);
-  save(STORAGE.selected,ids);renderProviders();updateProviderCount();
-  toast(tr("Selected all {n} indexers.",{n:ids.length}));
- });
+ $("selectAllProviders").addEventListener("click",toggleAllProviders);
  $("importPairing").addEventListener("click",()=>{
   try{
    const u=new URL($("pairLink").value.trim());
