@@ -30,10 +30,16 @@ class ReleaseGuards(unittest.TestCase):
             current.assert_not_called()
             deploy.assert_not_called()
 
-    def test_reviewed_therarbag_source_and_12_picker_safety(self):
-        cfg=m.guard_source()
-        self.assertEqual(cfg["name"],"alexlab-magnetra")
-        self.assertEqual(cfg["assets"]["binding"],"ASSETS")
+    def test_old_therarbag_release_refuses_new_45_picker(self):
+        # The historical 12-indexer release marker must not deploy this new UI.
+        with self.assertRaisesRegex(m.Stop,"REVIEWED_THERARBG_PICKER_SOURCE_MISMATCH"):
+            m.guard_source()
+
+    def historical_reviewed_config(self):
+        # Offline simulation only; the real production guard remains fail-closed.
+        return {"name":"alexlab-magnetra","main":"src/index.mjs",
+                "routes":[{"pattern":"index.alexlab.media","custom_domain":True}],
+                "assets":{"directory":"../web","binding":"ASSETS"}}
 
     def test_unexpected_live_split_must_not_upload(self):
         with patch.object(m,"current",side_effect=m.Stop("UNKNOWN_LIVE_SPLIT")), \
@@ -44,7 +50,8 @@ class ReleaseGuards(unittest.TestCase):
             write.assert_not_called()
 
     def test_positive_stage_canary_full_checks_i18n_and_46_catalog(self):
-        with patch.object(m,"current",return_value=DEP0) as current, \
+        with patch.object(m,"guard_source",return_value=self.historical_reviewed_config()), \
+             patch.object(m,"current",return_value=DEP0) as current, \
              patch.object(m,"bindings"), patch.object(m,"old_js_guard") as sha, \
              patch.object(m,"stable"),patch.object(m,"upload_version",return_value=NEW), \
              patch.object(m,"_wrangler_deploy",side_effect=[True,True,True]) as writes, \
@@ -67,7 +74,8 @@ class ReleaseGuards(unittest.TestCase):
             self.assertEqual([c.args[0] for c in catalog.call_args_list],[NEW,None])
 
     def test_new_assets_mismatch_ends_before_canary(self):
-        with patch.object(m,"current",return_value=DEP0), \
+        with patch.object(m,"guard_source",return_value=self.historical_reviewed_config()), \
+             patch.object(m,"current",return_value=DEP0), \
              patch.object(m,"bindings"),patch.object(m,"old_js_guard"), \
              patch.object(m,"stable"),patch.object(m,"upload_version",return_value=NEW), \
              patch.object(m,"_wrangler_deploy",return_value=True) as writes, \
