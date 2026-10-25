@@ -11,3 +11,23 @@ test("BTDigg outer budget is 18s; original shared 11s remains for other legacy a
  assert.match(source,/const BTDIGG_WORKER_TIMEOUT = 18_000/);
  assert.match(source,/id==="btdigg"\?BTDIGG_WORKER_TIMEOUT:TIMEOUT/);
 });
+
+
+test("real ThePirateBay official API call gets 16s, independent TorrentsCSV remains 11s",async()=>{
+ const {searchProvider}=await import("../src/providers.mjs");
+ const normal=AbortSignal.timeout,deadlines=[];
+ try{
+  AbortSignal.timeout=(ms)=>{deadlines.push(ms);return normal(ms);};
+  const fetcher=async(url,opts)=>{
+   if(url.startsWith("https://apibay.org/q.php"))
+    return new Response('[{"name":"No results returned"}]',{headers:{"content-type":"application/json"}});
+   if(url.startsWith("https://torrents-csv.com/service/search"))
+    return new Response('{"torrents":[]}',{headers:{"content-type":"application/json"}});
+   throw Error("Unapproved API endpoint");
+  };
+  const pirate=await searchProvider("thepiratebay","ubuntu","all",fetcher);
+  const csv=await searchProvider("torrentscsv","ubuntu","all",fetcher);
+  assert.deepEqual(pirate,[]);assert.deepEqual(csv,[]);
+  assert.deepEqual(deadlines,[16000,11000]);
+ }finally{AbortSignal.timeout=normal;}
+});
