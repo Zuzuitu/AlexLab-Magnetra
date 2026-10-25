@@ -1,0 +1,66 @@
+# Explicit manual release only. The PR test job cannot alter production.
+name: Magnetra BTDigg TPB Guarded Production
+on:
+  pull_request:
+    paths:
+      - scripts/release_btdigg_tpb_resilience_20261025.py
+      - scripts/test_release_btdigg_tpb_resilience_20261025.py
+      - .github/workflows/magnetra-btdigg-tpb-guarded-production-20261025.yml
+      - config/project-invariants.json
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Confirm protected production release
+        required: true
+        type: choice
+        default: DO_NOT_RELEASE
+        options:
+          - DO_NOT_RELEASE
+          - APPROVE_BTDIGG_TPB_GUARDED_RELEASE
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-project-invariants.py
+      - run: python3 -m unittest discover -s scripts -p 'test_release_btdigg_tpb_resilience_20261025.py' -v
+
+  guarded-production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'APPROVE_BTDIGG_TPB_GUARDED_RELEASE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify repository constraints and release protections
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_btdigg_tpb_resilience_20261025.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Provider and PWA regression tests
+        run: node --test worker/test/*.test.mjs
+      - name: Dry-run protected Cloudflare Worker bundle
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Verified immutable upload, 0 to 5 to 100 percent, and guarded rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_BTDIGG_TPB_RELEASE_ACTION: CONFIRM_MAGNETRA_BTDIGG_TPB_RESILIENCE_20261025
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          python3 scripts/release_btdigg_tpb_resilience_20261025.py
