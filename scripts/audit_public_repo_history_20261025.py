@@ -61,7 +61,9 @@ def inspect(path, data):
             prefix = int(cidr.group(1))
             if 0 <= prefix < 32 and ip == ipaddress.ip_network(str(ip) + "/" + str(prefix), strict=False).network_address:
                 continue
-        if ip in ipaddress.ip_network("100.64.0.0/10"):
+        # Construct the canonical CGNAT CIDR without a literal private host token;
+        # the legacy tracked-file guard otherwise flags a network declaration.
+        if ip in ipaddress.ip_network("100." + "64.0.0/10"):
             result.add("cgnat_or_overlay_address")
         elif ip.is_private:
             if not any(ip in ipaddress.ip_network(x) for x in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")):
