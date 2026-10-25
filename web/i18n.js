@@ -2,6 +2,9 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
+  "Saved source result ({n} min old)":{"ro":"Rezultat memorat din sursă (acum {n} min)","it":"Risultato salvato dalla fonte ({n} min fa)"},
+  "Saved authentic results shown because the source is temporarily unavailable.":{"ro":"Sunt afișate rezultate autentice memorate; sursa nu a răspuns acum.","it":"Risultati autentici salvati: la fonte non ha risposto ora."},
+  "{source}: saved results from {n} minutes ago; not live.":{"ro":"{source}: rezultate salvate acum {n} minute, nu în timp real.","it":"{source}: risultati salvati {n} minuti fa, non in tempo reale."},
   "Results pages":{"ro":"Pagini rezultate","it":"Pagine dei risultati"},
   "Previous page":{"ro":"← Anterioară","it":"← Precedente"},
   "Next page":{"ro":"Următoarea →","it":"Successiva →"},
