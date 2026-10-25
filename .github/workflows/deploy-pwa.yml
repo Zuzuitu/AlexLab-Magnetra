@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy-pwa]')
+    # Only an explicit deploy marker at the START of the commit subject can activate
+    # push deployment. Mentioning the marker in a PR/commit body is NOT consent.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[deploy-pwa] '))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

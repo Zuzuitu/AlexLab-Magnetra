@@ -36,6 +36,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
+      # Checkout must happen BEFORE testing the tracked activation file.
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Enforce distinct owner-approved activation event before Cloudflare requests
         shell: bash
         env:
@@ -44,9 +48,6 @@ jobs:
           set -euo pipefail
           [[ "$MESSAGE" == *'[magnetra-pwa-45-indexers-50-owner-approve-20261025]'* ]]
           test -s docs/release-events/pwa-45-indexers-50-production-20261025.md
-      - uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
       - name: Offline invariant, rollback and release regression tests
         run: |
           set -euo pipefail
