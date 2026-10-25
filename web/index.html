@@ -41,7 +41,7 @@
     </form>
   </section>
   <div class="summary-line"><div class="companion-chip" id="companionChip"><span class="status-dot"></span><span id="companionStatus">Flud Companion · Neconectat</span></div><button id="pasteMagnetButton" class="text-button" type="button">↗ Lipește magnet → Flud</button><button id="viewBookmarks" class="text-button" type="button">☆ Favorite <span id="bookmarkCount">0</span></button></div>
-  <section class="results-section"><div class="section-top"><div><div class="section-overline">REZULTATE</div><h2 id="resultsTitle">Rezultatele căutării</h2></div><div class="result-count" id="resultCount">PREGĂTIT</div></div><div id="searchQuality" class="search-quality" role="status" aria-live="polite"></div><div class="notice" id="notice" role="status" aria-live="polite">Introdu o căutare pentru rezultatele surselor selectate.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div></section>
+  <section class="results-section"><div class="section-top"><div><div class="section-overline">REZULTATE</div><h2 id="resultsTitle">Rezultatele căutării</h2></div><div class="result-count" id="resultCount">PREGĂTIT</div></div><div id="searchQuality" class="search-quality" role="status" aria-live="polite"></div><div class="notice" id="notice" role="status" aria-live="polite">Introdu o căutare pentru rezultatele surselor selectate.</div><div id="providerErrors" class="provider-errors"></div><div id="results" class="results" aria-live="polite"></div><div id="resultsPagination" class="pagination-host"></div></section>
 </main>
 <footer class="footer"><span>© AlexLab · Magnetra</span><span>Caută. Magnet. Gata.</span><a href="https://github.com/prajwalch/TorrentSearch" target="_blank" rel="noopener noreferrer">Bazat pe TorrentSearch (MIT) ↗</a><small class="metadata-credit">Date TV: <a href="https://www.tvmaze.com" target="_blank" rel="noopener noreferrer">TVmaze</a></small></footer>
 </div>
@@ -50,7 +50,7 @@
   <div class="sheet-head"><div><div class="section-overline">SURSE DE CĂUTARE</div><h2>Surse</h2><p id="catalogSummary" class="muted">Se încarcă sursele…</p></div><button class="close-btn" data-close="providersDialog" aria-label="Închide">×</button></div>
   <p class="muted">Sursele cu erori se dezactivează automat după căutare. Le poți reactiva oricând.</p>
   <div class="provider-grid" id="providerGrid"></div>
-  <div class="sheet-actions"><button type="button" class="secondary" id="selectWorking">Selectează sursele verificate</button><button type="button" class="secondary" id="selectAllProviders">Selectează toate</button><button type="button" class="primary" data-close="providersDialog">Gata</button></div>
+  <div class="sheet-actions"><button type="button" class="secondary" id="selectAllProviders">Selectează toate</button><button type="button" class="primary" data-close="providersDialog">Gata</button></div>
 </dialog>
 
 <dialog id="settingsDialog" class="sheet">

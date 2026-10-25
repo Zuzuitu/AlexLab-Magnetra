@@ -66,9 +66,13 @@ After the 46-adapter deployment, a benign `ubuntu` search returned results from 
 
 The follow-up outbound compatibility layer mirrors the pinned Android `NetworkClient.USER_AGENT` and permits **one same-origin HTTPS redirect**, never arbitrary redirects. Do not silently introduce a generic fetch proxy or third-party paid CAPTCHA service.
 
-## Audit-aware indexer selection
+## Indexer selection and results
 
-**Select last-audit results** selects the 12 sources that returned hits in a dated `ubuntu` test, while **Select all 46** preserves the full source inventory. Labels identify the historical audit date and are not real-time availability indicators. Previous selections persist; new installs default to Knaben, TorrentsCSV, ThePirateBay and Internet Archive, which returned results in the recorded audit.
+The PWA shows **45 selectable indexers**, with **SubsPlease** excluded from its picker, persisted selections and searches at the owner's request. **Select all** chooses all 45, regardless of an indexer's historical test outcome. Upstream Android and the Worker API still retain the 46 original adapters and source IDs for compatibility.
+
+New installations retain the existing five-source default, beginning with BTDigg. Existing choices remain saved, except that SubsPlease is removed from stale selections. Individual failing sources can still auto-pause after a completed search and can be manually re-enabled.
+
+Search results are sorted as requested and displayed in pages of **50 cards**, including mobile/iPhone. The client retains all fetched matches and paginates them locally; switching pages does not send new provider requests. Historical provider audit evidence is not a live uptime indicator.
 
 ## Indexer availability and recovery
 

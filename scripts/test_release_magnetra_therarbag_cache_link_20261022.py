@@ -30,10 +30,16 @@ class ReleaseGuards(unittest.TestCase):
             current.assert_not_called()
             deploy.assert_not_called()
 
-    def test_reviewed_therarbag_source_and_12_picker_safety(self):
-        cfg=m.guard_source()
-        self.assertEqual(cfg["name"],"alexlab-magnetra")
-        self.assertEqual(cfg["assets"]["binding"],"ASSETS")
+    def test_historical_therarbag_release_refuses_new_45_picker(self):
+        # Historical release code must fail closed on the new owner's picker.
+        with self.assertRaisesRegex(m.Stop,"REVIEWED_THERARBG_PICKER_SOURCE_MISMATCH"):
+            m.guard_source()
+
+    def historical_reviewed_config(self):
+        # Review baseline mocked solely in offline rollout/rollback tests.
+        return {"name":"alexlab-magnetra","main":"src/index.mjs",
+                "routes":[{"pattern":"index.alexlab.media","custom_domain":True}],
+                "assets":{"directory":"../web","binding":"ASSETS"}}
         self.assertEqual(m.ACTIVE,"056d8394-79b0-459a-b93e-b5f5a8a7295d")
         self.assertEqual(m.ROLLBACK,"8c4e0f6a-dc7a-4f72-9954-ba9cdd91392f")
         self.assertEqual(m.INITIAL,{m.ACTIVE:100,m.ROLLBACK:0})
@@ -48,10 +54,9 @@ class ReleaseGuards(unittest.TestCase):
                 m.old_js_guard()
             trans.assert_not_called()
 
-    def test_guard_reserves_only_existing_46_catalog_and_12_picker(self):
-        config=m.guard_source()
-        self.assertEqual(config["routes"],[{"pattern":"index.alexlab.media","custom_domain":True}])
-        self.assertEqual(config["assets"],{"directory":"../web","binding":"ASSETS"})
+    def test_old_release_source_gate_stays_closed(self):
+        with self.assertRaisesRegex(m.Stop,"REVIEWED_THERARBG_PICKER_SOURCE_MISMATCH"):
+            m.guard_source()
 
     def test_unexpected_live_split_must_not_upload(self):
         with patch.object(m,"current",side_effect=m.Stop("UNKNOWN_LIVE_SPLIT")), \
@@ -62,7 +67,8 @@ class ReleaseGuards(unittest.TestCase):
             write.assert_not_called()
 
     def test_positive_stage_canary_full_checks_i18n_and_46_catalog(self):
-        with patch.object(m,"current",return_value=DEP0) as current, \
+        with patch.object(m,"guard_source",return_value=self.historical_reviewed_config()), \
+             patch.object(m,"current",return_value=DEP0) as current, \
              patch.object(m,"bindings"), patch.object(m,"old_js_guard") as sha, \
              patch.object(m,"stable"),patch.object(m,"upload_version",return_value=NEW), \
              patch.object(m,"_wrangler_deploy",side_effect=[True,True,True]) as writes, \
@@ -85,7 +91,8 @@ class ReleaseGuards(unittest.TestCase):
             self.assertEqual([c.args[0] for c in catalog.call_args_list],[NEW,None])
 
     def test_new_assets_mismatch_ends_before_canary(self):
-        with patch.object(m,"current",return_value=DEP0), \
+        with patch.object(m,"guard_source",return_value=self.historical_reviewed_config()), \
+             patch.object(m,"current",return_value=DEP0), \
              patch.object(m,"bindings"),patch.object(m,"old_js_guard"), \
              patch.object(m,"stable"),patch.object(m,"upload_version",return_value=NEW), \
              patch.object(m,"_wrangler_deploy",return_value=True) as writes, \

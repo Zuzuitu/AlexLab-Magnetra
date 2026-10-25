@@ -47,3 +47,12 @@
   .masthead #settingsButton{width:44px;height:44px;min-width:44px;min-height:44px}
   .masthead #languageSelect{min-height:44px}
 }
+
+/* Client-side result pagination: 50 accessible cards per page. */
+.pagination-host{margin:24px 0 4px}
+.results-pagination{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px}
+.results-pagination button{border:1px solid var(--edge);border-radius:11px;background:#162335;color:#e9f5eb;padding:11px 15px;min-height:44px;font-size:13px;font-weight:750;cursor:pointer}
+.results-pagination button:disabled{opacity:.38;cursor:default}
+.results-pagination button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+.pagination-status{font-size:13px;color:#cbd8df;text-align:center;font-variant-numeric:tabular-nums}
+@media(max-width:480px){.results-pagination{gap:8px}.results-pagination button{padding:10px 11px}.pagination-status{flex:1 0 100%;order:-1}}

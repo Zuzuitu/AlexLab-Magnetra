@@ -1,5 +1,16 @@
 # AlexLab Magnetra — Project State
 
+## CURRENT OWNER DECISION — 25 OCT 2026 — 45 PWA INDEXERS AND 50-RESULT PAGES (CODE PREPARED, NOT DEPLOYED)
+
+**This current owner-approved interface specification overrides the historical 12-visible/34-hidden PWA picker rule below, but does not retroactively change historical release records or existing live Cloudflare traffic.**
+
+- **Indexer list:** make all 46 original implemented sources available for PWA selection **except `subsplease` (SubsPlease)**. Only SubsPlease remains hidden from the PWA indexer menu, local selected/paused indexer preferences, PWA search, displayed search/bookmark cards and provider-error panel. All other 45 indexers are selectable, even if dated audits show errors or no results. Do not claim all are currently accessible. Original Android/Worker API 46-ID inventory, provider adapters, attribution and source audits are preserved for compatibility.
+- **Bulk selection:** replace the previous “Select verified sources” action with a single **“Selectează toate”** button that selects all 45 PWA-eligible indexers. Individual selection and automatic pause after real source errors remain. Existing iPhone saved selections are retained except SubsPlease is scrubbed; existing five-source defaults remain.
+- **Results:** sort all loaded search matches first, then display **50 results per client-side page**, with previous/next controls, page count and a result range in RO/IT. No silent first-400 truncation, no extra provider calls when paging. Reset to page one for each new search, sort change or saved-bookmarks/search-mode toggle; clamp when streaming or changing result sizes. Saved bookmarks use the same paging.
+- **Privacy/operations:** no new service, backend API, Cloudflare WAF/rate limit or payment, no torrent download or automatic Flud send, no change to signing, Rock64, fixed-origin allowlist, production bindings or manual guarded rollout.
+- **Status:** implementation on a review branch pending five protected GitHub checks. **Not a confirmation of online publication or an iPhone physical acceptance test.** Cloudflare deployment needs a later explicitly guarded and independently verified 0% → 5% → 100% rollout with rollback.
+
+
 ## CURRENT AUTHORITATIVE CHECKPOINT — 25 OCT 2026 — NONAMECLUB IPHONE ACCEPTED; PUBLIC GITHUB PROTECTION ACTIVE; SAFE REPOSITORY CLEANUP
 
 **This checkpoint supersedes the older heading below that says physical NoNameClub iPhone acceptance is pending. Earlier release events remain historical records and must not be interpreted as the current production state.**

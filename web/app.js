@@ -69,10 +69,10 @@ function magnetFailureText(item,error){
 const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
-// Owner-curated PWA picker exclusion only: all 46 adapters remain in the API/Android.
-// Excluded IDs cannot be displayed, selected, restored from old localStorage,
-// bulk-selected or queried by the PWA. They are not removed from source code.
-const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks"]);
+// Owner-approved PWA-only exclusion: SubsPlease is not selectable or searchable.
+// All original 46 backend/Android adapters remain intact for compatibility.
+const hiddenIndexerIds=new Set(["subsplease"]);
+const RESULTS_PER_PAGE=50;
 const BTDIGG_MIN_GAP_MS=5500;
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
 // failed searches; it defers one user-requested search and is abortable.
@@ -104,7 +104,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set()};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set()};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -394,10 +394,38 @@ async function sendMagnet(item,button){
    else button.textContent=original;
  }
 }
+function renderPagination(total){
+ const host=$("resultsPagination");host.replaceChildren();
+ const pages=Math.ceil(total/RESULTS_PER_PAGE);
+ if(pages<=1)return;
+ const nav=el("nav","results-pagination");
+ nav.setAttribute("aria-label",tr("Results pages"));
+ const button=(label,disabled,next)=>{
+  const b=el("button","secondary",tr(label));b.type="button";b.disabled=disabled;
+  b.addEventListener("click",()=>{
+   next();renderResults();
+   $("resultsTitle").scrollIntoView({block:"start",behavior:"smooth"});
+  });
+  return b;
+ };
+ nav.append(
+  button("Previous page",state.resultsPage===1,()=>{state.resultsPage--;}),
+  el("span","pagination-status",tr("Page {page} of {pages} · {start}–{end} of {total}",{
+   page:state.resultsPage,pages,start:(state.resultsPage-1)*RESULTS_PER_PAGE+1,
+   end:Math.min(state.resultsPage*RESULTS_PER_PAGE,total),total
+  })),
+  button("Next page",state.resultsPage===pages,()=>{state.resultsPage++;})
+ );
+ host.append(nav);
+}
 function renderResults(){
  const root=$("results");root.replaceChildren();
- const items=state.bookmarksMode?Object.values(state.bookmarks):state.items;
- const sorted=sortItems(items);$("resultCount").textContent=tr(state.bookmarksMode?"{n} SAVED":"{n} MATCHES",{n:sorted.length});
+ const items=(state.bookmarksMode?Object.values(state.bookmarks):state.items)
+  .filter(item=>!hiddenIndexerIds.has(item.provider));
+ const sorted=sortItems(items);
+ state.resultsPage=Math.max(1,Math.min(state.resultsPage,Math.max(1,Math.ceil(sorted.length/RESULTS_PER_PAGE))));
+ renderPagination(sorted.length);
+ $("resultCount").textContent=tr(state.bookmarksMode?"{n} SAVED":"{n} MATCHES",{n:sorted.length});
  $("resultsTitle").textContent=tr(state.bookmarksMode?"Saved bookmarks":"Search results");
  $("searchQuality").textContent=state.bookmarksMode?"":state.excludedOffTopic?
   tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}):"";
@@ -407,7 +435,7 @@ function renderResults(){
    return;
  }
  $("notice").textContent="";
- for(const item of sorted.slice(0,400)){
+ for(const item of sorted.slice((state.resultsPage-1)*RESULTS_PER_PAGE,state.resultsPage*RESULTS_PER_PAGE)){
    const card=el("article","result");
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
    info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
@@ -513,7 +541,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast(tr("Select at least one indexer."));return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.items=[];state.excludedOffTopic=0;
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.excludedOffTopic=0;
  $("searchButton").disabled=false;$("searchButton").textContent=tr("Cancel search ×");
  $("notice").textContent=tr("Searching {n} indexers…",{n:ids.length});$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -633,7 +661,7 @@ function init(){
  updateBookmarkCount();
  $("languageSelect").addEventListener("change",e=>switchLanguage(e.target.value));
  $("searchForm").addEventListener("submit",e=>{e.preventDefault();search();});
- $("sort").addEventListener("change",renderResults);
+ $("sort").addEventListener("change",()=>{state.resultsPage=1;renderResults();});
  $("settingsButton").addEventListener("click",()=>openDialog("settingsDialog"));
  $("companionChip").addEventListener("click",()=>openDialog("settingsDialog"));
  $("pasteMagnetButton").addEventListener("click",async function(){
@@ -662,23 +690,16 @@ function init(){
  for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
  $("viewBookmarks").addEventListener("click",()=>{
   state.bookmarksMode=!state.bookmarksMode;
+  state.resultsPage=1;
   $("viewBookmarks").firstChild.textContent=state.bookmarksMode?tr("Back to search")+" ":tr("☆ Bookmarks")+" ";
   renderResults();
- });
- $("selectWorking").addEventListener("click",()=>{
-  const ids=orderedProviders(selectableProviders()).filter(p=>p.ported&&p.lastAudit?.state==="results").map(p=>p.id);
-  if(!ids.length){toast(tr("No tested sources with results in the saved audit."));return;}
-  state.selected=new Set(ids);
-  unpauseSources(ids);
-  save(STORAGE.selected,ids);renderProviders();updateProviderCount();
-  toast(tr("Selected {n} verified sources.",{n:ids.length}));
  });
  $("selectAllProviders").addEventListener("click",()=>{
   const ids=selectableProviders().map(p=>p.id);
   state.selected=new Set(ids);
   unpauseSources(ids);
   save(STORAGE.selected,ids);renderProviders();updateProviderCount();
-  toast(tr("Selected all {n} visible indexers; hidden sources stay excluded.",{n:ids.length}));
+  toast(tr("Selected all {n} indexers.",{n:ids.length}));
  });
  $("importPairing").addEventListener("click",()=>{
   try{
