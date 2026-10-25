@@ -16,7 +16,7 @@
 
 ## Dovezi de la Rock64, separate de producția Cloudflare
 
-- Rock64 Armbian Debian Trixie, IP LAN `192.168.0.216`; servicii preexistente, care NU trebuie repornite/modificate fără motiv: BTDigg `127.0.0.1:8796`, EZTV `127.0.0.1:8797`, gateway central Magnetra `127.0.0.1:8798`; tunnel `magnetra-btdigg-rock64` existent.
+- Rock64 Armbian Debian Trixie, IP LAN `[REDACTED_LOCAL_IP]`; servicii preexistente, care NU trebuie repornite/modificate fără motiv: BTDigg `127.0.0.1:8796`, EZTV `127.0.0.1:8797`, gateway central Magnetra `127.0.0.1:8798`; tunnel `magnetra-btdigg-rock64` existent.
 - Rute externe publicate în același tunnel: `btdigg-rock64.alexlab.media→8796`, `magnetra-rock64.alexlab.media→8798`; NU creați alt tunnel/rută, NU modificați BTDigg.
 - Protecție: `/healthz` fără bearer pe 8796/8797/8798 = HTTP 401; Worker de probă real a returnat `PASS_UNAUTHENTICATED_401`, `status=401`, fără error 1042 pentru această cale. Worker temporar și domeniu de probă șterse după confirmarea proprietarului.
 - EZTV: teste independente reale original→8797→8798, **53 magneturi identice**. Autentificare Worker→8798 nu este demonstrată.

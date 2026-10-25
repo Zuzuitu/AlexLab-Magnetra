@@ -10,22 +10,28 @@
 local.properties
 .kotlin
 
-# Magnetra security: local secrets, credentials and machine-specific artifacts
+# Local configuration, credentials, signing materials and tunnel access.
+# Public GitHub repository: never commit real values or host-local secrets.
 .env
 .env.*
 !.env.example
-!.env.sample
 *.pem
+*.key
 *.p12
 *.pfx
 *.jks
 *.keystore
-*.key
+**/gateway.env
+**/tunnel-token
+**/credentials.json
+**/*-credentials.json
+worker/.wrangler-*-once.jsonc
+
+# Security audit: additional local secret and generated-data exclusions.
 id_rsa
 id_rsa.pub
 id_ed25519
 id_ed25519.pub
-credentials.json
 service-account*.json
 *.token
 *.sqlite
@@ -36,7 +42,6 @@ service-account*.json
 *.ipa
 *.apk
 *.aab
-*.zip
 .wrangler/
 .cloudflare/
 .cloudflared/

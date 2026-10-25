@@ -1,200 +1,110 @@
 <div align="center">
 
-![TorrentSearch icon](https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/icon.png)
+<img src="./web/icon.svg" width="88" height="88" alt="AlexLab Magnetra — simbolul magnetului" />
 
-<h1>Torrent Search</h1>
+# AlexLab Magnetra
 
-[![Latest release](https://img.shields.io/github/v/release/prajwalch/TorrentSearch?style=for-the-badge&color=green)](https://github.com/prajwalch/TorrentSearch/releases)
-[![F-Droid](https://img.shields.io/f-droid/v/com.prajwalch.torrentsearch?style=for-the-badge&color=blue)](https://f-droid.org/packages/com.prajwalch.torrentsearch)
-[![IzzyOnDroid](https://img.shields.io/endpoint?style=for-the-badge&color=skyblue&url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.prajwalch.torrentsearch)](https://apt.izzysoft.de/fdroid/index/apk/com.prajwalch.torrentsearch)
-[![Downloads](https://img.shields.io/github/downloads/prajwalch/TorrentSearch/total?style=for-the-badge&color=lightgreen)](https://github.com/prajwalch/TorrentSearch/releases)
-[![Translation status](https://img.shields.io/weblate/progress/torrentsearch?style=for-the-badge)](https://hosted.weblate.org/engage/torrentsearch/)
+**Caută. Magnet. Gata.**
+
+Motor de căutare multi-sursă, PWA pentru iPhone și browser, integrat opțional cu Flud Companion.
+
+[**Deschide aplicația**](https://index.alexlab.media) · [**Codul proiectului**](https://github.com/Zuzuitu/AlexLab-Magnetra) · [**Proiectul original (MIT)**](https://github.com/prajwalch/TorrentSearch)
+
+[![PWA & provider contracts](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/pwa.yml/badge.svg)](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/pwa.yml)
+[![Security invariants](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/invariants.yml/badge.svg)](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/invariants.yml)
+[![Production smoke](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/production-smoke.yml/badge.svg)](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/production-smoke.yml)
 
 </div>
 
-## Table of contents
+---
 
-- [Intro](#intro)
-- [Screenshots](#screenshots)
-- [Download](#download)
-- [Features](#features)
-   * [Search](#search)
-   * [Detailed results](#detailed-results)
-   * [Torrent actions](#torrent-actions)
-   * [Torrent details](#torrent-details)
-   * [Browse](#browse)
-   * [Bookmarks](#bookmarks)
-   * [Safe mode](#safe-mode)
-   * [Integrations](#integrations)
-   * [Material 3 design](#material-3-design)
-- [Building from source](#building-from-source)
-   * [Command line](#command-line)
-- [Contributing](#contributing)
-   * [Translation](#translation)
-- [Contributors](#contributors)
-- [Tech stack and open source libraries](#tech-stack-and-open-source-libraries)
-- [Acknowledgements](#acknowledgements)
-- [Disclaimer](#disclaimer)
+## Ce este Magnetra?
 
-## Intro
+**AlexLab Magnetra** este o extindere independentă a proiectului open-source [TorrentSearch](https://github.com/prajwalch/TorrentSearch), cu o interfață web nouă și infrastructură dedicată pentru căutarea în mai multe indexere. Nu este pagina oficială TorrentSearch și nu folosește însemnele, versiunile sau statisticile de descărcare ale proiectului original drept propriile realizări.
 
-TorrentSearch is an Android app for searching torrents across multiple providers. It offers fast search speed with different categories, detailed results, full set of torrent actions, torrent details viewing within the app, and [more](#features).
+Pe iPhone se poate instala din **Safari → Share → Add to Home Screen**. Funcționează și în browser pe alte dispozitive. Codul Android provenit din proiectul original rămâne în repository, cu fluxuri GitHub Actions pentru buildurile Debug și Staging. Interfața PWA nu este aceeași aplicație cu interfața Android nativă.
 
-## Screenshots
+## Ce am construit și modificat față de proiectul original
 
-<img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_1.jpg" alt="Home screen"> <img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_2.jpg" alt="Search screen"> <img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_3.jpg" alt="Torrent actions"> <img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_4.jpg" alt="Bookmarks screen">
-<br>
-<img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_5.jpg" alt="Browse screen"> <img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_6.jpg" alt="Torrent details screen"> <img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_7.jpg" alt="Settings screen">
-<img width="23%" src="https://github.com/prajwalch/TorrentSearch/blob/main/fastlane/metadata/android/en-US/images/phoneScreenshots/screenshot_8.jpg" alt="Search providers screen">
+| Domeniu | TorrentSearch original | AlexLab Magnetra |
+| --- | --- | --- |
+| Interfață | Aplicație Android Kotlin / Jetpack Compose | **PWA proprie** cu design AlexLab, temă întunecată și aspect adaptat pentru iPhone |
+| Căutare | Indexere integrate în aplicația Android | **Cloudflare Worker + adaptoare web**, cu inventar de **46** provideri; **12** afișați implicit în selectorul curatat |
+| Limbi pentru PWA | Nu este această interfață web | Interfață Magnetra în **română și italiană** |
+| Rezultate | Funcțiile native ale aplicației Android | Sortare, categorii, favorite locale, copiere/distribuire magnet și legătură către sursa originală |
+| Reziliența surselor | Logică originală Android | Audit separat pe provideri, explicații pentru erori, oprire temporară a surselor cu probleme și verificări de URL |
+| Magneturi | Acțiunile clientului Android | Corecții validate pentru **0Magnet, TheRarBg și NoNameClub**, inclusiv selectarea paginii autentice de detalii în locul legăturilor auxiliare greșite |
+| Transfer la distanță | Integrarea originală nu este Flud Companion | Asociere **opțională** prin QR/token local și trimiterea manual confirmată către **Flud Companion** |
+| Infrastructură | Aplicație client | Worker Cloudflare, gateway-uri cu destinații fixe și servicii de ieșire opționale pe dispozitiv propriu, cu autentificare |
+| Publicare | Lansările proiectului upstream | Fluxuri GitHub Actions, controale de integritate, versiuni Worker verificabile, canary **0% → 5% → 100%** și rollback în release-urile controlate |
 
-## Download
+> **Atenție la cifre:** 46 reprezintă inventarul de adaptoare, nu 46 surse garantate disponibile în timp real. Cele 12 vizibile sunt configurația de selecție a interfeței; rezultatele depind de fiecare site și de momentul căutării.
 
-> [!NOTE]
-> TorrentSearch requires Android 7.1 or newer.
->
-> Nightly builds are available in the [Actions workflow](https://github.com/prajwalch/TorrentSearch/actions/workflows/staging_build.yml) runs.
-> They are generated automatically for each commit and may be unstable.
+## Experiența de utilizare
 
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/com.prajwalch.torrentsearch)
-[<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.prajwalch.torrentsearch)
-[<img src="https://github.com/machiav3lli/oandbackupx/blob/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/prajwalch/TorrentSearch/releases/latest/)
-[<img src="https://github.com/ImranR98/Obtainium/blob/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/prajwalch/TorrentSearch/)
+1. Deschizi [index.alexlab.media](https://index.alexlab.media) și introduci o căutare.
+2. Alegi categoria, sortarea și sursele dorite.
+3. Verifici rezultatele și poți obține, copia sau distribui un magnet valid.
+4. Dacă ai deja Flud Companion asociat, poți iniția transferul către dispozitivul tău; altfel rămâne disponibilă copierea obișnuită.
 
-## Features
+Favoritele și setările de asociere ale PWA sunt stocate local în browserul folosit. Magnetra nu necesită un cont general AlexLab pentru căutarea publică. Nu promite acces la surse private și nu ocolește autentificarea furnizorilor.
 
-### Search
+## Arhitectura proiectului
 
-- Per-provider enable/disable toggles
-- Multiple category: `Anime`, `Apps`, `Books`, `Games`, `Movies`, `Series`, and more
-- Parallel search across all providers with streaming results
-- Support for sorting and filtering torrents with different options
-
-### Detailed results
-
-Each result includes:
-
-- Torrent name
-- File size
-- Seeders and peers
-- Upload date
-- Category
-- NSFW indicator
-- Provider name
-
-### Torrent actions
-
-- **Open magnet link** in an external torrent client
-- **Download `.torrent` file** to local storage
-- **View torrent details** directly inside the app or open the full page in your browser
-- **Copy or share** the magnet link or details page link
-
-If no torrent client is installed, TorrentSearch provides links to FOSS torrent clients.
-
-### Torrent details
-
-- Support for viewing details directly inside the app. It can be disabled to open the page directly in your default browser instead.
-- Media poster with automatic NSFW image blurring (can be disabled)
-- Screenshot previews
-- Full description with inline image support
-
-_Note: Media poster and screenshots are shown only when available_
-
-### Browse
-
-- A dedicated screen for browsing latest and top torrents
-- Filter torrents with different options
-
-### Bookmarks
-
-- Save torrents for later
-- Export and import support
-
-### Safe mode
-
-When enabled, safe mode automatically:
-
-- Disables unsafe and NSFW providers
-- Hides NSFW categories and torrents
-
-### Integrations
-
-Connect your own indexer via the [Torznab API](https://torznab.github.io/spec-1.3-draft/torznab/Specification-v1.3.html#torznab-api-specification):
-
-- [Jackett](https://github.com/Jackett/Jackett)
-- [Prowlarr](https://github.com/Prowlarr/Prowlarr)
-- Other *arr services
-
-See the [wiki](https://github.com/prajwalch/TorrentSearch/wiki) for setup instructions.
-
-### Material 3 design
-
-- Clean, easy-to-use interface
-- Adapts to your wallpaper and system theme, with full light/dark mode support
-
-## Building from source
-
-The easiest way is to open the project in [Android Studio](https://developer.android.com/studio).
-It handles all setup and lets you run the app in a single click.
-
-### Command line
-
-**Requirements:**
-
-- JDK 17+ with `JAVA_HOME` set ([Adoptium](https://adoptium.net/) recommended)
-- Android SDK: Android Studio will automatically handle downloading and setting up this but if you prefer using command-line without full Android Studio installation, download the SDK from [here](https://developer.android.com/tools/releases/platform-tools) and set `ANDROID_HOME` environment variable with SDK path, or add `sdk.dir` to `local.properties` in the project root.
-
-```sh
-git clone https://github.com/prajwalch/TorrentSearch.git
-cd TorrentSearch
-./gradlew assembleDebug
+```text
+PWA (Safari / Home Screen / browser)
+          │
+          ▼
+Cloudflare Worker (catalog, căutare, resolvere, validări)
+          │
+          ├── indexere publice cu origini fixe
+          ├── gateway-uri opționale autentificate pentru sursele compatibile
+          └── legătură Flud Companion doar când utilizatorul a configurat-o
 ```
 
-Output: `app/build/outputs/apk/debug/`
+**Structura repository-ului**
 
-## Contributing
+- `web/` — interfața PWA, stilurile, limbile, manifestul și service worker-ul.
+- `worker/src/` și `worker/test/` — API, adaptori, contracte, validări și testare.
+- `rock64/` — implementări pentru gateway-uri locale opționale, fără credențiale incluse.
+- `app/` — codul aplicației Android și adaptările sale.
+- `scripts/` — verificări de securitate, teste, diagnostice și pași de release controlați.
+- `docs/` — istoric tehnic, checkpointuri și evidențe ale deciziilor.
 
-Bug fixes, new providers, UI improvements, and translations are all welcome.
-Read [CONTRIBUTING.md](https://github.com/prajwalch/TorrentSearch/blob/main/CONTRIBUTING.md) before
-opening a pull request.
+## Securitate și administrare
 
-### Translation
+Repository-ul este **public**; de aceea valorile reale ale tokenurilor, parolelor, cheilor private, perechilor QR și fișierelor de tunel **nu trebuie încărcate în Git**. Aplicația folosește origini fixe, limite de cerere, verificarea redirecționărilor și autentificare pentru serviciile private. Verificările CI includ teste de siguranță pentru adaptoare și un scanner care blochează fișierele de credențiale și adresele interne din codul urmărit de Git.
 
-Translations are managed on [Weblate](https://hosted.weblate.org/projects/torrentsearch/). No local setup needed, contribute directly from your browser.
+Workflow-urile obișnuite de verificare **nu trebuie confundate cu un release de producție**. Publicarea controlată necesită verificarea configurației, a versiunilor și a stării reale din Cloudflare; nu se reexecută arbitrar joburi de release consumate.
 
-[![Translation status](https://hosted.weblate.org/widget/torrentsearch/multi-auto.svg)](https://hosted.weblate.org/engage/torrentsearch/)
+## Dezvoltare locală
 
-## Contributors
+**PWA / Worker:** proiectul are pagini statice în `web/`, API Worker în `worker/` și teste Node.js pentru contracte.
 
-<a href="https://github.com/prajwalch/TorrentSearch/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=prajwalch/TorrentSearch" alt="TorrentSearch contributors"/>
-</a>
+```bash
+git clone https://github.com/Zuzuitu/AlexLab-Magnetra.git
+cd AlexLab-Magnetra
+node --test worker/test/*.test.mjs
+python3 scripts/check-project-invariants.py
+python3 scripts/check_public_repo_exposure.py
+```
 
-## Tech stack and open source libraries
+**Android:** este necesar SDK-ul Android și un JDK compatibil cu proiectul Gradle. Pentru un build de test:
 
-- **Language:** [Kotlin](https://kotlinlang.org/)
-- **UI:** [Jetpack Compose](https://developer.android.com/compose), [Material 3](https://m3.material.io/)
-- **Architecture:** [Modern App Architecture](https://developer.android.com/topic/architecture)
-- **Async:** [Coroutines](https://kotlinlang.org/docs/coroutines-overview.html), [Flow](https://kotlinlang.org/docs/flow.html)
-- **Networking:** [Ktor](https://ktor.io/) + [OkHttp](https://github.com/lysine-dev/okhttp)
-- **Storage:** [Room](https://developer.android.com/training/data-storage/room), [Jetpack DataStore](https://developer.android.com/topic/libraries/architecture/datastore)
-- **Dependency injection:** [Koin](https://insert-koin.io/), previously [Hilt](https://developer.android.com/training/dependency-injection/hilt-android)
-- **Image loading:** [Coil](https://coil-kt.github.io/coil/)
-- **HTML parsing**: [Jsoup](https://github.com/jhy/jsoup)
-- **Immutable collections**: [Kotlinx immutable collections](https://github.com/Kotlin/kotlinx.collections.immutable)
-- **Markdown rendering**: [ComposeMarkdown](https://github.com/jeziellago/compose-markdown)
-- **Scrollbar**: [LazyColumnScrollbar](https://github.com/nanihadesuka/LazyColumnScrollbar)
-- **Image blurring**: [BlurTransformation](https://github.com/T8RIN/BlurTransformation)
+```bash
+./gradlew app:assembleDebug
+```
 
-## Acknowledgements
+Folosirea acestor comenzi nu publică automat Worker-ul. Configurația de producție și credențialele se administrează separat; nu copia tokenuri în issue-uri, Pull Request-uri sau loguri.
 
-- [Weblate](https://weblate.org/en/) for free libre hosting plan
-- [IconKitchen](https://icon.kitchen/) — app icon
-- [Metrolist](https://github.com/MetrolistGroup/Metrolist) and [Canta](https://github.com/samolego/Canta) — referenced for architecture and implementation patterns during development
+## Stadiu și următoarele îmbunătățiri
 
-## Disclaimer
+La checkpointul din **25 octombrie 2026**, corecțiile magnet pentru **0Magnet, TheRarBg și NoNameClub** au fost validate în producție, iar NoNameClub a fost confirmat funcțional pe iPhone. Se urmăresc în continuare compatibilitatea PWA pe iOS (safe area în modul Home Screen), afișarea corectă a caracterelor chirilice, auditarea surselor fluctuante și consolidarea verificărilor de securitate pentru repository-ul public.
 
-TorrentSearch **does not host, store, or distribute any torrent files or copyrighted content**.
-It searches publicly accessible third-party sources and displays the results. The developer is not
-responsible for how those results are accessed or used.
+Pentru starea tehnică detaliată vezi [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) și [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md). Datele istorice sunt evidențe ale implementării, nu garanții de disponibilitate în timp real.
 
-Users are responsible for complying with their local laws and regulations.
+## Recunoaștere și licență
+
+Magnetra pornește din codul **[prajwalch/TorrentSearch](https://github.com/prajwalch/TorrentSearch)**, distribuit sub licența **MIT**. Mulțumiri autorului și contribuitorilor proiectului original. Păstrăm fișierul [`LICENSE`](LICENSE) și atribuirea upstream. Integrarea și personalizarea AlexLab sunt dezvoltări distincte.
+
+Magnetra nu găzduiește fișiere media sau conținut torrent; afișează rezultate și legături furnizate de servicii externe. Utilizatorul decide ce accesează și transferă.
