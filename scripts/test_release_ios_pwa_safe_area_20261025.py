@@ -23,7 +23,7 @@ class SafeReleaseTests(unittest.TestCase):
   self.assertEqual(r.ACTION,"CONFIRM_MAGNETRA_IOS_HOME_SCREEN_RELEASE_20261025")
   self.assertEqual(r.ORIGINAL,"https://nnmclub.to/forum/viewtopic.php?t=1896364")
  def test_missing_approval_never_writes(self):
-  with patch.dict(os.environ,{"MAGNETRA_NONAMECLUB_RELEASE_ACTION":""}),\
+  with patch.dict(os.environ,{"MAGNETRA_IOS_PWA_RELEASE_ACTION":""}),\
        patch.object(r,"release") as run,patch.object(r,"rollback_if_safe") as rollback:
    self.assertEqual(r.main(),2)
    run.assert_not_called()
@@ -138,7 +138,7 @@ class SafeReleaseTests(unittest.TestCase):
     r.rollback_if_safe(CANDIDATE)
     deploy.assert_not_called()
  def test_failure_stops_then_calls_checked_rollback(self):
-  with patch.dict(os.environ,{"MAGNETRA_NONAMECLUB_RELEASE_ACTION":r.ACTION}),patch.object(r,"release",side_effect=r.Stop("safe")),patch.object(r,"rollback_if_safe") as rollback:
+  with patch.dict(os.environ,{"MAGNETRA_IOS_PWA_RELEASE_ACTION":r.ACTION}),patch.object(r,"release",side_effect=r.Stop("safe")),patch.object(r,"rollback_if_safe") as rollback:
    self.assertEqual(r.main(),1)
    rollback.assert_called_once()
 if __name__=="__main__":unittest.main()
