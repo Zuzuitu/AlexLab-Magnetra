@@ -484,7 +484,29 @@
     "owner_approved_on": "2026-10-25",
     "bulk_select_deselect_toggle": true,
     "explicit_empty_selection_persists": true,
-    "owner_correction_on": "2026-10-25"
+    "owner_correction_on": "2026-10-25",
+    "production_release": {
+      "status": "VERIFIED_100_PERCENT",
+      "date": "2026-10-25",
+      "release_workflow_run": 40216426537,
+      "immutable_version": "74754dac-1842-47b2-8e6f-92a10731f124",
+      "active_percent": 100,
+      "rollback_version": "8d9c19f4-ca38-428b-888e-757ef578c829",
+      "rollback_percent": 0,
+      "cloudflare_binding_names_types_verified": true,
+      "immutable_staging_run": 40215194370,
+      "immutable_stage_initial_stopped_before_canary": true,
+      "independent_zero_readonly_pass_run": 40215819101,
+      "resumed_without_new_upload": true,
+      "canary_5_verified": true,
+      "full_100_verified": true,
+      "public_five_assets_verified": true,
+      "original_46_api_adapter_ids_verified": true,
+      "original_nonameclub_owner_magnet_verified": true,
+      "iphone_physical_acceptance_confirmed": false,
+      "no_new_paid_services": true,
+      "no_rock64_flud_dns_changes": true
+    }
   },
   "provider_recovery_v1": {
     "required_original_indexers": 46,
