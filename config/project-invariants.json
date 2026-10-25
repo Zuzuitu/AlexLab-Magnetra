@@ -94,7 +94,8 @@
       ".github/workflows/nonameclub-card-readonly-20261025.yml",
       ".github/workflows/nonameclub-production-20261025.yml",
       ".github/workflows/ios-pwa-safe-area-production-20261025.yml",
-      ".github/workflows/public-exposure-history-audit-20261025.yml"
+      ".github/workflows/public-exposure-history-audit-20261025.yml",
+      ".github/workflows/pwa-45-indexers-50-production-20261025.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
@@ -978,6 +979,18 @@
     "client_side_only": true,
     "all_fetched_matches_retained": true,
     "sort_before_paginating": true,
-    "reset_to_first_page_on_new_search_sort_or_view": true
+    "reset_to_first_page_on_new_search_sort_or_view": true,
+    "release": {
+      "owner_authorized_on": "2026-10-25",
+      "source_main_sha": "c962da6d7a2e44df8846012c2001cefcade7c41c",
+      "release_workflow": ".github/workflows/pwa-45-indexers-50-production-20261025.yml",
+      "release_script": "scripts/release_pwa_45_indexers_50_20261025.py",
+      "activation_requires_separate_main_commit": true,
+      "immutable_0_5_100_release_required": true,
+      "previous_verified_active_version": "76a15eae-5c8c-41a2-bace-adb9b2460933",
+      "previous_verified_rollback_version": "24642346-9db0-4cea-a56e-12e30f35569f",
+      "current_cloudflare_split_must_be_reverified": true,
+      "production_activation_status": "NOT_TRIGGERED"
+    }
   }
 }
