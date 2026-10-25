@@ -1,0 +1,49 @@
+# Read-only owner preflight: no wrangler, traffic edits, source probes or magnets.
+name: Magnetra Curated 11 Cloudflare Baseline (READ ONLY)
+on:
+  pull_request:
+    paths:
+      - scripts/audit_curated_11_cloudflare_readonly_20261025.py
+      - scripts/test_audit_curated_11_cloudflare_readonly_20261025.py
+      - .github/workflows/magnetra-curated-11-cloudflare-readonly-20261025.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/release-events/magnetra-curated-11-readonly-20261025.md
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-curated-11-readonly-preflight
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check-project-invariants.py
+      - run: python3 -m unittest discover -s scripts -p 'test_audit_curated_11_cloudflare_readonly_20261025.py' -v
+  audit:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, '[magnetra-curated-11-readonly-20261025] ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify source, owner event and offline assertions
+        run: |
+          set -euo pipefail
+          test -s docs/release-events/magnetra-curated-11-readonly-20261025.md
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_audit_curated_11_cloudflare_readonly_20261025.py' -v
+      - name: Inspect exact Cloudflare split, bindings and old public PWA - GET only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_curated_11_cloudflare_readonly_20261025.py
