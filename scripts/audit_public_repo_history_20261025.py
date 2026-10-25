@@ -53,6 +53,13 @@ def inspect(path, data):
             continue
         if ip.is_loopback or ip.is_multicast or ip.is_link_local or ip.is_unspecified:
             continue
+        # CIDR declarations are network definitions, not exposed device IPs.
+        following = data[m.end():m.end()+4]
+        cidr = re.match(rb"/(\d{1,2})(?!\d)", following)
+        if cidr:
+            prefix = int(cidr.group(1))
+            if 0 <= prefix < 32 and ip == ipaddress.ip_network(str(ip) + "/" + str(prefix), strict=False).network_address:
+                continue
         if ip in ipaddress.ip_network("100.64.0.0/10"):
             result.add("cgnat_or_overlay_address")
         elif ip.is_private:
@@ -108,6 +115,22 @@ def run():
         proc.stdin.close()
     print("MAGNETRA_PUBLIC_HISTORY_AUDIT: reached Git blobs only; no paths, IP addresses, keys or values emitted")
     print("BLOBS_SCANNED=" + str(blobs))
+    # Scan current tracked files separately to distinguish historical exposures.
+    current = collections.Counter()
+    raw_paths = subprocess.run(["git", "ls-files", "-z"], capture_output=True, check=True, timeout=30).stdout
+    for raw_path in raw_paths.split(b"\x00"):
+        if not raw_path:
+            continue
+        path = raw_path.decode("utf-8", "replace")
+        try:
+            with open(path, "rb") as stream:
+                data = stream.read(MAX_BYTES + 1)
+        except (OSError, ValueError):
+            continue
+        if len(data) <= MAX_BYTES:
+            current.update(inspect(path, data))
+    for tag in sorted(set(current) | set(HIGH) | {"private_ip_literal", "cgnat_or_overlay_address"}):
+        print("CURRENT_" + tag.upper() + "_FILE_COUNT=" + str(current[tag]))
     print("BLOBS_TOO_LARGE=" + str(large))
     for tag in sorted(set(counts) | set(HIGH)):
         print(tag.upper() + "_BLOB_COUNT=" + str(counts[tag]))
