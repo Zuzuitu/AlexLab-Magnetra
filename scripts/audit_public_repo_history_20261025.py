@@ -3,6 +3,7 @@
 import collections
 import ipaddress
 import math
+import os
 import re
 import subprocess
 import sys
@@ -79,6 +80,28 @@ def read_exact(stream, count):
         count -= len(buf)
     return b"".join(blocks)
 
+def check_new_ip_exposure():
+    base = os.environ.get("MAGNETRA_AUDIT_PR_BASE_SHA", "")
+    if not base:
+        return False
+    if not re.fullmatch(r"[a-f0-9]{40,64}", base):
+        raise RuntimeError("invalid base ref for privacy audit")
+    diff = subprocess.run(
+        ["git", "diff", "--no-ext-diff", "--unified=0", base, "HEAD", "--"],
+        capture_output=True, check=True, timeout=30,
+    ).stdout
+    if len(diff) > 6000000:
+        raise RuntimeError("PR diff too large for bounded exposure review")
+    added = b"\n".join(line[1:] for line in diff.splitlines()
+                       if line.startswith(b"+") and not line.startswith(b"+++"))
+    result = inspect("pr-added-lines", added)
+    unsafe = sorted(result & {"private_ip_literal", "cgnat_or_overlay_address", "public_ip_literal"})
+    print("PR_NEW_NETWORK_ADDRESS_RISK_CATEGORIES=" + str(len(unsafe)))
+    if unsafe:
+        print("RESULT=NEW_PUBLIC_OR_PRIVATE_IP_LITERAL_REQUIRES_OWNER_REVIEW; NO_VALUES_PRINTED")
+        return True
+    return False
+
 def run():
     raw = subprocess.run(["git", "rev-list", "--objects", "--all"], capture_output=True, check=True, timeout=90).stdout
     objects = {}
@@ -114,6 +137,7 @@ def run():
             counts.update(inspect(path, data))
         proc.stdin.close()
     print("MAGNETRA_PUBLIC_HISTORY_AUDIT: reached Git blobs only; no paths, IP addresses, keys or values emitted")
+    new_ip_warning = check_new_ip_exposure()
     print("BLOBS_SCANNED=" + str(blobs))
     # Scan current tracked files separately to distinguish historical exposures.
     current = collections.Counter()
@@ -134,6 +158,8 @@ def run():
     print("BLOBS_TOO_LARGE=" + str(large))
     for tag in sorted(set(counts) | set(HIGH)):
         print(tag.upper() + "_BLOB_COUNT=" + str(counts[tag]))
+    if new_ip_warning:
+        return 1
     if any(counts[k] for k in HIGH):
         print("RESULT=SECURITY_REVIEW_REQUIRED; DO_NOT_PUBLISH_MATCHING_SECRET_VALUES")
         return 1
