@@ -84,3 +84,12 @@ test("public UI removes source session/test diagnostics without removing operati
  assert.match(html,/id="languageSelect"/);
  assert.equal((html.match(/<option value="(?:ro|it)">/g)||[]).length,2);
 });
+
+test("bulk toggle labels and deselection notifications support RO and IT",()=>{
+ const r=runtime("it");
+ assert.equal(r.lang.t("Deselect all available"),"Deseleziona tutte");
+ assert.equal(r.lang.t("Deselected all {n} indexers.",{n:11}),"Deselezionate tutte le 11 fonti.");
+ assert.equal(r.lang.set("ro"),true);
+ assert.equal(r.lang.t("Deselect all available"),"Deselectează toate");
+ assert.equal(r.lang.t("Deselected all {n} indexers.",{n:11}),"Deselectate toate cele 11 surse.");
+});

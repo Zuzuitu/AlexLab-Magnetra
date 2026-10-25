@@ -1,5 +1,15 @@
 # AlexLab Magnetra — Project State
 
+## OWNER CORRECTION — 25 OCT 2026 — 11 CURATED PWA INDEXERS + SELECT/DESELECT (CODE ONLY)
+
+**Supersedes the earlier 45-visible/1-hidden picker instructions here, not historical production evidence. This change is not yet deployed.**
+
+- The user clarified that reintroducing the earlier 34 intentionally hidden indexers was a mistake. Restore the exact 34 hidden IDs from immediately before PR #196 and continue excluding SubsPlease: **35 excluded / 11 selectable** in PWA, original **46 adapters and IDs** still intact in Android/API. The 11 are curated choices, not a guarantee of current universal provider uptime.
+- Keep the single bulk button: **Selectează toate** if fewer than 11 are selected, **Deselectează toate** if all 11 are selected. Update immediately after per-source checkbox changes and RO/IT switching. Save deliberate empty selections across Home Screen reloads; clean hidden stale saved IDs and permit hidden-only legacy state to recover the established defaults. Never reenable excluded providers via client search, bookmarks or errors.
+- Preserve 50-item client pagination, completed-search auto-pause, relevance sorting, existing Rock64/Flud/proxy safety, all domain bindings and free-tier/no-cost requirements. Bump PWA service-worker cache revision.
+- **Deployment status:** branch/PR staging only, not live; previously verified public 45/50 assets and old Cloudflare audit represent the old deployment. No direct deploy, unreviewed one-shot release, API/Worker binding write or traffic switch. Next release requires independently verified current Cloudflare distribution, the correct rollback target and separate owner-approved guarded execution.
+
+
 ## VERIFIED LIVE CHECKPOINT — 25 OCT 2026 — PWA 45/50 ONLINE; RELEASE GUARDS REPAIRED
 
 **This supersedes the historical headings below that say the 45/50 feature is still in review or not deployed.** Do not rewrite historical release chronology.

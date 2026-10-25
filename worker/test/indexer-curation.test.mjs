@@ -28,83 +28,91 @@ function runPicker(saved){
   setItem:(key,value)=>storage.set(key,value),
   removeItem:key=>storage.delete(key)
  };
- const context=vm.createContext({document,localStorage});
- vm.runInContext(app+"\nglobalThis.__picker={state,hiddenIndexerIds,preferred,priorityIndexerIds,chooseProviders,selectableProviders,orderedProviders,renderProviders,renderProviderErrors};",context,{filename:"web/app.js"});
+ const context=vm.createContext({document,localStorage,setTimeout:()=>1,clearTimeout:()=>{}});
+ vm.runInContext(app+"\nglobalThis.__picker={state,hiddenIndexerIds,preferred,priorityIndexerIds,chooseProviders,selectableProviders,orderedProviders,renderProviders,renderProviderErrors,toggleAllProviders,updateSelectAllButton};",context,{filename:"web/app.js"});
  const ui=context.__picker;
  ui.state.providers=PROVIDERS;
  ui.chooseProviders();
  return {ui,elements,storage};
 }
 
-test("all 46 original provider IDs remain in backend, 45 are selectable and SubsPlease is excluded",()=>{
+
+test("curated 11 picker restores all 34 previous hidden IDs plus SubsPlease",()=>{
  assert.equal(PROVIDERS.length,46);
  const {ui,elements}=runPicker();
- assert.deepEqual([...ui.hiddenIndexerIds],["subsplease"]);
- assert.equal(ui.selectableProviders().length,45);
- ui.renderProviders();
- const rows=elements.get("providerGrid").children;
- const ids=rows.map(row=>row.children[0].children[0].value);
- assert.equal(ids.length,45);
- assert.ok(!ids.includes("subsplease"));
- for(const id of ["bt4g","eztvx","animetosho","mikanproject","fitgirlrepacks"]){
-  assert.ok(ids.includes(id),id+" must now appear");
- }
- assert.deepEqual(ids.slice(0,3),["btdigg","torrent9","oxtorrent"]);
- assert.match(elements.get("catalogSummary").textContent,/45 sources available/);
- assert.equal(elements.get("providerCount").textContent,"5/45");
-});
-
-test("only SubsPlease is scrubbed from existing iPhone selections and paused sources",()=>{
- const {ui,storage,elements}=runPicker({
-  "magnetra.providers.v1":["btdigg","bt4g","subsplease","animetosho"],
-  "magnetra.paused-indexers.v1":["subsplease","nyaasi","knaben"]
- });
- assert.deepEqual([...ui.state.selected],["btdigg","bt4g","animetosho"]);
- assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","bt4g","animetosho"]);
- assert.deepEqual([...ui.state.pausedIds],["nyaasi","knaben"]);
- assert.equal(elements.get("providerCount").textContent,"3/45");
-});
-
-test("previously selecting only SubsPlease safely falls back to preferred sources",()=>{
- const {ui,storage}=runPicker({"magnetra.providers.v1":["subsplease"]});
- const defaults=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
- assert.deepEqual([...ui.state.selected],defaults);
- assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),defaults);
-});
-
-test("one Select All control includes all 45 eligible indexers, never SubsPlease",()=>{
- assert.match(app,/\$\("selectAllProviders"\)\.addEventListener\("click",\(\)=>\{\s*const ids=selectableProviders\(\)\.map\(p=>p\.id\)/);
- assert.doesNotMatch(app,/\$\("selectWorking"\)/);
- assert.match(html,/id="selectAllProviders">Selectează toate/);
- assert.doesNotMatch(html,/id="selectWorking"|Selectează sursele verificate/);
- assert.match(html,/Sursele cu erori se dezactivează automat/);
-});
-
-test("error panel hides SubsPlease but shows previously hidden indexers",()=>{
- const {ui,elements}=runPicker();
- ui.renderProviderErrors([{provider:"subsplease",message:"Unavailable"}]);
- assert.equal(elements.get("providerErrors").children.length,0);
- ui.renderProviderErrors([
-  {provider:"subsplease",message:"Unavailable"},
-  {provider:"animetosho",message:"Upstream unavailable"},
-  {provider:"btdigg",message:"Temporary timeout"}
- ]);
- const parent=elements.get("providerErrors");
- assert.equal(parent.children.length,1);
- assert.match(parent.children[0].children[0].textContent,/2 source\(s\) unavailable/);
- const data=JSON.stringify(parent);
- assert.doesNotMatch(data,/SubsPlease|subsplease/);
- assert.match(data,/AnimeTosho|animetosho/);
-});
-
-test("manual selection persists as-is for reenabled indexers",()=>{
- const {ui,elements,storage}=runPicker({"magnetra.providers.v1":["btdigg","bangumimoe","ytsmx","torrent9"]});
- assert.deepEqual([...ui.state.selected],["btdigg","bangumimoe","ytsmx","torrent9"]);
+ assert.equal(ui.hiddenIndexerIds.size,35);
+ for(const id of ["subsplease","bt4g","eztvx","animetosho","mikanproject","fitgirlrepacks"])assert.ok(ui.hiddenIndexerIds.has(id),id);
+ assert.equal(ui.selectableProviders().length,11);
  ui.renderProviders();
  const ids=elements.get("providerGrid").children.map(row=>row.children[0].children[0].value);
- assert.equal(ids.length,45);
- assert.ok(ids.includes("ytsmx"));
- assert.ok(ids.includes("bangumimoe"));
+ assert.equal(ids.length,11);
+ assert.deepEqual(ids.slice(0,3),["btdigg","torrent9","oxtorrent"]);
  assert.ok(!ids.includes("subsplease"));
- assert.equal(JSON.parse(storage.get("magnetra.providers.v1")).length,4);
+ assert.match(elements.get("catalogSummary").textContent,/11 sources available/);
+ assert.equal(elements.get("providerCount").textContent,"5/11");
+});
+
+test("migrates iPhone selected and paused lists without reintroducing hidden sources",()=>{
+ const {ui,storage,elements}=runPicker({
+  "magnetra.providers.v1":["btdigg","bt4g","subsplease","animetosho","torrent9"],
+  "magnetra.paused-indexers.v1":["subsplease","nyaasi","knaben"]
+ });
+ assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
+ assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
+ assert.deepEqual([...ui.state.pausedIds],["knaben"]);
+ assert.equal(elements.get("providerCount").textContent,"2/11");
+});
+
+test("legacy hidden-only selection recovers defaults but explicit saved [] stays empty",()=>{
+ const a=runPicker({"magnetra.providers.v1":["subsplease","bt4g"]});
+ assert.deepEqual([...a.ui.state.selected],["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"]);
+ const b=runPicker({"magnetra.providers.v1":[]});
+ assert.equal(b.ui.state.selected.size,0);
+ assert.equal(b.elements.get("providerCount").textContent,"0/11");
+ assert.equal(b.elements.get("selectAllProviders").textContent,"Select all available");
+});
+
+test("select/deselect all toggle persists even across picker initialization",()=>{
+ const {ui,storage,elements}=runPicker();
+ assert.equal(elements.get("selectAllProviders").textContent,"Select all available");
+ ui.toggleAllProviders();
+ assert.equal(ui.state.selected.size,11);
+ assert.equal(elements.get("selectAllProviders").textContent,"Deselect all available");
+ assert.equal(elements.get("providerCount").textContent,"11/11");
+ ui.toggleAllProviders();
+ assert.equal(ui.state.selected.size,0);
+ assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),[]);
+ assert.equal(elements.get("selectAllProviders").textContent,"Select all available");
+ ui.chooseProviders();
+ assert.equal(ui.state.selected.size,0);
+ ui.toggleAllProviders();
+ assert.equal(ui.state.selected.size,11);
+ assert.doesNotMatch(app,/\$\("selectWorking"\)/);
+ assert.match(html,/id="selectAllProviders">Selectează toate/);
+});
+
+test("per-indexer checkbox changes also update dynamic bulk label",()=>{
+ const {ui,elements}=runPicker();
+ ui.toggleAllProviders();ui.renderProviders();
+ const input=elements.get("providerGrid").children[0].children[0].children[0];
+ input.checked=false;input.listeners.change();
+ assert.equal(ui.state.selected.size,10);
+ assert.equal(elements.get("selectAllProviders").textContent,"Select all available");
+ input.checked=true;input.listeners.change();
+ assert.equal(ui.state.selected.size,11);
+ assert.equal(elements.get("selectAllProviders").textContent,"Deselect all available");
+});
+
+test("error panels and saved preferences exclude previously hidden adapters",()=>{
+ const {ui,elements,storage}=runPicker({"magnetra.providers.v1":["btdigg","bangumimoe","ytsmx","torrent9"]});
+ assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
+ assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
+ ui.renderProviderErrors([
+  {provider:"subsplease",message:"Unavailable"},
+  {provider:"animetosho",message:"Unreachable"},
+  {provider:"btdigg",message:"Temporary timeout"}
+ ]);
+ const visible=JSON.stringify(elements.get("providerErrors"));
+ assert.doesNotMatch(visible,/SubsPlease|subsplease|AnimeTosho|animetosho/);
+ assert.match(visible,/1 source\(s\) unavailable/);
 });
