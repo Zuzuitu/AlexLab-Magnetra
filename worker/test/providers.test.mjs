@@ -143,3 +143,20 @@ test("missing seed/leech fields remain unknown rather than fabricated zero",asyn
  assert.equal(rows[0].seeders,null);
  assert.equal(rows[0].peers,null);
 });
+
+
+test("ThePirateBay 429 reads only bounded Retry-After from the original apibay response",async()=>{
+ const cases=[["17",17000],["999999",300000],["not a retry delay",null]];
+ for(const [header,expected] of cases){
+  let fetches=0;
+  await assert.rejects(
+   ()=>searchProvider("thepiratebay","ubuntu","all",async(url)=>{
+    fetches++;
+    assert.match(url,/^https:\/\/apibay\.org\/q\.php\?/);
+    return new Response("",{status:429,headers:{"retry-after":header}});
+   }),
+   err=>{assert.match(err.message,/provider HTTP 429/);assert.equal(err.retryAfterMs,expected);return true;}
+  );
+  assert.equal(fetches,1,"never retry a 429 at the adapter");
+ }
+});
