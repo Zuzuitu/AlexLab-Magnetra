@@ -541,7 +541,9 @@ function renderProviderErrors(failures,warnings=[]){
   line.append(el("strong","",provider?.name||failure.provider));
   const message=failure.provider==="btdigg"&&failure.code==="RATE_LIMIT"
    ?tr("BTDigg is limiting requests. Wait a few seconds before another search.")
-   :genericError(failure);
+   :failure.provider==="thepiratebay"&&failure.code==="RATE_LIMIT"
+    ?tr("ThePirateBay is limiting requests right now. Try again later.")
+    :genericError(failure);
   const why=el("span","",message);
   line.append(why);
   entry.append(line);
@@ -560,7 +562,11 @@ function renderProviderErrors(failures,warnings=[]){
   // or hardcoded providers that may currently be blocked.
   const live=orderedProviders(selectableProviders()).filter(p=>p.ported&&
    ["results","empty-unverified"].includes(state.sessionAudit[p.id]?.state)).map(p=>p.id);
-  const ids=live.length?live:["knaben","torrentscsv","thepiratebay"].filter(id=>
+  // Exclude failed sources from both observed and fallback alternatives.
+  const failed=new Set(visibleFailures.map(f=>f.provider));
+  const safeLive=live.filter(id=>!failed.has(id));
+  const ids=safeLive.length?safeLive:["knaben","torrentscsv"].filter(id=>
+   !failed.has(id)&&state.sessionAudit[id]?.state!=="error"&&
    selectableProviders().some(p=>p.id===id));
   if(!ids.length){toast(tr("No alternative indexers are available."));return;}
   state.selected=new Set(ids);
