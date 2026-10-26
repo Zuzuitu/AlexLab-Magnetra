@@ -6,9 +6,12 @@ export const STALE_MAX_MS=20*60_000;
 const MAX_ENTRIES=12;
 const MAX_SERIALIZED_BYTES=160_000;
 const ALLOWED=new Set(["btdigg","thepiratebay"]);
+const TPB_DEFAULT_COOLDOWN_MS=60_000;
+const TPB_MAX_COOLDOWN_MS=5*60_000;
 
 export function createVerifiedSourceCache(clock=()=>Date.now()){
  const entries=new Map(),inflight=new Map();
+ let tpbCooldownUntil=0;
  const key=(id,q,category)=>JSON.stringify([id,q,category]);
  function read(k){
   const item=entries.get(k);
@@ -18,6 +21,11 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
   entries.delete(k);entries.set(k,item);
   return {item,age};
  }
+ function staleResult(k){
+  const old=read(k);
+  return old?{items:old.item.items.map(x=>({...x})),
+   cache:{mode:"stale",ageSeconds:Math.floor(old.age/1000)}}:null;
+ }
  async function search(id,q,category,fetchResults){
   if(!ALLOWED.has(id))return {items:await fetchResults(),cache:null};
   const k=key(id,q,category);
@@ -26,6 +34,12 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
    return {items:cached.item.items.map(x=>({...x})),
      cache:{mode:"fresh",ageSeconds:Math.floor(cached.age/1000)}};
   if(inflight.has(k))return inflight.get(k);
+  // Best-effort per-isolate cooldown across every TPB query, not just one term.
+  if(id==="thepiratebay"&&clock()<tpbCooldownUntil){
+   const old=staleResult(k);
+   if(old)return old;
+   throw Error("provider HTTP 429");
+  }
   const work=(async()=>{
    try{
     const items=await fetchResults();
@@ -40,11 +54,15 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
     }
     return {items,cache:null};
    }catch(e){
-    // Only an identical original-source, exact-query, still-bounded positive
-    // result may substitute a failing request. Surface STALE clearly in API/UI.
-    const old=read(k);
-    if(old)return {items:old.item.items.map(x=>({...x})),
-      cache:{mode:"stale",ageSeconds:Math.floor(old.age/1000)}};
+    // Negative cache stores only the upstream 429 deadline, not fake results.
+    if(id==="thepiratebay"&&/^provider HTTP 429/i.test(String(e?.message||""))){
+     const ms=Number.isFinite(e.retryAfterMs)&&e.retryAfterMs>0
+      ?Math.min(TPB_MAX_COOLDOWN_MS,e.retryAfterMs):TPB_DEFAULT_COOLDOWN_MS;
+     tpbCooldownUntil=Math.max(tpbCooldownUntil,clock()+ms);
+    }
+    // Exact-query original results may be returned only visibly marked stale.
+    const old=staleResult(k);
+    if(old)return old;
     throw e;
    }finally{inflight.delete(k);}
   })();
