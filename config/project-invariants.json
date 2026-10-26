@@ -240,6 +240,21 @@
       "fabricated_legacy_html_results_forbidden": true
     }
   },
+  "tpb_rate_limit_candidate_2026_10_27": {
+    "status": "code_only_not_deployed",
+    "original_source_origin": "https://apibay.org",
+    "429_default_cooldown_ms": 60000,
+    "429_max_retry_after_ms": 300000,
+    "negative_cache_contains_only_deadline": true,
+    "cooldown_scope": "per_worker_isolate_across_tpb_queries",
+    "cross_isolate_global_coordination_claimed": false,
+    "original_positive_exact_query_stale_only": true,
+    "no_429_retry_or_bypass": true,
+    "failed_providers_excluded_from_alternatives": true,
+    "new_paid_services_allowed": false,
+    "requires_fresh_cloudflare_split_preflight_before_release": true,
+    "previous_workflow_replay_forbidden": true
+  },
   "pwa_cache": {
     "api_requests_never_cached": true,
     "application_assets_network_first": true,
