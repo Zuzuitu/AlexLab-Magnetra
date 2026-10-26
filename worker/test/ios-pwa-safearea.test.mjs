@@ -26,7 +26,7 @@ test("standalone header settings and language controls preserve tappable minimum
 });
 
 test("installed service worker refreshes the safe-area stylesheet through a new cache",()=>{
-  assert.match(sw,/const CACHE="alexlab-magnetra-v10"/);
+  assert.match(sw,/const CACHE="alexlab-magnetra-v11"/);
   assert.match(sw,/const FRESH_ASSETS=new Set\(\[[^\]]*"\/styles\.css"/);
   assert.match(sw,/fetch\(event\.request,\{cache:"no-store"\}\)/);
 });
