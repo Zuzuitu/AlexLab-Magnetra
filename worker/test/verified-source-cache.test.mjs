@@ -57,3 +57,68 @@ test("a confirmed source-empty response retires its former positive cache",async
  now+=1;
  await assert.rejects(()=>c.search("thepiratebay","ubuntu","all",async()=>{throw Error("provider HTTP 504")}),/504/);
 });
+
+
+test("TPB HTTP 429 pauses all TPB queries in one isolate until Retry-After expiry",async()=>{
+ let now=0,calls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ const limited=async()=>{calls++;const err=Error("provider HTTP 429");err.retryAfterMs=30_000;throw err;};
+ await assert.rejects(()=>c.search("thepiratebay","first","all",limited),/429/);
+ now=29_999;
+ await assert.rejects(()=>c.search("thepiratebay","second","movies",limited),/429/);
+ assert.equal(calls,1,"cooldown must not contact original upstream for a different term");
+ now=30_001;
+ await assert.rejects(()=>c.search("thepiratebay","second","movies",limited),/429/);
+ assert.equal(calls,2,"upstream may be contacted once the real deadline expires");
+});
+
+test("TPB 429 with an exact cached positive is stale, not fresh or borrowed",async()=>{
+ let now=0,calls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ await c.search("thepiratebay","ubuntu","all",async()=>[{id:"thepiratebay:1",name:"real",provider:"thepiratebay"}]);
+ now=FRESH_MS+1;
+ const limited=async()=>{calls++;throw Error("provider HTTP 429");};
+ const first=await c.search("thepiratebay","ubuntu","all",limited);
+ assert.equal(first.cache.mode,"stale");
+ assert.equal(calls,1);
+ now+=10_000;
+ const still=await c.search("thepiratebay","ubuntu","all",limited);
+ assert.equal(still.cache.mode,"stale");
+ assert.equal(calls,1,"do not recontact upstream within default cooldown");
+ await assert.rejects(()=>c.search("thepiratebay","different","all",limited),/429/);
+ assert.equal(calls,1,"different search must not receive another query's cached results");
+ now+=60_001;
+ await assert.rejects(()=>c.search("thepiratebay","different","all",limited),/429/);
+ assert.equal(calls,2);
+});
+
+test("TPB 403, timeout and 5xx do not create a 429 cooldown; BTDigg remains separate",async()=>{
+ let now=0,tpbCalls=0,btdiggCalls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ for(const error of ["provider HTTP 403","provider HTTP 503","TimeoutError"]){
+  await assert.rejects(()=>c.search("thepiratebay","a"+tpbCalls,"all",async()=>{
+   tpbCalls++;throw Error(error);
+  }));
+ }
+ assert.equal(tpbCalls,3);
+ await assert.rejects(()=>c.search("thepiratebay","limited","all",async()=>{throw Error("provider HTTP 429")}),/429/);
+ await c.search("btdigg","ubuntu","all",async()=>{btdiggCalls++;return [{id:"btdigg:1",name:"original"}];});
+ assert.equal(btdiggCalls,1);
+ now+=60_001;
+ await c.search("thepiratebay","recovered","all",async()=>{tpbCalls++;return [];});
+ assert.equal(tpbCalls,4);
+});
+
+test("TPB 429 cooldown is bounded and never becomes permanent",async()=>{
+ let now=0,calls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ await assert.rejects(()=>c.search("thepiratebay","ubuntu","all",async()=>{
+  calls++;const e=Error("provider HTTP 429");e.retryAfterMs=8*60*60_000;throw e;
+ }),/429/);
+ now=5*60_000-1;
+ await assert.rejects(()=>c.search("thepiratebay","new","all",async()=>{calls++;return [];}),/429/);
+ assert.equal(calls,1);
+ now=5*60_000+1;
+ assert.deepEqual((await c.search("thepiratebay","new","all",async()=>{calls++;return [];})).items,[]);
+ assert.equal(calls,2);
+});
