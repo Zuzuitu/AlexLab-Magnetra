@@ -1,5 +1,13 @@
 # AlexLab Magnetra — Project State
 
+## 27 OCT 2026 — TPB 429 CODE MERGED; NEW GUARDED MANUAL RELEASE PREPARED (NOT YET DEPLOYED)
+
+- Remediation PR #211 merged to `main` at `2162ceceba42eeacec7762f4a0170c1f19031209`. All six PR checks PASS (worker/PWA, invariants, repository exposure audit, Android debug/staging and guarded-workflow offline checks). This did **not** activate a new Cloudflare version. The observed original-source TPB rate limit remains a user-reported UI observation; no new exact HTTP 429 upstream trace or verified IP-level root cause.
+- New owner-only manual workflow `.github/workflows/magnetra-tpb-429-guarded-production-20261027.yml` and independent `scripts/release_tpb_429_guarded_20261027.py` replace the obsolete 25 Oct deployment procedure, with pinned verified source files and an independently checked read-only production baseline `40bfd647-2b8a-4643-94f2-577e723aba97@100%` / `74754dac-1842-47b2-8e6f-92a10731f124@0%` **as expected, not yet freshly proved**. The workflow itself verifies the LIVE split, account, bindings, source hashes and public old asset bytes before ANY Cloudflare write; otherwise aborts.
+- After preflight: immutable upload with protected four bindings preserved, guarded 0% staging and static asset + health/46 catalog checks, existing source-owned NoNameClub magnet/card verification, 5% canary, 100% release, verified old-version rollback at zero. Reject unknown splits and stale release invocations; never run generic `deploy-pwa.yml` or prior release workflows as substitutes.
+- No BTDigg or ThePirateBay automated source query during release (their historical positive probes could consume rate-limit quota); isolated mocked tests verify 429 Retry-After and conservative per-isolate cooldown. No guarantee of multi-isolate coordination. The owner should do **one** TPB test after release and report the physical iPhone outcome. No DNS, Rock64, WAF, Flud, paid service or external gateway changes.
+- Do not describe this as deployed without the new workflow's GitHub Actions release log proving 0→5→100 and the public postflight. This paragraph describes implementation/rollout readiness only.
+
 ## 27 OCT 2026 — TPB HTTP 429 RESPECTFUL COOLDOWN (CODE REVIEW ONLY; NOT DEPLOYED)
 
 - Baseline independently checked: GitHub `main` at `b41229261a0ab0878ee701bd235242c6bb6d792d`, release Action `40294943804` completed SUCCESS. Its recorded production split was `40bfd647-2b8a-4643-94f2-577e723aba97@100%` / `74754dac-1842-47b2-8e6f-92a10731f124@0%`; **current Cloudflare split still requires separate read-only verification before any write**.
