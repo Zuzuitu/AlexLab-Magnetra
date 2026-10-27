@@ -1,5 +1,12 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 27 OCT 2026 — HOME + TPB GUARDED RELEASE #40482099439 STOPPED BEFORE UPLOAD; SAFE PREFLIGHT REPAIR (CODE ONLY)
+
+- [Manual GitHub Actions #40482099439](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40482099439) failed with `HOME_TPB_RELEASE_STOP_NO_SUCCESS_ASSUMED`. Logs show `REVIEWED_HOME_TPB_SERIAL_AND_CURATED_11_GUARDS: PASS` and fresh `EXACT_FDFF_100_40BFD6_ZERO_FOUR_BINDINGS: PASS`, **no** `FIX_IMMUTABLE_NEW_VERSION` / zero-slot / canary / traffic switch markers. The previous stable `fdffdc78-0bd3-4721-a5b1-11f515c52bd1@100%` and `40bfd647-2b8a-4643-94f2-577e723aba97@0%` remain the validated split at the last preflight. No Cloudflare write occurred.
+- Audited deterministic cause: `release_home_tpb_serial_guarded_20261027.release()` invoked legacy `live_http("/sw.js")`; this imported helper's allowlist accepts `/app.js` and selected APIs but **rejects `/sw.js` locally**. Previous source-hash comparison therefore never ran; it was not proof of bad public SW bytes nor TPB failure.
+- Dedicated fix swaps only that call to the script's existing `candidate_http("/sw.js", None)`, which restricts to the approved same-origin path, rejects redirects, checks JavaScript status/content type and size, then compares public previous SW v11 Git blob to the known source. New offline test constructs exact original SW v11 from reviewed SW v12 with only the cache tag reverted; confirms correct immutable Git blob and stops at mocked upload (before writes). Other source/bindings/0→5→100/rollback invariants and no-TPB-probe policy preserved.
+- **Not yet deployed**. Never describe PR #214's Home and TPB serialization code as active until a newly successful owner-approved guarded workflow proves 100% and public postflight. A rerun after this single preflight fix requires review, CI, and user-initiated manual dispatch, not automatic deploy or replay of the failed commit.
+
 ## 27 OCT 2026 — GUARDED HOME + TPB SERIALIZER RELEASE WORKFLOW (NOT DEPLOYED)
 
 - Code fix PR [#214](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/214) merged `1496ce10ec2e09ddc4d796891650c5b91bcf8aaf`; full PWA, invariants, exposure audit and both Android builds passed. This integration alone **did not deploy Cloudflare**.
