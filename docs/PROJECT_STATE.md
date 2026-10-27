@@ -1,5 +1,12 @@
 # AlexLab Magnetra — Project State
 
+## 27 OCT 2026 — GUARDED HOME + TPB SERIALIZER RELEASE WORKFLOW (NOT DEPLOYED)
+
+- Code fix PR [#214](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/214) merged `1496ce10ec2e09ddc4d796891650c5b91bcf8aaf`; full PWA, invariants, exposure audit and both Android builds passed. This integration alone **did not deploy Cloudflare**.
+- New owner-only manual workflow `.github/workflows/magnetra-home-tpb-serial-guarded-production-20261027.yml` uses independent script `scripts/release_home_tpb_serial_guarded_20261027.py`. Expected last release split is `fdffdc78-0bd3-4721-a5b1-11f515c52bd1@100%` / `40bfd647-2b8a-4643-94f2-577e723aba97@0%`; this is still revalidated via Cloudflare read-only GET immediately **before any write**.
+- Code/blob guards pin `web/app.js`, new accessible Home `web/index.html`, `web/styles.css`, SW v12, TPB serialized cache, existing Worker/adapters; verify previous public SW v11 blob for unrelated changes; preserve four bindings with `--keep-vars`, staged immutable 0%, 5% canary, 100% and fail-closed rollback to fdff. No TPB/BTDigg automated upstream search during release; static assets/46 catalog and existing NoNameClub original magnet/search-card checks remain.
+- **Not live until GitHub manual guarded release succeeds**; no generic deploy, old workflow re-run, DNS, WAF, Rock64/Flud or new paid services. Owner iPhone should test Home logo tap and all 11 sources once after release. More cross-isolate TPB 429s remain possible and are not evidence of duplicate per-indexer PWA calls.
+
 ## 27 OCT 2026 — OWNER FOLLOW-UP: LOGO → HOME + TPB IN-ISOLATE SERIALIZATION (CODE CANDIDATE ONLY)
 
 - Owner screenshot from iPhone shows 384 results, a separate TPB `RATE_LIMIT` warning during an all-11 search, and an owner report that a subsequent TPB-only query succeeded. **This is not evidence of duplicate outbound TPB requests or their root cause.** Code audit proves the PWA dispatches one independent API request **per selected indexer**, no duplicate IDs in its `Set`, at most three concurrent providers; the Worker refuses any multi-provider request with duplicate IDs; TPB's `apibay.org` adapter performs one bounded HTTP request per invocation without automatic retry. Rate limiting may reflect independent third-party traffic, edge egress variability, and separate Cloudflare isolates.
