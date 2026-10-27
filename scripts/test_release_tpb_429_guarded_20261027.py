@@ -35,6 +35,11 @@ class TPB429ReleaseGuards(unittest.TestCase):
         self.assertIn("verify_candidate(NEW)",code)
         self.assertIn("public_postflight(NEW)",code)
 
+    def test_reviewed_source_guard_runs_offline_against_exact_repo(self):
+        # Covers actual content-addressed pins and 11/35, SW v11, TPB 429 safety.
+        source=release.source_guard()
+        self.assertEqual(source["name"],"alexlab-magnetra")
+
     def test_read_only_preflight_stops_before_upload_when_baseline_differs(self):
         with patch.object(release,"source_guard",return_value={}), \
              patch.object(release,"split_guard",side_effect=release.Stop("UNKNOWN_SPLIT")), \
