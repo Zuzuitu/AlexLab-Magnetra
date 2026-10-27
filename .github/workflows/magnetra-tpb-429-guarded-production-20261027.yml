@@ -1,0 +1,79 @@
+# Owner-run release only; offline PR checks never mutate Cloudflare.
+name: Magnetra TPB 429 Guarded Production 20261027
+
+on:
+  pull_request:
+    paths:
+      - scripts/release_tpb_429_guarded_20261027.py
+      - scripts/test_release_tpb_429_guarded_20261027.py
+      - .github/workflows/magnetra-tpb-429-guarded-production-20261027.yml
+      - config/project-invariants.json
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Explicit approval for protected TPB 429 rollout
+        required: true
+        type: choice
+        default: DO_NOT_RELEASE
+        options:
+          - DO_NOT_RELEASE
+          - APPROVE_TPB_429_GUARDED_RELEASE_20261027
+
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  offline-release-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check technical invariants and release fail-closed tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_tpb_429_guarded_20261027.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: All PWA, provider and Companion regression tests
+        run: node --test worker/test/*.test.mjs
+      - name: Offline Wrangler packaging validation
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+
+  guarded-production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'APPROVE_TPB_429_GUARDED_RELEASE_20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fail-closed source checks and current tested contracts
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_tpb_429_guarded_20261027.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run PWA and provider regression suite before write
+        run: node --test worker/test/*.test.mjs
+      - name: Dry-run reviewed Cloudflare Worker
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Validate live split and immutable bindings, deploy 0→5→100 with rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_TPB_429_RELEASE_ACTION: CONFIRM_MAGNETRA_TPB_429_GUARDED_20261027
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          python3 scripts/release_tpb_429_guarded_20261027.py
