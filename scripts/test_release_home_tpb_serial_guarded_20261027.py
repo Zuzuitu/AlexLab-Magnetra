@@ -35,10 +35,35 @@ class HomeTPBGuardTests(unittest.TestCase):
 
     def test_live_asset_guard_checks_previous_service_worker_not_unchanged_app(self):
         code=inspect.getsource(release.release)
-        self.assertIn('old_bytes=live_http("/sw.js")',code)
-        self.assertNotIn('old_bytes=live_http("/app.js")',code)
+        self.assertIn('old_bytes=candidate_http("/sw.js",None)',code)
+        self.assertNotIn('live_http("/sw.js")',code)
+        self.assertIn('"/sw.js":"javascript"',inspect.getsource(release.candidate_http))
         self.assertIn("OLD_PUBLIC_GIT_BLOB",code)
         self.assertIn("stable(first,BASELINE)",code)
+
+    def test_previous_real_v11_service_worker_passes_prewrite_guard(self):
+        # Simulate the exact previously deployed immutable SW from the v12
+        # reviewed source by reversing only the approved version bump.
+        current=(release.ROOT/"web/sw.js").read_bytes()
+        self.assertEqual(current.count(b'alexlab-magnetra-v12'),1)
+        previous=current.replace(b'alexlab-magnetra-v12',b'alexlab-magnetra-v11')
+        import hashlib
+        blob=hashlib.sha1(b"blob "+str(len(previous)).encode()+b"\\x00"+previous).hexdigest()
+        self.assertEqual(blob,release.OLD_PUBLIC_GIT_BLOB)
+        self.assertNotEqual(current,previous)
+        requests=[]
+        def public_asset(path,version):
+            requests.append((path,version))
+            return previous
+        with patch.object(release,"source_guard",return_value={"name":"alexlab-magnetra"}), \\
+             patch.object(release,"split_guard",return_value=object()), \\
+             patch.object(release,"candidate_http",side_effect=public_asset), \\
+             patch.object(release,"stable"), \\
+             patch.object(release,"upload",side_effect=release.Stop("EXPECTED_BEFORE_UPLOAD")) as upload:
+            with self.assertRaisesRegex(release.Stop,"EXPECTED_BEFORE_UPLOAD"):
+                release.release()
+            upload.assert_called_once()
+        self.assertEqual(requests,[("/sw.js",None)],"same-origin asset, no legacy HTTP helper")
 
     def test_unknown_baseline_must_stop_before_immutable_upload(self):
         with patch.object(release,"source_guard",return_value={}), \
