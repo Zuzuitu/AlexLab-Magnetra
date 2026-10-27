@@ -1,5 +1,17 @@
 # AlexLab Magnetra — Project State
 
+## CURRENT AUTHORITATIVE CHECKPOINT — 27 OCT 2026 — MAGNETRA STABLE, LIVE AND OWNER-ACCEPTED
+
+**Operational status: stable for the tested core workflow, no P0 defects presently confirmed.** This is the current checkpoint; all older notes below saying the 27 Oct TPB 429 fix is *PR only/not deployed* are preserved as historical stages, **not** the live state. Detailed release record: [Magnetra Stable — 27 Oct 2026](release-events/magnetra-stable-20261027.md).
+
+- Implementation PR [#211](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/211) merged at `2162ceceba42eeacec7762f4a0170c1f19031209`; guarded workflow PR [#212](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/212) merged at `aa3d31b6b6518ff707454c6e466bd244d1a3d869`.
+- Owner-approved [GitHub Actions production run #40473100787](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40473100787) completed **SUCCESS** on 27 Oct 2026. Log proves 4 immutable bindings preserved, guarded new candidate `fdffdc78-0bd3-4721-a5b1-11f515c52bd1`, 0%→5%→100% release, `PUBLIC_FIVE_ASSETS_HASHES_46_CATALOG_PASS` and safe rollback previous `40bfd647-2b8a-4643-94f2-577e723aba97@0%`. Previous 40bfd6 had been @100% at preflight; prior 7475 had been @0%. This split is evidence *as of release*, not a new independent live audit.
+- **Physical acceptance**: owner tested ThePirateBay search on iPhone and sending to Flud Companion **successfully** after rollout. Do not infer permanent ThePirateBay origin availability or comprehensive per-provider/UI QA from this test.
+- PWA stays at **11 selectable/35 hidden** indexers (SubsPlease not visible), original **46 Worker/Android** providers intact, 50 results per client page, Select all ↔ Deselect all with empty persisted state, RO/IT, safe-area iPhone Home Screen, SW cache v11. TPB 429 cooldown is bounded and per Worker isolate, not a global promise. BTDigg, protected gateway, Rock64, Flud and existing secrets remained untouched.
+- All 7 PR #212 CI checks passed, as did the manual release job and immediate public postflight. No further release or experimental changes are required to close this project milestone; the repository's GitHub release assets, tags, counts and unrelated services must remain unchanged. Treat current production as **change-frozen** absent a reproduced issue.
+- **Deferred, not automatically merged/closed:** PRs [#199](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/199), [#193](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/193), [#150](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/150), [#149](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/149), [#36](https://github.com/Zuzuitu/AlexLab-Magnetra/pull/36). Legacy release tooling must not be replayed, and new feature/security experiments require separate review.
+- This documentation-only milestone does **not** deploy a new Worker, change Cloudflare traffic, DNS, WAF, token/binding state, Rock64, Flud or app code.
+
 ## 27 OCT 2026 — TPB 429 CODE MERGED; NEW GUARDED MANUAL RELEASE PREPARED (NOT YET DEPLOYED)
 
 - Remediation PR #211 merged to `main` at `2162ceceba42eeacec7762f4a0170c1f19031209`. All six PR checks PASS (worker/PWA, invariants, repository exposure audit, Android debug/staging and guarded-workflow offline checks). This did **not** activate a new Cloudflare version. The observed original-source TPB rate limit remains a user-reported UI observation; no new exact HTTP 429 upstream trace or verified IP-level root cause.
