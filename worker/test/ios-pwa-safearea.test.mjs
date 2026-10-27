@@ -25,8 +25,15 @@ test("standalone header settings and language controls preserve tappable minimum
   assert.match(app,/\$\("settingsButton"\)\.addEventListener\("click",\(\)=>openDialog\("settingsDialog"\)\)/);
 });
 
+test("the entire Magnetra brand is an accessible same-origin Home link on iPhone",()=>{
+  assert.match(html,/<a class="brand" href="\/" aria-label="Magnetra — Acasă \/ Home"/);
+  assert.match(html,/<a class="brand"[^>]*>[\s\S]*?class="brand-icon"[\s\S]*?class="brand-title"[\s\S]*?<\/a>/);
+  assert.match(css,/\.brand\{[^}]*text-decoration:none;min-height:44px\}/);
+  assert.doesNotMatch(html,/<a class="brand"[^>]*target="_blank"/);
+});
+
 test("installed service worker refreshes the safe-area stylesheet through a new cache",()=>{
-  assert.match(sw,/const CACHE="alexlab-magnetra-v11"/);
+  assert.match(sw,/const CACHE="alexlab-magnetra-v12"/);
   assert.match(sw,/const FRESH_ASSETS=new Set\(\[[^\]]*"\/styles\.css"/);
   assert.match(sw,/fetch\(event\.request,\{cache:"no-store"\}\)/);
 });
