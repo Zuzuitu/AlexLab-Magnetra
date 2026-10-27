@@ -67,6 +67,26 @@ test("sliding search pool starts the next provider without waiting for an unrela
  assert.equal(api.state.searching,false);
 });
 
+test("selecting every curated source issues exactly one request per provider including TPB",async()=>{
+ const requested=[];let concurrent=0,maxConcurrent=0;
+ const {api,element}=harness(async(path)=>{
+  const url=new URL(path,"https://index.alexlab.media");
+  const id=url.searchParams.get("providers");
+  requested.push(id);concurrent++;maxConcurrent=Math.max(maxConcurrent,concurrent);
+  await Promise.resolve();
+  concurrent--;
+  return json({results:[],stats:[{provider:id,ok:true,count:0}],errors:[]});
+ });
+ const all=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive",
+  "oxtorrent","torrent9","therarbag","nonameclub","0magnet","animeworld"];
+ element("query").value="lupin";element("category").value="all";
+ api.state.selected=new Set(all);
+ await api.search();
+ assert.equal(requested.length,all.length,"no hidden extra search requests");
+ assert.equal(new Set(requested).size,all.length,"no provider receives duplicate requests");
+ assert.equal(requested.filter(id=>id==="thepiratebay").length,1);
+ assert.ok(maxConcurrent<=3,"PWA bound to three parallel providers");
+});
 test("cancel search preserves completed results but ignores late and stale responses",async()=>{
  let releaseSlow;
  const slow=new Promise(resolve=>{releaseSlow=resolve;});

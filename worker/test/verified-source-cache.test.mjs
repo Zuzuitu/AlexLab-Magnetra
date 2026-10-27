@@ -36,10 +36,61 @@ test("single flight deduplicates identical inflight requests within one isolate"
  const src=()=>{calls++;return new Promise(r=>finish=r);};
  const one=c.search("thepiratebay","ubuntu","all",src);
  const two=c.search("thepiratebay","ubuntu","all",src);
+ await Promise.resolve(); // TPB cross-query gate starts the actual source call on a microtask.
  finish([{id:"t",name:"original"}]);
  assert.equal((await Promise.all([one,two])).length,2);
  assert.equal(calls,1);
 });
+test("different simultaneous TPB terms serialize the original source per isolate",async()=>{
+ const c=createVerifiedSourceCache(()=>0);
+ const started=[];let release;
+ const first=c.search("thepiratebay","first","all",async()=>{
+  started.push("first");
+  return new Promise(resolve=>{release=resolve;});
+ });
+ const second=c.search("thepiratebay","second","all",async()=>{
+  started.push("second");
+  return [{id:"second",name:"source original"}];
+ });
+ await Promise.resolve();
+ assert.deepEqual(started,["first"],"second TPB term must wait, not double-hit the origin");
+ release([{id:"first",name:"source original"}]);
+ const both=await Promise.all([first,second]);
+ assert.deepEqual(started,["first","second"]);
+ assert.equal(both[0].items[0].id,"first");
+ assert.equal(both[1].items[0].id,"second");
+});
+
+test("a queued distinct TPB term never reaches origin after the first term returns 429",async()=>{
+ let calls=0;const c=createVerifiedSourceCache(()=>0);
+ let rejectFirst;
+ const first=c.search("thepiratebay","a","all",async()=>{
+  calls++;
+  return new Promise((_,reject)=>{rejectFirst=reject;});
+ });
+ const second=c.search("thepiratebay","b","all",async()=>{
+  calls++;
+  return [{id:"b",name:"must not be fetched"}];
+ });
+ await Promise.resolve();
+ assert.equal(calls,1);
+ const err=Error("provider HTTP 429");err.retryAfterMs=20_000;
+ rejectFirst(err);
+ const outcomes=await Promise.allSettled([first,second]);
+ assert.deepEqual(outcomes.map(x=>x.status),["rejected","rejected"]);
+ assert.match(outcomes[1].reason.message,/429/);
+ assert.equal(calls,1,"queued TPB requests must honor newly established cooldown");
+});
+
+test("TPB serialization never delays a different provider, including BTDigg",async()=>{
+ const c=createVerifiedSourceCache(()=>0);let unblock;
+ const slow=c.search("thepiratebay","first","all",async()=>new Promise(resolve=>{unblock=resolve;}));
+ const btdigg=await c.search("btdigg","first","all",async()=>[{id:"btdigg",name:"fast original"}]);
+ assert.equal(btdigg.items[0].id,"btdigg");
+ await Promise.resolve();unblock([]);
+ await slow;
+});
+
 test("unrelated provider traffic is unaffected by cache",async()=>{
  const c=createVerifiedSourceCache(()=>0);let calls=0;
  const f=async()=>{calls++;return [{id:"knaben:1",name:"original"}];};

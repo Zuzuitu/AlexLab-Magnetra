@@ -12,6 +12,10 @@ const TPB_MAX_COOLDOWN_MS=5*60_000;
 export function createVerifiedSourceCache(clock=()=>Date.now()){
  const entries=new Map(),inflight=new Map();
  let tpbCooldownUntil=0;
+ // Serialize distinct uncached TPB queries inside this Worker isolate as well.
+ // Identical queries already share inflight[k]; this gate prevents two different
+ // TPB searches racing the origin before the first 429 sets the cooldown.
+ let tpbTail=Promise.resolve();
  const key=(id,q,category)=>JSON.stringify([id,q,category]);
  function read(k){
   const item=entries.get(k);
@@ -41,7 +45,20 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
    throw Error("provider HTTP 429");
   }
   const work=(async()=>{
+   let releaseTpb;
+   if(id==="thepiratebay"){
+    const previous=tpbTail;
+    tpbTail=new Promise(resolve=>{releaseTpb=resolve;});
+    await previous;
+   }
    try{
+    // Recheck AFTER waiting: the prior distinct query may just have
+    // established an upstream 429 cooldown. Never retry during that window.
+    if(id==="thepiratebay"&&clock()<tpbCooldownUntil){
+     const old=staleResult(k);
+     if(old)return old;
+     throw Error("provider HTTP 429");
+    }
     const items=await fetchResults();
     if(Array.isArray(items)&&items.length===0)entries.delete(k);
     if(Array.isArray(items)&&items.length>0&&items.length<=100){
@@ -64,7 +81,10 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
     const old=staleResult(k);
     if(old)return old;
     throw e;
-   }finally{inflight.delete(k);}
+   }finally{
+    if(releaseTpb)releaseTpb();
+    inflight.delete(k);
+   }
   })();
   inflight.set(k,work);
   return work;
