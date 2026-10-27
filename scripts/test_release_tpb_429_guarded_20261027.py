@@ -16,7 +16,7 @@ class TPB429ReleaseGuards(unittest.TestCase):
         self.assertEqual(release.OLD_PUBLIC_GIT_BLOB,"2d6735e0fc98f61820c746cfa34ec380cf497248")
 
     def test_requires_explicit_manual_approval(self):
-        with patch.dict(os.environ,{"MAGNETRA_BTDIGG_TPB_RELEASE_ACTION":""}):
+        with patch.dict(os.environ,{"MAGNETRA_TPB_429_RELEASE_ACTION":""}):
             with patch.object(release,"release") as do_release:
                 self.assertEqual(release.main(),2)
                 do_release.assert_not_called()
