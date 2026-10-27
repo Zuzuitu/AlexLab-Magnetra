@@ -10,6 +10,8 @@ Motor de căutare multi-sursă, PWA pentru iPhone și browser, integrat opționa
 
 [**Deschide aplicația**](https://index.alexlab.media) · [**Codul proiectului**](https://github.com/Zuzuitu/AlexLab-Magnetra) · [**Proiectul original (MIT)**](https://github.com/prajwalch/TorrentSearch)
 
+**Stare: Magnetra Stable — 27.10.2026** · [Checkpoint și verificare release](docs/release-events/magnetra-stable-20261027.md)
+
 [![PWA & provider contracts](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/pwa.yml/badge.svg)](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/pwa.yml)
 [![Security invariants](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/invariants.yml/badge.svg)](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/invariants.yml)
 [![Production smoke](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/production-smoke.yml/badge.svg)](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/workflows/production-smoke.yml)
@@ -29,16 +31,16 @@ Pe iPhone se poate instala din **Safari → Share → Add to Home Screen**. Func
 | Domeniu | TorrentSearch original | AlexLab Magnetra |
 | --- | --- | --- |
 | Interfață | Aplicație Android Kotlin / Jetpack Compose | **PWA proprie** cu design AlexLab, temă întunecată și aspect adaptat pentru iPhone |
-| Căutare | Indexere integrate în aplicația Android | **Cloudflare Worker + adaptoare web**, cu inventar de **46** provideri; **12** afișați implicit în selectorul curatat |
+| Căutare | Indexere integrate în aplicația Android | **Cloudflare Worker + adaptoare web**, cu inventar de **46** provideri; **11** selectabili în PWA, **35** ascunși (inclusiv SubsPlease) |
 | Limbi pentru PWA | Nu este această interfață web | Interfață Magnetra în **română și italiană** |
-| Rezultate | Funcțiile native ale aplicației Android | Sortare, categorii, favorite locale, copiere/distribuire magnet și legătură către sursa originală |
-| Reziliența surselor | Logică originală Android | Audit separat pe provideri, explicații pentru erori, oprire temporară a surselor cu probleme și verificări de URL |
+| Rezultate | Funcțiile native ale aplicației Android | Sortare, categorii, **50 rezultate/pagină**, favorite locale, copiere/distribuire magnet și legătură către sursa originală |
+| Reziliența surselor | Logică originală Android | Audit separat pe provideri, explicații pentru erori, protecție TPB pentru HTTP 429 cu cooldown limitat și cache autentic, verificări de URL |
 | Magneturi | Acțiunile clientului Android | Corecții validate pentru **0Magnet, TheRarBg și NoNameClub**, inclusiv selectarea paginii autentice de detalii în locul legăturilor auxiliare greșite |
 | Transfer la distanță | Integrarea originală nu este Flud Companion | Asociere **opțională** prin QR/token local și trimiterea manual confirmată către **Flud Companion** |
 | Infrastructură | Aplicație client | Worker Cloudflare, gateway-uri cu destinații fixe și servicii de ieșire opționale pe dispozitiv propriu, cu autentificare |
 | Publicare | Lansările proiectului upstream | Fluxuri GitHub Actions, controale de integritate, versiuni Worker verificabile, canary **0% → 5% → 100%** și rollback în release-urile controlate |
 
-> **Atenție la cifre:** 46 reprezintă inventarul de adaptoare, nu 46 surse garantate disponibile în timp real. Cele 12 vizibile sunt configurația de selecție a interfeței; rezultatele depind de fiecare site și de momentul căutării.
+> **Atenție la cifre:** 46 reprezintă inventarul de adaptoare, nu 46 surse garantate disponibile în timp real. Cele 11 selectabile (35 ascunse) sunt configurația PWA, nu o garanție de disponibilitate a tuturor surselor; rezultatele depind de fiecare site și de momentul căutării.
 
 ## Experiența de utilizare
 
@@ -99,9 +101,9 @@ Folosirea acestor comenzi nu publică automat Worker-ul. Configurația de produc
 
 ## Stadiu și următoarele îmbunătățiri
 
-La checkpointul din **25 octombrie 2026**, corecțiile magnet pentru **0Magnet, TheRarBg și NoNameClub** au fost validate în producție, iar NoNameClub a fost confirmat funcțional pe iPhone. Se urmăresc în continuare compatibilitatea PWA pe iOS (safe area în modul Home Screen), afișarea corectă a caracterelor chirilice, auditarea surselor fluctuante și consolidarea verificărilor de securitate pentru repository-ul public.
+**Magnetra Stable — 27 octombrie 2026:** versiunea PWA a fost publicată printr-un workflow protejat, cu verificări 0% → 5% → 100% și posibilitate de rollback. Utilizatorul a confirmat **căutarea ThePirateBay pe iPhone și trimiterea rezultatului către Flud**. Aceste verificări nu garantează că site-urile terțe vor rămâne permanent disponibile. Cele **11 surse selectabile**, **35 ascunse**, **46 adaptoare** și **50 rezultate per pagină** sunt păstrate. Nu există un release suplimentar de executat pentru acest checkpoint; viitoarele schimbări necesită PR și release protejat.
 
-Pentru starea tehnică detaliată vezi [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) și [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md). Datele istorice sunt evidențe ale implementării, nu garanții de disponibilitate în timp real.
+Pentru starea tehnică detaliată vezi [checkpoint-ul Stable din 27 octombrie](docs/release-events/magnetra-stable-20261027.md), [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) și [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md). Datele istorice sunt evidențe ale implementării, nu garanții de disponibilitate în timp real.
 
 ## Recunoaștere și licență
 
