@@ -354,7 +354,7 @@ def release():
     return 0
 
 def main():
-    if os.environ.get("MAGNETRA_BTDIGG_TPB_RELEASE_ACTION")!=ACTION:
+    if os.environ.get("MAGNETRA_TPB_429_RELEASE_ACTION")!=ACTION:
         print("EXPLICIT_TPB_429_OWNER_PRODUCTION_ACTION_MISSING")
         return 2
     try:
