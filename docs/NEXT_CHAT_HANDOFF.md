@@ -1,5 +1,17 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## CURRENT AUTHORITATIVE HANDOFF — MAGNETRA STABLE — 27 OCTOBER 2026
+
+**Live production, owner-accepted for the core flow.** All following sections saying the 27 Oct TPB fix has not deployed are **historical** and must not override this checkpoint. Canonical evidence: [Stable release report](release-events/magnetra-stable-20261027.md); public site https://index.alexlab.media.
+
+**Exact merged baseline:** PR #211 commit `2162ceceba42eeacec7762f4a0170c1f19031209` (respectful source-owned TPB 429 handling), PR #212 `aa3d31b6b6518ff707454c6e466bd244d1a3d869` (owner-only immutable deployment). 7/7 PR #212 check suites passed; successful manual GitHub Actions [#40473100787](https://github.com/Zuzuitu/AlexLab-Magnetra/actions/runs/40473100787), release version **`fdffdc78-0bd3-4721-a5b1-11f515c52bd1@100%`**, former **`40bfd647-2b8a-4643-94f2-577e723aba97@0%`** as release-log rollback. This is the verified *release-time* state; any future write requires a fresh read-only Cloudflare snapshot.
+
+**Real owner acceptance on iPhone (27 Oct):** original ThePirateBay search works; successful handoff to Flud confirmed. Avoid claiming full all-providers availability or lifetime absence of rate limits. PWA 11 visible/35 hidden (SubsPlease excluded), 46 original API/Android adapters, 50 client results/page, RO/IT, persisted all/none selection, SW v11, companion integration preserved. No new service fees or gateway/Rock64/Cloudflare secrets changes.
+
+**Maintenance posture:** stable/change-frozen; no additional release, no obsolete 25 Oct or 27 Oct one-shot workflow re-run and no generic direct deploy. Do not reintroduce hidden providers or reconfigure Rock64/Flud just to clean up. Open PRs #199, #193, #150, #149, #36 remain **deferred**, not integrated, and need their own relevance/cost/security review; #199 references older 45-source release behavior and cannot be blindly merged. For a future verified defect: capture one exact, redacted reproduction; branch + PR and CI, fresh Cloudflare version/bindings inspection, explicit owner authorization, immutable 0→5→100 with guarded rollback, and user acceptance for the specific change. No secret or private network disclosure.
+
+**Next action:** none required unless the owner reports a reproducible issue or requests a new feature. See also `docs/PROJECT_STATE.md` and the stable release report. This handoff update is documentation-only.
+
 ## 27 OCT 2026 — TPB 429 CODE MERGED; NEW GUARDED MANUAL RELEASE PREPARED (NOT YET DEPLOYED)
 
 - Remediation PR #211 merged to `main` at `2162ceceba42eeacec7762f4a0170c1f19031209`. All six PR checks PASS (worker/PWA, invariants, repository exposure audit, Android debug/staging and guarded-workflow offline checks). This did **not** activate a new Cloudflare version. The observed original-source TPB rate limit remains a user-reported UI observation; no new exact HTTP 429 upstream trace or verified IP-level root cause.
