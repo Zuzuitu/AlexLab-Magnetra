@@ -6,7 +6,7 @@ import {resolveLegacy,validateLegacyDetail} from "./legacy-adapters.mjs";
 import {classifyTheRarBgResolveError} from "./therarbag-resolve-errors.mjs";
 import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
-import {filterRelevance} from "./query-relevance.mjs";
+import {filterRelevance,planSearchQuery} from "./query-relevance.mjs";
 import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
 import {verifiedSourceCache} from "./verified-source-cache.mjs";
 import {rock64EZTVFetcher} from "./eztv-rock64.mjs";
@@ -28,6 +28,8 @@ async function safeBody(request,max=15000){
 async function getSearch(url,env) {
  const q=url.searchParams.get("q")||"";
  if(q.trim().length<2||q.length>180)return error("Query must contain 2–180 characters.");
+ const plan=planSearchQuery(q);
+ const sourceQuery=plan.searchedAs;
  const category=url.searchParams.get("category")||"all";
  if(!CATEGORIES.has(category))return error("Invalid category.");
  const ids=(url.searchParams.get("providers")||DEFAULT_IDS.join(",")).split(",").filter(Boolean);
@@ -51,15 +53,15 @@ async function getSearch(url,env) {
      try {
        const sourceFetch=id==="btdigg"&&btdiggFetcher?btdiggFetcher:
         id==="eztvx"&&eztvFetcher?eztvFetcher:htmlFetchers[id]||fetch;
-       const {items:found,cache}=await verifiedSourceCache.search(id,q,category,
-         ()=>searchProvider(id,q,category,sourceFetch));
-       const {matches,excluded}=filterRelevance(found,q);
+       const {items:found,cache}=await verifiedSourceCache.search(id,sourceQuery,category,
+         ()=>searchProvider(id,sourceQuery,category,sourceFetch));
+       const {matches,excluded}=filterRelevance(found,sourceQuery);
        return {provider:id,results:matches,count:matches.length,
          rawCount:found.length,excluded,cache};
      } catch(e){
        const reason=classifyProviderError(e);
        return {provider:id,results:[],count:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
-         code:reason.code,message:reason.message,retryable:reason.retryable,openUrl:id==="btdigg"?null:directSearchUrl(id,q)};
+         code:reason.code,message:reason.message,retryable:reason.retryable,openUrl:id==="btdigg"?null:directSearchUrl(id,sourceQuery)};
      }
    }));
    for(const item of batch){
@@ -77,7 +79,7 @@ async function getSearch(url,env) {
    }
  }
  // Preserve source identities and identical hashes across providers for traceability.
- return json({query:q,category,results,stats,errors,warnings,total:results.length,
+ return json({query:q,...(plan.broadened?{searchedAs:sourceQuery}:{}),category,results,stats,errors,warnings,total:results.length,
    excludedOffTopic:stats.reduce((sum,item)=>sum+item.excludedOffTopic,0)});
 }
 // SHA-256 fingerprint of an already-validated public detail link; no raw

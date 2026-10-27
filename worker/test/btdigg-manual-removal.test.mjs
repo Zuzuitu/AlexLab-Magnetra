@@ -17,7 +17,7 @@ test("BTDigg Safari bookmarks, instructions and clipboard imports are completely
  assert.equal(existsSync(fromRoot("worker/test/btdigg-browser-import.test.mjs")),false);
  assert.equal(existsSync(fromRoot("worker/test/btdigg-three-step-guide.test.mjs")),false);
  assert.equal(sw.includes("btdigg-bridge.js"),false);
- assert.equal(sw.includes("alexlab-magnetra-v12"),true);
+ assert.equal(sw.includes("alexlab-magnetra-v13"),true);
  assert.ok(sw.includes("/i18n.js"),"translation asset cached and refreshed");
 });
 
@@ -25,7 +25,7 @@ test("only BTDigg source-error browser prompt disappears; Flud and provider cata
  const worker=readFileSync(fromRoot("worker/src/index.mjs"),"utf8");
  const catalog=readFileSync(fromRoot("worker/src/catalog.mjs"),"utf8");
  assert.match(worker,/rock64BTDiggFetcher/);
- assert.match(worker,/id==="btdigg"\?null:directSearchUrl\(id,q\)/);
+ assert.match(worker,/id==="btdigg"\?null:directSearchUrl\(id,sourceQuery\)/);
  assert.match(app,/failure\.provider==="btdigg"\?null:\(failure\.openUrl \|\| provider\?\.url\)/);
  assert.equal((catalog.match(/"id": "/g)||[]).length,46);
  assert.match(catalog,/"id": "btdigg"/);

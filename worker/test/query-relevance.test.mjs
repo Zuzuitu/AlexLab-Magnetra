@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.mjs";
-import {filterRelevance,queryTerms,relevantTitle} from "../src/query-relevance.mjs";
+import {filterRelevance,queryTerms,relevantTitle,planSearchQuery} from "../src/query-relevance.mjs";
 
 const hash="0123456789abcdef0123456789abcdef01234567";
 const movie="the good dinosaur 2015";
@@ -15,6 +15,51 @@ const original=[
  {id:"torrent9:7",provider:"torrent9",name:"Dr. Good! c'est bon! - Janvier-février 2023"},
  {id:"torrent9:8",provider:"torrent9",name:"The Good Dinosaur (2016) WEBRip"},
 ];
+test("long video release filenames become one honest title/year query",()=>{
+ const filename="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+ assert.deepEqual(planSearchQuery(filename),{searchedAs:"The Dog Stars 2026",broadened:true});
+ assert.deepEqual(planSearchQuery("The Dog Stars 1080p PSA"),{searchedAs:"The Dog Stars",broadened:true});
+ assert.deepEqual(planSearchQuery("the doa stars 1080p psa"),{searchedAs:"the doa stars",broadened:true},
+  "do not invent a spelling correction or fabricate a title");
+ for(const untouched of ["The Dog Stars 2026","Ubuntu 24.04","tt21285562",
+  "the","10bit","x265","The Good Dinosaur 2015"]){
+  const plan=planSearchQuery(untouched);
+  assert.equal(plan.searchedAs,untouched);
+  assert.equal(plan.broadened,false);
+ }
+ assert.equal(relevantTitle("The Dog Stars 2026","The Dog Stars 2025 1080p PSA"),false,
+  "real release year must still match");
+});
+
+test("Worker searches the release title once per provider, not every quality or group token",async()=>{
+ const before=globalThis.fetch;
+ const seen=[];
+ try{
+  globalThis.fetch=async(url,opts)=>{
+   seen.push({url:String(url),opts});
+   assert.equal(String(url),"https://api.knaben.org/v1");
+   assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026");
+   return new Response(JSON.stringify({hits:[
+    {id:"dog:1",title:"The Dog Stars (2026) 1080p WEB-DL x265 BONE",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:7},
+    {id:"other:2",title:"The Other Stars (2026) x265 PSA",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:100}
+   ]}),{headers:{"content-type":"application/json"}});
+  };
+  const raw="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+  const url="https://index.alexlab.media/api/search?q="+encodeURIComponent(raw)+"&providers=knaben&category=all";
+  const res=await worker.fetch(new Request(url),{});
+  assert.equal(res.status,200);
+  const data=await res.json();
+  assert.equal(data.query,raw);
+  assert.equal(data.searchedAs,"The Dog Stars 2026","must inform UI when original filename was simplified");
+  assert.equal(seen.length,1,"no hidden rerun, fallback or second provider query");
+  assert.equal(data.total,1);
+  assert.equal(data.excludedOffTopic,1);
+  assert.equal(data.results[0].name,"The Dog Stars (2026) 1080p WEB-DL x265 BONE");
+  assert.equal(data.results[0].provider,"knaben");
+  assert.equal(data.results[0].magnet,"magnet:?xt=urn:btih:"+hash);
+ }finally{globalThis.fetch=before;}
+});
+
 test("screenshot regression: exact title and title-year match; unrelated hits excluded",()=>{
  const {matches,excluded}=filterRelevance(original,movie);
  assert.deepEqual(matches.map(x=>x.id),original.slice(0,3).map(x=>x.id));

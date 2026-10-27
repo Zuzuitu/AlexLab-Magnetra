@@ -76,7 +76,7 @@ test("generic manual magnet action for Flud remains (not BTDigg browser importin
 
 test("PWA online assets are refreshed network-first but authenticated APIs never cached",()=>{
  const sw=readFileSync(new URL("../../web/sw.js",import.meta.url),"utf8");
- assert.ok(sw.includes('CACHE="alexlab-magnetra-v12"'));
+ assert.ok(sw.includes('CACHE="alexlab-magnetra-v13"'));
  assert.ok(sw.includes('new Set(["/app.js","/i18n.js","/styles.css","/manifest.webmanifest"])'));
  assert.ok(sw.includes('fetch(event.request,{cache:"no-store"})'));
  assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
