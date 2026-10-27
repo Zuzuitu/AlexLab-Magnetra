@@ -1,0 +1,79 @@
+# Source-reviewed, one-shot owner-run deployment. PR checks are offline only.
+name: Magnetra Home TPB Serial Guarded Production 20261027
+
+on:
+  pull_request:
+    paths:
+      - scripts/release_home_tpb_serial_guarded_20261027.py
+      - scripts/test_release_home_tpb_serial_guarded_20261027.py
+      - .github/workflows/magnetra-home-tpb-serial-guarded-production-20261027.yml
+      - config/project-invariants.json
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Explicit approval for production Home + TPB serialization release
+        required: true
+        type: choice
+        default: DO_NOT_RELEASE
+        options:
+          - DO_NOT_RELEASE
+          - APPROVE_HOME_TPB_SERIAL_GUARDED_20261027
+
+permissions:
+  contents: read
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  offline-release-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate immutable source pins and fail-closed release safeguards
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_home_tpb_serial_guarded_20261027.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test iPhone Home, TPB origin serialization, provider and Flud contracts
+        run: node --test worker/test/*.test.mjs
+      - name: Offline immutable Cloudflare package validation
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+
+  guarded-production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'APPROVE_HOME_TPB_SERIAL_GUARDED_20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify exact source hashes, invariants, and release safety tests
+        run: |
+          set -euo pipefail
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_home_tpb_serial_guarded_20261027.py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify all PWA, provider and Companion tests before any release write
+        run: node --test worker/test/*.test.mjs
+      - name: Validate Cloudflare bundle without writing
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Verify real live split and bindings, immutable release 0 to 5 to 100 with rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_HOME_TPB_RELEASE_ACTION: CONFIRM_MAGNETRA_HOME_TPB_SERIAL_20261027
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          python3 scripts/release_home_tpb_serial_guarded_20261027.py
