@@ -48,17 +48,17 @@ class HomeTPBGuardTests(unittest.TestCase):
         self.assertEqual(current.count(b'alexlab-magnetra-v12'),1)
         previous=current.replace(b'alexlab-magnetra-v12',b'alexlab-magnetra-v11')
         import hashlib
-        blob=hashlib.sha1(b"blob "+str(len(previous)).encode()+b"\\x00"+previous).hexdigest()
+        blob=hashlib.sha1(b"blob "+str(len(previous)).encode()+bytes([0])+previous).hexdigest()
         self.assertEqual(blob,release.OLD_PUBLIC_GIT_BLOB)
         self.assertNotEqual(current,previous)
         requests=[]
         def public_asset(path,version):
             requests.append((path,version))
             return previous
-        with patch.object(release,"source_guard",return_value={"name":"alexlab-magnetra"}), \\
-             patch.object(release,"split_guard",return_value=object()), \\
-             patch.object(release,"candidate_http",side_effect=public_asset), \\
-             patch.object(release,"stable"), \\
+        with patch.object(release,"source_guard",return_value={"name":"alexlab-magnetra"}), \
+             patch.object(release,"split_guard",return_value=object()), \
+             patch.object(release,"candidate_http",side_effect=public_asset), \
+             patch.object(release,"stable"), \
              patch.object(release,"upload",side_effect=release.Stop("EXPECTED_BEFORE_UPLOAD")) as upload:
             with self.assertRaisesRegex(release.Stop,"EXPECTED_BEFORE_UPLOAD"):
                 release.release()
