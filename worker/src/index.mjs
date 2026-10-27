@@ -61,7 +61,7 @@ async function getSearch(url,env) {
      } catch(e){
        const reason=classifyProviderError(e);
        return {provider:id,results:[],count:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
-         code:reason.code,message:reason.message,retryable:reason.retryable,openUrl:id==="btdigg"?null:directSearchUrl(id,q)};
+         code:reason.code,message:reason.message,retryable:reason.retryable,openUrl:id==="btdigg"?null:directSearchUrl(id,sourceQuery)};
      }
    }));
    for(const item of batch){
