@@ -25,9 +25,7 @@ from inspect_companion_binding_readonly import (
 )
 from stage_therarbag_iphone_20261024 import validate_source, verify_binding_payload
 from cloudflare_html_asset_guard import verify_reviewed_html
-from release_therarbag_iphone_diagnostic_20261024 import (
-    http as live_http, BASE, UA,
-)
+from release_therarbag_iphone_diagnostic_20261024 import BASE, UA
 
 ACTIVE = "fdffdc78-0bd3-4721-a5b1-11f515c52bd1"
 ROLLBACK = "40bfd647-2b8a-4643-94f2-577e723aba97"
@@ -327,8 +325,10 @@ def release():
     global NEW
     config=source_guard()
     first=split_guard()
-    # Refuse redundant release or unexpected previous v11 service-worker bytes before write.
-    old_bytes=live_http("/sw.js")
+    # Read only the public previous SW through the CURRENT strict byte-asset allowlist,
+    # not the legacy helper whose allowlist excludes /sw.js. Stop before any write
+    # unless the old production bytes match the independently reviewed v11 blob.
+    old_bytes=candidate_http("/sw.js",None)
     if hashlib.sha256(old_bytes).digest()==hashlib.sha256((ROOT/"web/sw.js").read_bytes()).digest():
         raise Stop("NEW_SW_ALREADY_LIVE")
     old_blob=hashlib.sha1(b"blob "+str(len(old_bytes)).encode()+bytes([0])+old_bytes).hexdigest()
