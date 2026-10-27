@@ -102,7 +102,8 @@
       ".github/workflows/magnetra-curated-11-zero-readonly-20261025.yml",
       ".github/workflows/magnetra-curated-11-version-only-resume-20261025.yml",
       ".github/workflows/magnetra-btdigg-tpb-guarded-production-20261025.yml",
-      ".github/workflows/magnetra-tpb-429-guarded-production-20261027.yml"
+      ".github/workflows/magnetra-tpb-429-guarded-production-20261027.yml",
+      ".github/workflows/magnetra-home-tpb-serial-guarded-production-20261027.yml"
     ],
     "allowed_cron_expressions": [],
     "handoff_document": "docs/NEXT_CHAT_HANDOFF.md",
