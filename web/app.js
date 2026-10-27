@@ -104,7 +104,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[]};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[],searchedAs:null};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -453,8 +453,10 @@ function renderResults(){
  renderPagination(sorted.length);
  $("resultCount").textContent=tr(state.bookmarksMode?"{n} SAVED":"{n} MATCHES",{n:sorted.length});
  $("resultsTitle").textContent=tr(state.bookmarksMode?"Saved bookmarks":"Search results");
- $("searchQuality").textContent=state.bookmarksMode?"":state.excludedOffTopic?
-  tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}):"";
+ const qualityNotes=[];
+ if(state.searchedAs)qualityNotes.push(tr("Searched by title: {query}. Quality and release group are not guaranteed.",{query:state.searchedAs}));
+ if(state.excludedOffTopic)qualityNotes.push(tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}));
+ $("searchQuality").textContent=state.bookmarksMode?"":qualityNotes.join(" ");
  if(!sorted.length){
    if(state.bookmarksMode)$("notice").textContent=tr("No bookmarks saved yet.");
    else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent=tr("No matching titles. Try another title, fewer keywords or different indexers.");
@@ -598,7 +600,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast(tr("Select at least one indexer."));return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.excludedOffTopic=0;state.cacheWarnings=[];
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.excludedOffTopic=0;state.cacheWarnings=[];state.searchedAs=null;
  $("searchButton").disabled=false;$("searchButton").textContent=tr("Cancel search ×");
  $("notice").textContent=tr("Searching {n} indexers…",{n:ids.length});$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -620,6 +622,8 @@ async function search(){
      }
      const data=await api(url.pathname+url.search,{signal:controller.signal});
      if(controller.signal.aborted)return;
+     if(typeof data.searchedAs==="string"&&data.searchedAs.length<=180&&data.searchedAs!==query)
+      state.searchedAs=data.searchedAs;
      state.items.push(...(data.results||[]));
      // Source-side relevance exclusions are not provider transport errors.
      const quality=(data.stats||[]).find(s=>s.provider===id);
