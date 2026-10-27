@@ -298,3 +298,12 @@ test("TheRarBg diagnostic mode is explicit and does not change source URL or nor
  });
  assert.equal(seen[1].headers["x-magnetra-resolve-diagnostic"],undefined);
 });
+
+test("alternative search never reselects the failing TPB source",()=>{
+ assert.match(source,/new Set\(visibleFailures\.map\(f=>f\.provider\)\)/);
+ assert.match(source,/safeLive=live\.filter\(id=>!failed\.has\(id\)\)/);
+ assert.doesNotMatch(source,/\["knaben","torrentscsv","thepiratebay"\]/);
+ const i18n=readFileSync(new URL("../../web/i18n.js",import.meta.url),"utf8");
+ assert.match(i18n,/ThePirateBay limitează momentan solicitările/);
+ assert.match(i18n,/ThePirateBay limita temporaneamente le richieste/);
+});

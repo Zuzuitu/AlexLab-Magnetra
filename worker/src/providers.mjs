@@ -51,6 +51,14 @@ function normalize(item,provider) {
   };
 }
 const parsed=(xs,id)=>xs.map(x=>normalize(x,id)).filter(Boolean).slice(0,MAX_RESULTS);
+// Honor only bounded Retry-After metadata from the original source; never retry here.
+function boundedRetryAfterMs(value){
+ if(typeof value!=="string")return null;
+ const raw=value.trim();
+ const seconds=/^\d{1,6}$/.test(raw)?Number(raw):null;
+ const delay=seconds!==null?seconds*1000:Date.parse(raw)-Date.now();
+ return Number.isFinite(delay)&&delay>0?Math.min(5*60_000,Math.ceil(delay)):null;
+}
 async function requestJson(url, options={}, fetcher=fetch,timeoutMs=REQUEST_TIMEOUT_MS) {
   if(!Number.isInteger(timeoutMs)||timeoutMs<1000||timeoutMs>TPB_API_TIMEOUT_MS)
     throw Error("Invalid bounded JSON API timeout");
@@ -59,6 +67,11 @@ async function requestJson(url, options={}, fetcher=fetch,timeoutMs=REQUEST_TIME
     signal:AbortSignal.timeout(timeoutMs),
     headers:{...SOURCE_HEADERS,"accept":"application/json",...(options.headers||{})}
   },fetcher);
+  if(response.status===429&&new URL(url).origin==="https://apibay.org"){
+    const limited=new Error("provider HTTP 429");
+    limited.retryAfterMs=boundedRetryAfterMs(response.headers.get("retry-after"));
+    throw limited;
+  }
   if(!response.ok)throw Error("provider HTTP "+response.status);
   const length=Number(response.headers.get("content-length")||0);
   if(length>4_000_000)throw Error("provider response too large");

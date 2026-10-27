@@ -1,4 +1,4 @@
-const CACHE="alexlab-magnetra-v10";
+const CACHE="alexlab-magnetra-v11";
 const ASSETS=["/","/index.html","/styles.css","/app.js","/i18n.js","/icon.svg","/manifest.webmanifest"];
 const FRESH_ASSETS=new Set(["/app.js","/i18n.js","/styles.css","/manifest.webmanifest"]);
 self.addEventListener("install",event=>
