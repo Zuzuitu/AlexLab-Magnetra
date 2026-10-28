@@ -104,7 +104,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[],searchedAs:null};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],alternativeItems:[],fallbackReady:false,fallbackCriteria:[],requestedGroup:null,bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[],searchedAs:null};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -446,7 +446,10 @@ function renderPagination(total){
 }
 function renderResults(){
  const root=$("results");root.replaceChildren();
- const items=(state.bookmarksMode?Object.values(state.bookmarks):state.items)
+ const showAlternatives=!state.bookmarksMode&&state.fallbackReady&&
+  state.items.length===0&&state.alternativeItems.length>0;
+ const items=(state.bookmarksMode?Object.values(state.bookmarks):
+  showAlternatives?state.alternativeItems:state.items)
   .filter(item=>!hiddenIndexerIds.has(item.provider));
  const sorted=sortItems(items);
  state.resultsPage=Math.max(1,Math.min(state.resultsPage,Math.max(1,Math.ceil(sorted.length/RESULTS_PER_PAGE))));
@@ -454,7 +457,10 @@ function renderResults(){
  $("resultCount").textContent=tr(state.bookmarksMode?"{n} SAVED":"{n} MATCHES",{n:sorted.length});
  $("resultsTitle").textContent=tr(state.bookmarksMode?"Saved bookmarks":"Search results");
  const qualityNotes=[];
- if(state.searchedAs)qualityNotes.push(tr("Searched sources by title: {query}. Results must match every requested release term; verify the file details.",{query:state.searchedAs}));
+ if(state.searchedAs)qualityNotes.push(tr("Some indexers searched by title: {query}. Matching is checked against the original request.",{query:state.searchedAs}));
+ if(showAlternatives)qualityNotes.push(tr("No exact {group} release found in responding indexers. Showing alternatives matching {terms}.",{
+  group:state.requestedGroup||tr("requested"),terms:state.fallbackCriteria.join(" ")
+ }));
  if(state.excludedOffTopic)qualityNotes.push(tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}));
  $("searchQuality").textContent=state.bookmarksMode?"":qualityNotes.join(" ");
  if(!sorted.length){
@@ -467,6 +473,10 @@ function renderResults(){
    const card=el("article","result");
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
    info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
+   if(item.releaseMatch==="quality-alternative"){
+    info.append(el("span","meta-dot","·"),
+     el("span","tag alternative-release",tr("Alternative group / release")));
+   }
    for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?tr("{n} seeders",{n:item.seeders}):null,item.peers!==null&&item.peers!==undefined?tr("{n} peers",{n:item.peers}):null,item.date?String(item.date).slice(0,10):null]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));
    }
@@ -600,7 +610,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast(tr("Select at least one indexer."));return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.excludedOffTopic=0;state.cacheWarnings=[];state.searchedAs=null;
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.alternativeItems=[];state.fallbackReady=false;state.fallbackCriteria=[];state.requestedGroup=null;state.excludedOffTopic=0;state.cacheWarnings=[];state.searchedAs=null;
  $("searchButton").disabled=false;$("searchButton").textContent=tr("Cancel search ×");
  $("notice").textContent=tr("Searching {n} indexers…",{n:ids.length});$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -625,6 +635,11 @@ async function search(){
      if(typeof data.searchedAs==="string"&&data.searchedAs.length<=180&&data.searchedAs!==query)
       state.searchedAs=data.searchedAs;
      state.items.push(...(data.results||[]));
+     state.alternativeItems.push(...(data.alternatives||[]).filter(x=>x.releaseMatch==="quality-alternative"));
+     if(Array.isArray(data.fallbackCriteria)&&data.fallbackCriteria.every(x=>typeof x==="string"&&x.length<=20))
+      state.fallbackCriteria=data.fallbackCriteria;
+     if(typeof data.requestedGroup==="string"&&data.requestedGroup.length<=20)
+      state.requestedGroup=data.requestedGroup;
      // Source-side relevance exclusions are not provider transport errors.
      const quality=(data.stats||[]).find(s=>s.provider===id);
      state.excludedOffTopic+=Math.max(0,Number(quality?.excludedOffTopic)||0);
@@ -632,7 +647,7 @@ async function search(){
      for(const w of data.warnings||[])state.cacheWarnings.push(w);
      const observed=(data.stats||[]).find(s=>s.provider===id);
      if(observed)state.sessionAudit[id]={
-      state:observed.ok?(observed.count>0?"results":"empty-unverified"):"error",
+      state:observed.ok?((observed.count>0||observed.alternativeCount>0)?"results":"empty-unverified"):"error",
       count:observed.count||0,at:new Date().toLocaleString(currentLanguage())
      };
      if(id==="btdigg"){
@@ -663,7 +678,9 @@ async function search(){
   }));
   if(!controller.signal.aborted){
    const paused=pauseFailedSources(ids,failures);
-   if(!state.items.length)$("notice").textContent=tr(failures.length?"No matching results; some indexers failed.":"No matching titles in selected indexers.");
+   state.fallbackReady=true;
+   if(!state.items.length&&!state.alternativeItems.length)
+    $("notice").textContent=tr(failures.length?"No matching results; some indexers failed.":"No matching titles in selected indexers.");
    else $("notice").textContent="";
    if(paused)toast(tr("{n} failing indexer(s) paused for future searches.",{n:paused}));
   }
