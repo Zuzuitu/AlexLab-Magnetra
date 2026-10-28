@@ -12,9 +12,10 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
   btdigg: {
     host:"https://btdig.com",
     search:q=>"https://btdig.com/search?q="+encodeURIComponent(q),
-    // One source-owned release is one row: title, size and magnet are
-    // nested inside the same div.one_result. Selecting direct children
-    // made separate rows and lost the real name↔magnet association.
+    // One source-owned release is one row. Both current wrapped markup
+    // and possible unwrapped sibling fields are safely grouped under the
+    // div.one_result container. The former direct-child selector depended
+    // on an inner wrapper existing; it is not known to be the live failure.
     rows:"div.one_result",
     name:"div.torrent_name a",
     magnet:'div.torrent_magnet a[href^="magnet:?xt=urn:btih:"]',
