@@ -94,3 +94,28 @@ test("API allows alternatives only when there is no exact match, but never repre
   assert.equal(data.alternatives[0].releaseMatch,"quality-alternative");
  }finally{globalThis.fetch=before;}
 });
+
+test("35 hidden legacy adapters do not receive the curated-only group-fallback policy",async()=>{
+ const before=globalThis.fetch;
+ const observed=[];
+ try{
+  globalThis.fetch=async(url,options)=>{
+   observed.push({url:String(url),options});
+   assert.equal(String(url),"https://btsow.live/bts/data/api/search");
+   assert.equal(JSON.parse(options.body)[0].search,"The Dog Stars 2026");
+   return new Response(JSON.stringify({data:[{
+    hash:"e".repeat(40),name:alternate.name,size:"1.73 GB"
+   }]}),{headers:{"content-type":"application/json"}});
+  };
+  const url="https://index.alexlab.media/api/search?q="+encodeURIComponent(requested)+
+   "&providers=btsow";
+  const result=await (await worker.fetch(new Request(url),{})).json();
+  assert.equal(observed.length,1);
+  assert.equal(result.total,0);
+  assert.equal(result.alternativeTotal,0);
+  assert.deepEqual(result.alternatives,[]);
+  assert.equal(result.requestedGroup,undefined);
+  assert.equal(result.stats[0].rawCount,1);
+  assert.equal(result.stats[0].excludedOffTopic,1);
+ }finally{globalThis.fetch=before;}
+});
