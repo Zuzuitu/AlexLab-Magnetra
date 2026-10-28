@@ -33,7 +33,7 @@ test("the entire Magnetra brand is an accessible same-origin Home link on iPhone
 });
 
 test("installed service worker refreshes the safe-area stylesheet through a new cache",()=>{
-  assert.match(sw,/const CACHE="alexlab-magnetra-v13"/);
+  assert.match(sw,/const CACHE="alexlab-magnetra-v14"/);
   assert.match(sw,/const FRESH_ASSETS=new Set\(\[[^\]]*"\/styles\.css"/);
   assert.match(sw,/fetch\(event\.request,\{cache:"no-store"\}\)/);
 });
