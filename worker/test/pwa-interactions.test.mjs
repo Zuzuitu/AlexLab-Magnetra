@@ -321,10 +321,10 @@ test("TheRarBg diagnostic mode is explicit and does not change source URL or nor
 
 test("UI discloses title-based search and does not claim an exact PSA release",()=>{
  assert.match(source,/state\.searchedAs=data\.searchedAs/);
- assert.match(source,/Searched by title: \{query\}\. Quality and release group are not guaranteed\./);
+ assert.match(source,/Searched sources by title: \{query\}\. Results must match every requested release term; verify the file details\./);
  const i18n=readFileSync(new URL("../../web/i18n.js",import.meta.url),"utf8");
- assert.match(i18n,/Căutare după titlu: \{query\}/);
- assert.match(i18n,/Ricerca per titolo: \{query\}/);
+ assert.match(i18n,/Indexere interogate după titlul: \{query\}/);
+ assert.match(i18n,/Fonti interrogate per titolo: \{query\}/);
 });
 test("alternative search never reselects the failing TPB source",()=>{
  assert.match(source,/new Set\(visibleFailures\.map\(f=>f\.provider\)\)/);
