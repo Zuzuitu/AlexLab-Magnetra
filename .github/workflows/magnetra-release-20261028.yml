@@ -1,7 +1,9 @@
 # One-shot owner-authorized 2026-10-28 release. No generic deploy.
-name: Magnetra #226 guarded online 0-5-100 release
+name: "Magnetra #226 guarded online 0-5-100 release"
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 
@@ -13,6 +15,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compile release script without using Cloudflare
+        run: python3 -m py_compile scripts/release_magnetra_20261028.py
+      - name: Test explicit approval, baseline, rollback and bindings offline
+        run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_20261028.py' -v
   release:
     if: github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, '[magnetra-release-20261028] ')
     runs-on: ubuntu-latest
