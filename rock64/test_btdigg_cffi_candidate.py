@@ -49,7 +49,7 @@ class TransportCandidateTests(unittest.TestCase):
 
     def test_bad_query_is_rejected_before_any_network_action(self):
         c=FakeClient()
-        for query in ["", "x", "a"*181, "abc\\x00bad", "\\turl"]:
+        for query in ["", "x", "a"*181, "abc"+chr(0)+"bad", chr(9)+"url"]:
             with self.subTest(query=repr(query)):
                 with self.assertRaises(ValueError):
                     candidate.fetch_one(query,client=c)
