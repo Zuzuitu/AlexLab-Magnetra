@@ -98,7 +98,7 @@ test("exact release takes precedence across ALL selected sources; alternatives o
    alternatives:[],stats:[{provider:id,ok:true,count:1,alternativeCount:0}],errors:[]
   });
   return json({
-   results:[],alternatives:[{id:"f1",provider:"fast",name:"The Dog Stars 2026 1080p 10bit WEB-DL x265 OTHER",releaseMatch:"quality-alternative"}],
+   results:[],alternatives:[{id:"f1",provider:"fast",name:"The Dog Stars 2026 1080p 10bit WEB-DL x265 OTHER",releaseMatch:"quality-alternative",fallbackRank:1,fallbackDifferences:["group"],fallbackActual:{resolution:"1080p",codec:"x265",bitDepth:"10bit"}}],
    fallbackCriteria:["1080p","x265","10bit"],requestedGroup:"PSA",
    stats:[{provider:id,ok:true,count:0,alternativeCount:1}],errors:[]
   });
@@ -126,7 +126,7 @@ test("when NO source has PSA, quality-only alternatives become visible without n
   calls++;
   const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
   return json({results:[],alternatives:[
-   {id:id+":alternative",provider:id,name:"The Dog Stars 2026 1080p 10bit x265 OTHER",releaseMatch:"quality-alternative"}
+   {id:id+":alternative",provider:id,name:"The Dog Stars 2026 1080p 10bit x265 OTHER",releaseMatch:"quality-alternative",fallbackRank:1,fallbackDifferences:["group"],fallbackActual:{resolution:"1080p",codec:"x265",bitDepth:"10bit"}}
   ],fallbackCriteria:["1080p","x265","10bit"],requestedGroup:"PSA",
   stats:[{provider:id,ok:true,count:0,alternativeCount:1}],errors:[]});
  });
@@ -140,6 +140,52 @@ test("when NO source has PSA, quality-only alternatives become visible without n
  assert.deepEqual(Array.from(api.selectedSearchItems().items,x=>x.provider),["fast","other"]);
  assert.deepEqual(Array.from(api.state.fallbackCriteria),["1080p","x265","10bit"]);
  assert.equal(api.state.sessionAudit.fast.state,"results");
+});
+
+test("PWA ranks alternatives GLOBALLY and chooses 1080p x264 before 720p x265",async()=>{
+ const {api,element}=harness(async(path)=>{
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  const item=id==="low"?{
+   id:"lower",provider:id,name:"The Dog Stars 2026 720p x265 PSA",releaseMatch:"quality-alternative",fallbackRank:1000,
+   fallbackDifferences:["resolution"],fallbackActual:{resolution:"720p",codec:"x265",bitDepth:"10bit"}
+  }:{
+   id:"codec",provider:id,name:"The Dog Stars 2026 1080p x264 PSA",releaseMatch:"quality-alternative",fallbackRank:200,
+   fallbackDifferences:["codec"],fallbackActual:{resolution:"1080p",codec:"x264",bitDepth:"10bit"}
+  };
+  return json({results:[],alternatives:[item],stats:[{provider:id,ok:true,count:0,alternativeCount:1}],errors:[]});
+ });
+ element("query").value="The Dog Stars 2026 1080p x265 10bit PSA";
+ element("category").value="movies";
+ api.state.selected=new Set(["low","codec"]);
+ await api.search();
+ assert.equal(api.selectedSearchItems().showAlternatives,true);
+ assert.deepEqual(Array.from(api.selectedSearchItems().items,x=>x.id),["codec"],
+  "1080p x264 must be shown instead of 720p x265 when exact is missing");
+ assert.equal(api.state.alternativeItems.length,2,"lower ranked source results are retained but not mixed");
+});
+
+test("fallback tiers are never displayed before search completion or when exact exists",async()=>{
+ let release;
+ const pendingSource=new Promise(resolve=>{release=resolve;});
+ const {api,element}=harness(async(path)=>{
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  if(id==="slow")await pendingSource;
+  return json(id==="slow"
+   ?{results:[{id:"exact",provider:id,name:"The Dog Stars 2026 1080p x265 10bit PSA"}],
+      alternatives:[],stats:[{provider:id,ok:true,count:1}],errors:[]}
+   :{results:[],alternatives:[{id:"fallback",provider:id,name:"The Dog Stars 2026 720p x265 PSA",releaseMatch:"quality-alternative",
+     fallbackRank:1000,fallbackDifferences:["resolution"]}],
+      stats:[{provider:id,ok:true,count:0,alternativeCount:1}],errors:[]});
+ });
+ element("query").value="The Dog Stars 2026 1080p x265 10bit PSA";
+ api.state.selected=new Set(["fast","slow"]);
+ const task=api.search();
+ await tick();
+ assert.equal(api.selectedSearchItems().showAlternatives,false);
+ release();
+ await task;
+ assert.equal(api.selectedSearchItems().showAlternatives,false);
+ assert.deepEqual(Array.from(api.selectedSearchItems().items,x=>x.id),["exact"]);
 });
 
 test("cancel search preserves completed results but ignores late and stale responses",async()=>{
