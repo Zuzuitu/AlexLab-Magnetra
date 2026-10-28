@@ -101,6 +101,25 @@ test("full release exactness respects term order and excludes extra REPACK label
  assert.deepEqual(partition.alternatives.map(x=>x.id),["reordered","repack"]);
  assert.equal(partition.excluded,0);
  assert.deepEqual(partition.alternatives.find(x=>x.id==="repack").fallbackDifferences,["group"]);
+ assert.deepEqual(partition.alternatives.find(x=>x.id==="reordered").fallbackDifferences,["release"]);
+});
+
+test("requested container extension is optional for exact source release identity",()=>{
+ const originalWithExt=requested+".mkv";
+ const plain=make("plain",requested);
+ const alt=make("alt",requested+"-REPACK");
+ const result=partitionReleases([plain,alt],originalWithExt,planSearchQuery(originalWithExt));
+ assert.deepEqual(result.exact,[plain]);
+ assert.deepEqual(result.alternatives.map(x=>x.id),["alt"]);
+ assert.equal(result.excluded,0);
+});
+
+test("same video/group but a different WEB release is visibly labeled as release variation",()=>{
+ const differentSource=make("webdl","The.Dog.Stars.2026.1080p.10bit.WEB-DL.6CH.x265.HEVC-PSA");
+ const r=rankReleaseAlternative(differentSource,requested,plan);
+ assert.equal(r.fallbackRank,0);
+ assert.deepEqual(r.fallbackDifferences,["release"]);
+ assert.equal(r.fallbackGroupMatches,true);
 });
 
 test("ordinary title searches still use existing unordered relevance matching",()=>{
