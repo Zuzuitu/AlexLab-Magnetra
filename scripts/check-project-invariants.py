@@ -1033,7 +1033,7 @@ def check_web_parity_and_companion(config: dict) -> None:
                 fail("global query relevance guard missing: " + marker)
     if source_worker.is_file():
         worker_code = source_worker.read_text(encoding="utf-8")
-        for marker in ('from "./query-relevance.mjs"', "planSearchQuery(q)", "filterRelevance(found,sourceQuery)",
+        for marker in ('from "./query-relevance.mjs"', "planSearchQuery(q)", "filterRelevance(found,q)",
                        "rawCount:item.rawCount", "excludedOffTopic:item.excluded"):
             if marker not in worker_code:
                 fail("global Worker relevance enforcement missing: " + marker)
