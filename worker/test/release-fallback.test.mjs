@@ -61,6 +61,19 @@ test("no wrong film or wrong year and never mistake unknown resolution for 1080p
  assert.deepEqual(ranked.fallbackActual,{resolution:null,codec:"x265",bitDepth:null});
 });
 
+test("H.265/H.264 aliases, release suffix before .mkv and missing group behave safely",()=>{
+ const withExt=requested+".mkv";
+ assert.equal(releaseFallbackIntent(withExt,planSearchQuery(withExt)).requestedGroup,"PSA");
+ const h264=make("h264","The Dog Stars 2026 1080p 10bit H.264-PSA");
+ const r=rankReleaseAlternative(h264,requested,plan);
+ assert.equal(r.fallbackActual.codec,"h264");
+ assert.ok(r.fallbackRank<rankReleaseAlternative(lower720,requested,plan).fallbackRank);
+ const h265=make("h265","The Dog Stars 2026 1080p 10bit H.265-OtherGroup");
+ assert.equal(rankReleaseAlternative(h265,requested,plan).fallbackActual.codec,"h265");
+ assert.ok(rankReleaseAlternative(h265,requested,plan).fallbackRank<
+  rankReleaseAlternative(codec264,requested,plan).fallbackRank);
+});
+
 test("partition keeps source magnet unchanged and never mislabels fallback as exact",()=>{
  const original=[lower720,wrongTitle,sameOtherGroup,exact,codec264,lower720Other,
    same8bit,wrongYear,upper2160];
