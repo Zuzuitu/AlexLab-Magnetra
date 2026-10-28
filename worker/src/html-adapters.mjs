@@ -12,11 +12,15 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
   btdigg: {
     host:"https://btdig.com",
     search:q=>"https://btdig.com/search?q="+encodeURIComponent(q),
-    rows:"div.one_result > div",
-    name:"div.torrent_name > a",
-    magnet:"div.torrent_magnet > div.fa-magnet > a",
+    // One source-owned release is one row. Both current wrapped markup
+    // and possible unwrapped sibling fields are safely grouped under the
+    // div.one_result container. The former direct-child selector depended
+    // on an inner wrapper existing; it is not known to be the live failure.
+    rows:"div.one_result",
+    name:"div.torrent_name a",
+    magnet:'div.torrent_magnet a[href^="magnet:?xt=urn:btih:"]',
     size:"span.torrent_size",date:"span.torrent_age",
-    details:"div.torrent_name > a",
+    details:"div.torrent_name a",
   },
   dmhy: {
     host:"https://share.dmhy.org",
