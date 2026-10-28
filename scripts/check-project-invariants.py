@@ -1210,21 +1210,21 @@ def check_web_parity_and_companion(config: dict) -> None:
     # Original 46 API/Android adapter identities stay intact.
     curation = nested(config, "pwa_indexer_curation")
     if curation:
-        expected_hidden = ["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease"]
+        expected_hidden = ["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease","audiobookbay"]
         hidden_ids = curation.get("hidden_ids", [])
         priority_ids = curation.get("priority_visible_ids", [])
         if (hidden_ids != expected_hidden
-                or curation.get("hidden_from_picker_and_pwa_search_count") != 35
-                or curation.get("visible_picker_count") != 11
+                or curation.get("hidden_from_picker_and_pwa_search_count") != 36
+                or curation.get("visible_picker_count") != 10
                 or curation.get("original_adapter_ids_retained") != 46
                 or priority_ids[:3] != ["btdigg", "torrent9", "oxtorrent"]
                 or curation.get("bulk_select_deselect_toggle") is not True
                 or curation.get("explicit_empty_selection_persists") is not True
                 or not curation.get("do_not_reenable_by_clicking_select_all")):
-            fail("PWA must preserve the 11 curated indexers with 35 excluded sources")
+            fail("PWA must preserve the 10 curated indexers with 36 excluded sources")
         picker_text = frontend.read_text(encoding="utf-8")
         html_text = (ROOT / "web/index.html").read_text(encoding="utf-8")
-        for marker in ("const hiddenIndexerIds=new Set([\"anirena\",\"bt4g\",\"bitsearch\",\"extdotto\",\"eztvx\",\"filemood\",\"limetorrents\",\"nyaasi\",\"1337x\",\"tokyotoshokan\",\"torrentdatabase\",\"torrentdownloadinfo\",\"torrentdownloads\",\"torrentkitty\",\"uindex\",\"xxxclub\",\"torrentz\",\"animetosho\",\"mikanproject\",\"bangumimoe\",\"btsow\",\"dmhy\",\"linuxtracker\",\"mypornclub\",\"nekobt\",\"sukebeinyaa\",\"ytsmx\",\"anilibria\",\"blueroms\",\"epublibre\",\"megapeer\",\"rutorinfo\",\"xxxtracker\",\"fitgirlrepacks\",\"subsplease\"]);",
+        for marker in ("const hiddenIndexerIds=new Set([\"anirena\",\"bt4g\",\"bitsearch\",\"extdotto\",\"eztvx\",\"filemood\",\"limetorrents\",\"nyaasi\",\"1337x\",\"tokyotoshokan\",\"torrentdatabase\",\"torrentdownloadinfo\",\"torrentdownloads\",\"torrentkitty\",\"uindex\",\"xxxclub\",\"torrentz\",\"animetosho\",\"mikanproject\",\"bangumimoe\",\"btsow\",\"dmhy\",\"linuxtracker\",\"mypornclub\",\"nekobt\",\"sukebeinyaa\",\"ytsmx\",\"anilibria\",\"blueroms\",\"epublibre\",\"megapeer\",\"rutorinfo\",\"xxxtracker\",\"fitgirlrepacks\",\"subsplease\",\"audiobookbay\"]);",
                        'function selectableProviders()',
                        'const valid=new Set(selectableProviders().map(p=>p.id))',
                        'const ids=selectableProviders().map(p=>p.id);',
