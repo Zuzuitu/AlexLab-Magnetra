@@ -19,8 +19,13 @@ export function releaseFallbackIntent(original,plan){
  const last=tail.at(-1);
  if(!last||TECHNICAL.test(last)||!/^[a-z][a-z0-9]{1,19}$/i.test(last))return null;
  // Keep only technical terms supplied by the user; never infer x265 or 10bit.
- const requirements=[...new Set(tail.filter(term=>
-   RESOLUTION.test(term)||CODEC.test(term)||DEPTH.test(term)).map(x=>x.toLowerCase()))];
+ const resolutions=tail.filter(x=>RESOLUTION.test(x));
+ const codecs=tail.filter(x=>CODEC.test(x));
+ const depths=tail.filter(x=>DEPTH.test(x));
+ // Prefer an explicit encoder x265 over the redundant umbrella codec HEVC.
+ // WEBRip and 6CH are not requirements for fallback alternatives.
+ const codec=codecs.find(x=>/^x(?:264|265)$/i.test(x))||codecs[0];
+ const requirements=[resolutions[0],codec,depths[0]].filter(Boolean).map(x=>x.toLowerCase());
  if(!requirements.length)return null;
  return {
   titleQuery:plan.searchedAs,
