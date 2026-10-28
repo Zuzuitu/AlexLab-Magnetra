@@ -2,9 +2,9 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
-  "Searched by title: {query}. Quality and release group are not guaranteed.":{
-    "ro":"Căutare după titlu: {query}. Calitatea și grupul versiunii nu sunt garantate.",
-    "it":"Ricerca per titolo: {query}. Qualità e gruppo di rilascio non sono garantiti."
+  "Searched sources by title: {query}. Results must match every requested release term; verify the file details.":{
+    "ro":"Indexere interogate după titlul: {query}. Rezultatele trebuie să conțină toate detaliile cerute (calitate și grup). Verifică fișierul înainte de descărcare.",
+    "it":"Fonti interrogate per titolo: {query}. I risultati devono contenere tutti i dettagli richiesti (qualità e gruppo). Verifica il file prima di scaricarlo."
   },
   "ThePirateBay is limiting requests right now. Try again later.":{"ro":"ThePirateBay limitează momentan solicitările. Reîncearcă mai târziu.","it":"ThePirateBay limita temporaneamente le richieste. Riprova più tardi."},
   "Saved source result ({n} min old)":{"ro":"Rezultat memorat din sursă (acum {n} min)","it":"Risultato salvato dalla fonte ({n} min fa)"},
