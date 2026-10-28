@@ -40,8 +40,9 @@ test("Worker searches the release title once per provider, not every quality or 
    assert.equal(String(url),"https://api.knaben.org/v1");
    assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026");
    return new Response(JSON.stringify({hits:[
-    {id:"dog:1",title:"The Dog Stars (2026) 1080p WEB-DL x265 BONE",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:7},
-    {id:"other:2",title:"The Other Stars (2026) x265 PSA",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:100}
+    {id:"dog:1",title:"The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:7},
+    {id:"dog:2",title:"The Dog Stars (2026) 1080p WEB-DL x265 BONE",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:70},
+    {id:"other:3",title:"The Other Stars (2026) 1080p 10bit WEBRip 6CH x265 HEVC PSA",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:100}
    ]}),{headers:{"content-type":"application/json"}});
   };
   const raw="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
@@ -53,11 +54,33 @@ test("Worker searches the release title once per provider, not every quality or 
   assert.equal(data.searchedAs,"The Dog Stars 2026","must inform UI when original filename was simplified");
   assert.equal(seen.length,1,"no hidden rerun, fallback or second provider query");
   assert.equal(data.total,1);
-  assert.equal(data.excludedOffTopic,1);
-  assert.equal(data.results[0].name,"The Dog Stars (2026) 1080p WEB-DL x265 BONE");
+  assert.equal(data.excludedOffTopic,2,"other release groups and unrelated films are not accepted");
+  assert.equal(data.results[0].name,"The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA");
   assert.equal(data.results[0].provider,"knaben");
   assert.equal(data.results[0].magnet,"magnet:?xt=urn:btih:"+hash);
  }finally{globalThis.fetch=before;}
+});
+
+test("release quality and group terms remain strict even when provider lookup is title-only",()=>{
+ const exact="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+ const possible=[
+  {name:exact,id:"ok"},
+  {name:"The.Dog.Stars.2026.1080p.WEBRip.x265.HEVC-PSA",id:"missing_10bit_6CH"},
+  {name:"The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-GALAXY",id:"other_group"},
+  {name:"The.Dog.Stars.2026.2160p.10bit.WEBRip.6CH.x265.HEVC-PSA",id:"other_quality"},
+  {name:"The.Dog.Stars.2026.1080p.10bit.WEB-DL.6CH.x265.HEVC-PSA",id:"other_source"},
+  {name:"The.Dog.Stars.2025.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA",id:"other_year"}
+ ];
+ const plan=planSearchQuery(exact);
+ assert.equal(plan.searchedAs,"The Dog Stars 2026");
+ const {matches,excluded}=filterRelevance(possible,exact);
+ assert.deepEqual(matches.map(x=>x.id),["ok"]);
+ assert.equal(excluded,possible.length-1);
+ // A shorter user query still retains explicit quality/group requirements;
+ // no automatic spelling correction or lower-quality substitution.
+ assert.equal(relevantTitle("The Dog Stars 1080p PSA",exact),true);
+ assert.equal(relevantTitle("The Dog Stars 1080p PSA","The.Dog.Stars.2026.1080p.WEBRip-x265-GALAXY"),false);
+ assert.equal(relevantTitle("The Doa Stars 1080p PSA",exact),false);
 });
 
 test("screenshot regression: exact title and title-year match; unrelated hits excluded",()=>{
