@@ -55,7 +55,10 @@ async function getSearch(url,env) {
         id==="eztvx"&&eztvFetcher?eztvFetcher:htmlFetchers[id]||fetch;
        const {items:found,cache}=await verifiedSourceCache.search(id,sourceQuery,category,
          ()=>searchProvider(id,sourceQuery,category,sourceFetch));
-       const {matches,excluded}=filterRelevance(found,sourceQuery);
+       // Search providers by title/year once, but keep ALL user-entered
+       // release requirements (1080p, 10bit, WEBRip, 6CH, x265, PSA, etc.)
+       // mandatory when deciding which authentic source rows may be shown.
+       const {matches,excluded}=filterRelevance(found,q);
        return {provider:id,results:matches,count:matches.length,
          rawCount:found.length,excluded,cache};
      } catch(e){
