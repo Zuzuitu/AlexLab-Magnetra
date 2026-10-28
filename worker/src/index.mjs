@@ -49,7 +49,7 @@ async function getSearch(url,env) {
  }
  catch(e){return error(String(e?.message||e),503);}
  const results=[],alternatives=[],errors=[],stats=[],warnings=[];
- const fallback=releaseFallbackIntent(q,plan);
+ const fallback=ids.some(id=>CURATED_EXACT_PROVIDER_IDS.includes(id))?releaseFallbackIntent(q,plan):null;
  // Bounded concurrency reduces load on providers and keeps resource consumption predictable.
  for(let i=0;i<ids.length;i+=3){
    const batch=await Promise.all(ids.slice(i,i+3).map(async id=>{
@@ -62,7 +62,16 @@ async function getSearch(url,env) {
        // each of the 11 curated indexers. Original strict filter is universal.
        const {items:found,cache}=await verifiedSourceCache.search(id,providerQuery,category,
          ()=>searchProvider(id,providerQuery,category,sourceFetch));
-       const {exact,alternatives:qualityMatches,excluded}=partitionReleases(found,q,plan);
+       // Alternative groups are a PWA-owner feature for the 11 curated
+       // indexers only. Preserve the original strict relevance contract
+       // for the other 35 legacy/API adapters.
+       const curated=CURATED_EXACT_PROVIDER_IDS.includes(id);
+       const {exact,alternatives:qualityMatches,excluded}=curated
+        ?partitionReleases(found,q,plan)
+        :(()=>{
+          const {matches,excluded}=filterRelevance(found,q);
+          return {exact:matches,alternatives:[],excluded};
+         })();
        return {provider:id,results:exact,alternatives:qualityMatches,
          count:exact.length,alternativeCount:qualityMatches.length,
          rawCount:found.length,excluded,cache,
