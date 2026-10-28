@@ -38,7 +38,7 @@ test("Worker preserves exact release metadata across curated search providers",a
   globalThis.fetch=async(url,opts)=>{
    seen.push({url:String(url),opts});
    assert.equal(String(url),"https://api.knaben.org/v1");
-   assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026 1080p 10bit WEBRip 6CH x265 HEVC PSA");
+   assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026 1080p x265 10bit");
    return new Response(JSON.stringify({hits:[
     {id:"dog:1",title:"The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:7},
     {id:"dog:2",title:"The Dog Stars (2026) 1080p WEB-DL x265 BONE",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:70},
@@ -52,7 +52,7 @@ test("Worker preserves exact release metadata across curated search providers",a
   const data=await res.json();
   assert.equal(data.query,raw);
   assert.equal(data.searchedAs,undefined,"curated exact searches must not claim title-only query");
-  assert.equal(data.stats[0].queryMode,"all-terms-normalized");
+  assert.equal(data.stats[0].queryMode,"quality-terms-without-group");
   assert.equal(seen.length,1,"no hidden rerun, fallback or second provider query");
   assert.equal(data.total,1);
   assert.equal(data.excludedOffTopic,2,"other release groups and unrelated films are not accepted");
@@ -98,7 +98,7 @@ test("BTDigg receives literal filename; Knaben receives all release terms once",
     return new Response("",{status:429});
    }
    if(actual==="https://api.knaben.org/v1"){
-    assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026 1080p 10bit WEBRip 6CH x265 HEVC PSA");
+    assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026 1080p x265 10bit");
     return new Response(JSON.stringify({hits:[
      {id:"source:valid",title:exact,magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:1},
      {id:"source:wrong",title:"The Dog Stars 2026 1080p WEB-DL x265 OTHER",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:4}
@@ -113,7 +113,7 @@ test("BTDigg receives literal filename; Knaben receives all release terms once",
   const data=await response.json();
   assert.equal(data.query,exact);
   assert.equal(data.searchedAs,undefined);
-  assert.deepEqual(data.stats.map(x=>x.queryMode),["all-terms-literal","all-terms-normalized"]);
+  assert.deepEqual(data.stats.map(x=>x.queryMode),["all-terms-literal","quality-terms-without-group"]);
   assert.equal(seen.length,2);
   assert.equal(data.errors.length,1);
   assert.equal(data.errors[0].provider,"btdigg");
