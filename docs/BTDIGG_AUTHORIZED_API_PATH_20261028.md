@@ -1,5 +1,23 @@
 # BTDigg — authorized integration path (28 October 2026)
 
+## 28 October 2026 — new owner-proven transport result and isolated candidate
+
+Owner ran a **single disposable venv** one-query BTDigg HTTP test with `curl_cffi==0.17.0` on the physical ARM64 Rock64, with `impersonate="chrome"` and no redirects. Owner's exact terminal output:
+
+```
+HTTP_STATUS: 200
+EXACT_RELEASE_FOUND: True
+MAGNET_MARKERS: 2
+```
+
+This establishes **one real successful request from Rock64** with a different HTTP/TLS stack; it supersedes any categorical statement that Rock64 cannot reach BTDigg. It does **not** prove the presence of two genuine distinct torrents (only two HTML magnet markers), successful extraction by the existing Worker HTMLRewriter, stable daily operation or permission for sustained automated access.
+
+- Production Python gateway still uses verified IPv4 TLS/HTTP/1.1; `http_429` and `tcp_timeout` were genuine observed failures for that stack. The experimental browser-like transport can differ in TLS/HTTP fingerprint and thus in how origin responds, but this is NOT a free or authorized API endpoint.
+- New experimental `rock64/btdigg_cffi_candidate.py` has a single fixed-origin request and no integration into the live gateway. `rock64/test_btdigg_cffi_candidate.py` tests the contract offline, without installing any new dependency or requesting BTDigg.
+- **No production activation or service restart**, no change to `/opt/magnetra-btdigg/`, `/etc/magnetra-btdigg/`, Cloudflare, Flud, or the tunnel. The temporary venv used by the owner test was cleaned by the test shell and cannot be relied on as an installed production dependency.
+- Explicit engineering gate: verify BTDigg conditions for programmatic use and authorized API route; obtain owner approval before enabling browser-like automation. HTTP 429 is a source denial, not permission to retry with rotating fingerprints/proxies/challenge-solving. Never implement those.
+- After authorization, test actual original HTML selectors and source-owned magnet/size/field association with one bounded test, add pinned dependency integrity/provisioning and safe isolated process limits, then use an opt-in flag (disabled by default) to wire the existing Rock64 service with rollback, all GitHub CI and separate physical iPhone acceptance.
+
 **Status: investigation only. No API credentials, spec, authorized API response or provider permission obtained. No production change.**
 
 ## Physical evidence
