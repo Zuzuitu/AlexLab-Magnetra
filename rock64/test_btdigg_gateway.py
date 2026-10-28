@@ -85,6 +85,54 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(code, status)
             self.assertEqual(content, b"")
 
+    def test_true_upstream_429_pauses_uncached_requests_without_retry(self):
+        calls = []
+        def source(query):
+            calls.append(query)
+            return (429, b"") if len(calls) == 1 else (
+                200, b'<div class="one_result">authentic</div>')
+        provider = gateway.SearchProvider(fetcher=source, clock=lambda: self.now[0])
+        self.assertEqual(provider.search("first"), (429, b""))
+        self.assertEqual(provider.rate_limit_remaining_seconds(),
+                         gateway.UPSTREAM_429_BACKOFF_SECONDS)
+        self.now[0] += gateway.MIN_SEARCH_INTERVAL + 1
+        self.assertEqual(provider.search("second"), (429, b""))
+        self.assertEqual(calls, ["first"], "no new origin request under rate limit")
+        self.now[0] += gateway.UPSTREAM_429_BACKOFF_SECONDS - gateway.MIN_SEARCH_INTERVAL - 2
+        self.assertEqual(provider.search("third"), (429, b""))
+        self.assertEqual(calls, ["first"])
+        self.now[0] += 2
+        self.assertEqual(provider.search("second")[0], 200)
+        self.assertEqual(calls, ["first", "second"])
+
+    def test_cached_genuine_html_remains_available_during_remote_429(self):
+        calls = []
+        def source(q):
+            calls.append(q)
+            if q == "good":
+                return (200, b'<div class="one_result">genuine result</div>')
+            return (429, b"")
+        provider = gateway.SearchProvider(fetcher=source, clock=lambda: self.now[0])
+        self.assertEqual(provider.search("good")[0], 200)
+        self.now[0] += 6
+        self.assertEqual(provider.search("limited"), (429, b""))
+        self.assertEqual(provider.search("good")[0], 200)
+        self.assertEqual(calls, ["good", "limited"],
+                         "only genuine positive response can be served from cache")
+        self.assertEqual(provider.search("uncached"), (429, b""))
+        self.assertEqual(len(calls), 2)
+
+    def test_local_five_second_limit_does_not_invent_upstream_429_cooldown(self):
+        provider = gateway.SearchProvider(
+            fetcher=lambda q: (200, b'<div class="one_result">ok</div>'),
+            clock=lambda: self.now[0])
+        self.assertEqual(provider.search("good")[0], 200)
+        self.assertEqual(provider.search("other"), (429, b""))
+        self.assertEqual(provider.rate_limit_remaining_seconds(),
+                         gateway.MIN_SEARCH_INTERVAL)
+        self.now[0] += gateway.MIN_SEARCH_INTERVAL + 1
+        self.assertEqual(provider.search("other")[0], 200)
+
     def test_multiple_queries_bounded_lru_and_expiration(self):
         self.assertEqual(self.provider.search("ubuntu")[0], 200)
         self.now[0] += 6
