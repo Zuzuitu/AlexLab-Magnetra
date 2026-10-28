@@ -100,8 +100,21 @@ test("full release exactness respects term order and excludes extra REPACK label
  assert.deepEqual(partition.exact,[sameWithContainer]);
  assert.deepEqual(partition.alternatives.map(x=>x.id),["reordered","repack"]);
  assert.equal(partition.excluded,0);
- assert.deepEqual(partition.alternatives.find(x=>x.id==="repack").fallbackDifferences,["group"]);
+ assert.deepEqual(partition.alternatives.find(x=>x.id==="repack").fallbackDifferences,["release"]);
+ assert.equal(partition.alternatives.find(x=>x.id==="repack").fallbackGroupMatches,true);
  assert.deepEqual(partition.alternatives.find(x=>x.id==="reordered").fallbackDifferences,["release"]);
+});
+
+test("revision tags preserve source group while another group remains distinct",()=>{
+ const proper=make("proper",requested+"-PROPER.mkv");
+ const other=make("other","The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-OtherGroup-REPACK");
+ const same=rankReleaseAlternative(proper,requested,plan);
+ const different=rankReleaseAlternative(other,requested,plan);
+ assert.equal(same.fallbackGroupMatches,true);
+ assert.deepEqual(same.fallbackDifferences,["release"]);
+ assert.equal(different.fallbackGroupMatches,false);
+ assert.ok(different.fallbackDifferences.includes("group"));
+ assert.ok(same.fallbackRank<different.fallbackRank);
 });
 
 test("requested container extension is optional for exact source release identity",()=>{
