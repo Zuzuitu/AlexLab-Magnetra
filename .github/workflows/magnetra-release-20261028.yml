@@ -1,0 +1,56 @@
+# One-shot owner-authorized 2026-10-28 release. No generic deploy.
+name: "Magnetra #226 guarded online 0-5-100 release"
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compile release script without using Cloudflare
+        run: python3 -m py_compile scripts/release_magnetra_20261028.py
+      - name: Test explicit approval, baseline, rollback and bindings offline
+        run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_20261028.py' -v
+  release:
+    if: github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, '[magnetra-release-20261028] ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout reviewed main with full ancestry
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate project invariants before Cloudflare API access
+        run: python3 scripts/check-project-invariants.py
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate Worker source and PWA contract
+        run: |
+          node --test worker/test/*.test.mjs
+          npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Offline fail-closed release safety tests
+        run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_20261028.py' -v
+      - name: Owner-approved immutable stage 0%, canary 5%, release 100% or guarded restore
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_20261028_RELEASE_ACTION: CONFIRM_MAGNETRA_20261028_ONLINE_OWNER
+        run: python3 scripts/release_magnetra_20261028.py
