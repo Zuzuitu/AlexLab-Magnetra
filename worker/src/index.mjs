@@ -53,8 +53,12 @@ async function getSearch(url,env) {
      try {
        const sourceFetch=id==="btdigg"&&btdiggFetcher?btdiggFetcher:
         id==="eztvx"&&eztvFetcher?eztvFetcher:htmlFetchers[id]||fetch;
-       const {items:found,cache}=await verifiedSourceCache.search(id,sourceQuery,category,
-         ()=>searchProvider(id,sourceQuery,category,sourceFetch));
+       // BTDigg successfully matched the full owner-supplied release name
+       // in a genuine one-request physical Rock64 test. Keep it exact here;
+       // other indexers retain title/year discovery plus strict filtering.
+       const providerQuery=id==="btdigg"?q:sourceQuery;
+       const {items:found,cache}=await verifiedSourceCache.search(id,providerQuery,category,
+         ()=>searchProvider(id,providerQuery,category,sourceFetch));
        // Search providers by title/year once, but keep ALL user-entered
        // release requirements (1080p, 10bit, WEBRip, 6CH, x265, PSA, etc.)
        // mandatory when deciding which authentic source rows may be shown.
@@ -82,7 +86,7 @@ async function getSearch(url,env) {
    }
  }
  // Preserve source identities and identical hashes across providers for traceability.
- return json({query:q,...(plan.broadened?{searchedAs:sourceQuery}:{}),category,results,stats,errors,warnings,total:results.length,
+ return json({query:q,...(plan.broadened&&ids.some(id=>id!=="btdigg")?{searchedAs:sourceQuery}:{}),category,results,stats,errors,warnings,total:results.length,
    excludedOffTopic:stats.reduce((sum,item)=>sum+item.excludedOffTopic,0)});
 }
 // SHA-256 fingerprint of an already-validated public detail link; no raw
