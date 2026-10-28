@@ -445,10 +445,13 @@ function renderPagination(total){
  host.append(nav);
 }
 function selectedSearchItems(){
+ const eligible=state.alternativeItems.filter(item=>!hiddenIndexerIds.has(item.provider)&&
+  item.releaseMatch==="quality-alternative"&&Number.isSafeInteger(item.fallbackRank)&&item.fallbackRank>=0);
+ const bestRank=eligible.length?Math.min(...eligible.map(x=>x.fallbackRank)):null;
  const showAlternatives=!state.bookmarksMode&&state.fallbackReady&&
-  state.items.length===0&&state.alternativeItems.length>0;
+  state.items.length===0&&bestRank!==null;
  const items=(state.bookmarksMode?Object.values(state.bookmarks):
-  showAlternatives?state.alternativeItems:state.items)
+  showAlternatives?eligible.filter(x=>x.fallbackRank===bestRank):state.items)
   .filter(item=>!hiddenIndexerIds.has(item.provider));
  return {items,showAlternatives};
 }
@@ -462,9 +465,7 @@ function renderResults(){
  $("resultsTitle").textContent=tr(state.bookmarksMode?"Saved bookmarks":"Search results");
  const qualityNotes=[];
  if(state.searchedAs)qualityNotes.push(tr("Some indexers searched by title: {query}. Matching is checked against the original request.",{query:state.searchedAs}));
- if(showAlternatives)qualityNotes.push(tr("No exact {group} release found in responding indexers. Showing alternatives matching {terms}.",{
-  group:state.requestedGroup||tr("requested"),terms:state.fallbackCriteria.join(" ")
- }));
+ if(showAlternatives)qualityNotes.push(tr("Exact release not found in responding indexers. Showing only the highest-ranked available alternatives. Different specifications are labeled."));
  if(state.excludedOffTopic)qualityNotes.push(tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}));
  $("searchQuality").textContent=state.bookmarksMode?"":qualityNotes.join(" ");
  if(!sorted.length){
@@ -478,8 +479,14 @@ function renderResults(){
    const body=el("div"),title=el("h3","result-title",item.name),info=el("div","result-info");
    info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
    if(item.releaseMatch==="quality-alternative"){
+    const changed=Array.isArray(item.fallbackDifferences)?item.fallbackDifferences:[];
+    const labels={resolution:tr("resolution"),codec:tr("codec"),bitDepth:tr("bit depth"),group:tr("group")};
+    const detail=changed.map(x=>labels[x]).filter(Boolean).join(", ");
+    const actual=item.fallbackActual||{};
+    const specs=[actual.resolution,actual.codec,actual.bitDepth].filter(x=>typeof x==="string"&&x.length<20).join(" · ");
     info.append(el("span","meta-dot","·"),
-     el("span","tag alternative-release",tr("Alternative group / release")));
+     el("span","tag alternative-release",tr("Alternative release")+(detail?" · "+tr("Different: {terms}",{terms:detail}):"")));
+    if(specs)info.append(el("span","meta-dot","·"),el("span","",specs));
    }
    for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?tr("{n} seeders",{n:item.seeders}):null,item.peers!==null&&item.peers!==undefined?tr("{n} peers",{n:item.peers}):null,item.date?String(item.date).slice(0,10):null]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));

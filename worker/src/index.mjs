@@ -62,9 +62,11 @@ async function getSearch(url,env) {
        // each of the 11 curated indexers. Original strict filter is universal.
        const {items:found,cache}=await verifiedSourceCache.search(id,providerQuery,category,
          ()=>searchProvider(id,providerQuery,category,sourceFetch));
-       // Quality-only alternatives are for the 11 curated PWA sources.
-       // Preserve strict original relevance for the 35 hidden adapters.
-       const {exact,alternatives:qualityMatches,excluded}=CURATED_EXACT_PROVIDER_IDS.includes(id)
+       // Alternative groups are a PWA-owner feature for the 11 curated
+       // indexers only. Preserve the original strict relevance contract
+       // for the other 35 legacy/API adapters.
+       const curated=CURATED_EXACT_PROVIDER_IDS.includes(id);
+       const {exact,alternatives:qualityMatches,excluded}=curated
         ?partitionReleases(found,q,plan)
         :(()=>{
           const {matches,excluded}=filterRelevance(found,q);
