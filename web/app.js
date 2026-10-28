@@ -480,7 +480,7 @@ function renderResults(){
    info.append(el("span","tag",state.providers.find(p=>p.id===item.provider)?.name||item.provider));
    if(item.releaseMatch==="quality-alternative"){
     const changed=Array.isArray(item.fallbackDifferences)?item.fallbackDifferences:[];
-    const labels={resolution:tr("resolution"),codec:tr("codec"),bitDepth:tr("bit depth"),group:tr("group")};
+    const labels={resolution:tr("resolution"),codec:tr("codec"),bitDepth:tr("bit depth"),group:tr("group"),release:tr("release naming")};
     const detail=changed.map(x=>labels[x]).filter(Boolean).join(", ");
     const actual=item.fallbackActual||{};
     const specs=[actual.resolution,actual.codec,actual.bitDepth].filter(x=>typeof x==="string"&&x.length<20).join(" · ");
