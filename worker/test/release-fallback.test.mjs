@@ -11,7 +11,7 @@ const wrongResolution={id:"4k",name:"The Dog Stars 2026 2160p 10bit x265 - Other
 const wrongCodec={id:"264",name:"The Dog Stars 2026 1080p 10bit x264 - OtherGroup"};
 const wrongDepth={id:"8bit",name:"The Dog Stars 2026 1080p 8bit x265 - OtherGroup"};
 const wrongYear={id:"2025",name:"The Dog Stars 2025 1080p 10bit x265 - OtherGroup"};
-const otherFilm={id:"other-film",name:"Other Dog Stars 2026 1080p 10bit x265 - OtherGroup"};
+const otherFilm={id:"other-film",name:"The Other Stars 2026 1080p 10bit x265 - OtherGroup"};
 
 test("explicit group suffix qualifies for fallback, but ONLY user-supplied video requirements survive",()=>{
  const plan=planSearchQuery(requested);
