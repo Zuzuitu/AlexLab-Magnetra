@@ -104,7 +104,7 @@ async function waitForBTDigg(query,signal){
  }
  if(signal.aborted)throw new DOMException("Search cancelled","AbortError");
 }
-const state={providers:[],audit:null,selected:new Set(preferred),items:[],alternativeItems:[],fallbackReady:false,fallbackCriteria:[],requestedGroup:null,bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[],searchedAs:null};
+const state={providers:[],audit:null,selected:new Set(preferred),items:[],alternativeItems:[],fallbackReady:false,fallbackCriteria:[],requestedGroup:null,bookmarks:{},pairing:null,bookmarksMode:false,resultsPage:1,searching:false,searchAbort:null,sessionAudit:{},excludedOffTopic:0,pausedIds:new Set(),cacheWarnings:[],searchedAs:null,lastFailedSourcesCount:0};
 const recentCompanionCommands=new Map();
 const activeCompanionMagnets=new Set();
 const activeCompanionItems=new Set();
@@ -455,6 +455,12 @@ function selectedSearchItems(){
   .filter(item=>!hiddenIndexerIds.has(item.provider));
  return {items,showAlternatives};
 }
+// A partial outage is NOT evidence that a requested release does not exist.
+function noResultsText(){
+ return state.lastFailedSourcesCount>0
+  ?tr("Search incomplete: {n} source(s) failed. No matching releases were found among responding sources.",{n:state.lastFailedSourcesCount})
+  :tr("No matching titles. Try another title, fewer keywords or different indexers.");
+}
 function renderResults(){
  const root=$("results");root.replaceChildren();
  const {items,showAlternatives}=selectedSearchItems();
@@ -470,7 +476,7 @@ function renderResults(){
  $("searchQuality").textContent=state.bookmarksMode?"":qualityNotes.join(" ");
  if(!sorted.length){
    if(state.bookmarksMode)$("notice").textContent=tr("No bookmarks saved yet.");
-   else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent=tr("No matching titles. Try another title, fewer keywords or different indexers.");
+   else if(!state.searching && state.items.length===0 && $("query").value.trim())$("notice").textContent=noResultsText();
    return;
  }
  $("notice").textContent="";
@@ -621,7 +627,7 @@ async function search(){
  if(!state.selected.size){openDialog("providersDialog");toast(tr("Select at least one indexer."));return;}
  const ids=[...state.selected],category=$("category").value,failures=[];
  const controller=new AbortController();
- state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.alternativeItems=[];state.fallbackReady=false;state.fallbackCriteria=[];state.requestedGroup=null;state.excludedOffTopic=0;state.cacheWarnings=[];state.searchedAs=null;
+ state.searchAbort=controller;state.searching=true;state.bookmarksMode=false;state.resultsPage=1;state.items=[];state.alternativeItems=[];state.fallbackReady=false;state.fallbackCriteria=[];state.requestedGroup=null;state.excludedOffTopic=0;state.cacheWarnings=[];state.searchedAs=null;state.lastFailedSourcesCount=0;
  $("searchButton").disabled=false;$("searchButton").textContent=tr("Cancel search ×");
  $("notice").textContent=tr("Searching {n} indexers…",{n:ids.length});$("providerErrors").replaceChildren();renderResults();
  let completed=0,next=0;
@@ -697,6 +703,7 @@ async function search(){
   }
  }finally{
   const cancelled=controller.signal.aborted;
+  state.lastFailedSourcesCount=cancelled?0:failures.length;
   state.searchAbort=null;state.searching=false;
   $("searchButton").disabled=false;$("searchButton").textContent=tr("Search →");
   renderResults();
