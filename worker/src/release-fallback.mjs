@@ -107,7 +107,7 @@ function groupRank(group,name){
  if(new RegExp("(?:-|[\\s._])"+group+"(?:\\.[a-z0-9]+)?$","i").test(literal))return 0;
  return 1;
 }
-function describeDifferences(intent,meta,name){
+function describeDifferences(intent,meta,name,original){
  const changes=[];
  if(intent.requestedResolution&&meta.resolution!==intent.requestedResolution)
   changes.push("resolution");
@@ -117,6 +117,8 @@ function describeDifferences(intent,meta,name){
   changes.push("bitDepth");
  if(intent.requestedGroup&&groupRank(intent.requestedGroup,name)!==0)
   changes.push("group");
+ // Technical equivalence alone does not prove identical release naming.
+ if(!changes.length&&!isLiteralReleaseMatch(name,original))changes.push("release");
  return changes;
 }
 export function rankReleaseAlternative(item,original,plan){
@@ -132,7 +134,7 @@ export function rankReleaseAlternative(item,original,plan){
  // The category order is intentional: SAME RESOLUTION with x264 always
  // outranks 720p x265 when the request was 1080p x265.
  const fallbackRank=resolution*1000+codec*100+bitDepth*10+group;
- return {fallbackRank,fallbackDifferences:describeDifferences(intent,meta,item.name),
+ return {fallbackRank,fallbackDifferences:describeDifferences(intent,meta,item.name,original),
    fallbackActual:{resolution:meta.resolution?meta.resolution+"p":null,
     codec:meta.codec,bitDepth:meta.bitDepth},
    fallbackGroupMatches:group===0};
@@ -145,8 +147,9 @@ export function partitionReleases(found,original,plan){
  const intent=releaseFallbackIntent(original,plan);
  // For real full-release searches, strict token presence alone is not exact:
  // a REPACK, an extra suffix or reordered release terms is an alternative.
- // Non-release searches and all hidden providers keep their legacy contracts.
- const exact=intent?strictRelevant.filter(row=>isLiteralReleaseMatch(row?.name,original)):strictRelevant;
+ // A .mkv extension only in the query does not disqualify the same source
+ // name without extension. Non-release and hidden-provider logic stay intact.
+ const exact=intent?found.filter(row=>isLiteralReleaseMatch(row?.name,original)):strictRelevant;
  const ids=new Set(exact);
  const alternatives=[];
  if(intent)for(const row of found){
