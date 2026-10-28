@@ -1,3 +1,4 @@
+import {releaseFallbackIntent} from "./release-fallback.mjs";
 // Owner's 11 visible, curated PWA indexers are entitled to full release
 // metadata in ONE upstream request. Keep a separate explicit list so the
 // original 35 hidden adapters retain their existing compatible search route.
@@ -18,11 +19,17 @@ const EXACT_SET=new Set(CURATED_EXACT_PROVIDER_IDS);
 // No source probing, automatic fallback, additional requests or retries.
 export function sourceQueryFor(id,original,plan){
  if(!EXACT_SET.has(id))return plan.searchedAs;
- if(id==="btdigg"||!plan.broadened)return original;
+ // Owner's confirmed successful BTDigg request was the literal full release.
+ if(id==="btdigg")return original;
+ const fallback=releaseFallbackIntent(original,plan);
+ if(fallback)return [fallback.titleQuery,...fallback.technicalTerms].join(" ");
+ if(!plan.broadened)return original;
  const tokens=String(original).match(/[\p{L}\p{N}]+/gu);
  return tokens?.length?tokens.join(" "):original;
 }
 export function sourceQueryModeFor(id,original,plan){
  if(!EXACT_SET.has(id))return plan.broadened?"title":"literal";
- return id!=="btdigg"&&plan.broadened?"all-terms-normalized":"all-terms-literal";
+ if(id==="btdigg")return "all-terms-literal";
+ if(releaseFallbackIntent(original,plan))return "quality-terms-without-group";
+ return plan.broadened?"all-terms-normalized":"all-terms-literal";
 }
