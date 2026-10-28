@@ -39,6 +39,9 @@ CACHE_SECONDS = 20 * 60
 CACHE_MAX_ENTRIES = 4
 CACHE_MAX_BYTES = 6_000_000
 MIN_SEARCH_INTERVAL = 5
+# The external source can impose an independent 429 limit. Never immediately
+# recontact that origin after it confirms a rate limit. No auto-retry.
+UPSTREAM_429_BACKOFF_SECONDS = 60
 INFLIGHT_WAIT_SECONDS = TIMEOUT_SECONDS + 1
 SOURCE_UA = (
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
@@ -58,6 +61,7 @@ class SearchProvider:
         # At most one upstream request at a time. An identical in-flight query
         # can reuse its outcome rather than causing a spurious local 429.
         self._inflight = None
+        self._upstream_429_until = float('-inf')
 
     @staticmethod
     def fetch(query: str) -> tuple[int, bytes]:
@@ -220,6 +224,11 @@ class SearchProvider:
             if cached is not None:
                 self._cache.move_to_end(query)
                 return 200, cached[0]
+            # Cached positive rows remain available, but a real remote 429
+            # suppresses ALL uncached queries until its bounded cooldown ends.
+            # This does not rotate IPs, evade challenges or issue retries.
+            if now < self._upstream_429_until:
+                return 429, b""
             ongoing = self._inflight
             if ongoing is not None:
                 if ongoing["query"] != query:
@@ -255,11 +264,23 @@ class SearchProvider:
                 if status == 200:
                     self._prune(self.clock())
                     self._remember(query, html, self.clock())
+                elif status == 429:
+                    self._upstream_429_until = max(
+                        self._upstream_429_until,
+                        self.clock() + UPSTREAM_429_BACKOFF_SECONDS,
+                    )
                 ongoing["status"] = status
                 ongoing["body"] = html
                 self._inflight = None
                 ongoing["event"].set()
         return status, html
+
+    def rate_limit_remaining_seconds(self):
+        # Used only to choose a standards-compliant HTTP Retry-After header.
+        # Does not fetch source content or disclose any request/identity.
+        with self._lock:
+            remaining = max(0, self._upstream_429_until - self.clock())
+        return max(MIN_SEARCH_INTERVAL, int(remaining + 0.999))
 
 def handler_class(secret: str, provider: SearchProvider):
     class Handler(BaseHTTPRequestHandler):
@@ -277,7 +298,7 @@ def handler_class(secret: str, provider: SearchProvider):
             self.send_header("x-content-type-options", "nosniff")
             self.send_header("content-length", str(len(body)))
             if status == 429:
-                self.send_header("retry-after", str(MIN_SEARCH_INTERVAL))
+                self.send_header("retry-after", str(provider.rate_limit_remaining_seconds()))
             self.end_headers()
             if body:
                 self.wfile.write(body)
