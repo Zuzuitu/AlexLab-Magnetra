@@ -26,7 +26,9 @@ function codecValue(t){
  return CODEC.test(x)?x:null;
 }
 function technicalFromName(s){
- const arr=words(s).map(x=>x.toLowerCase());
+ // H.265/H-265 and H.264 are codec aliases in source-owned filenames.
+ const normalized=String(s??"").replace(/\b([hx])[.\s-](264|265)\b/gi,"$1$2");
+ const arr=words(normalized).map(x=>x.toLowerCase());
  const res=[...new Set(arr.map(resolutionValue).filter(Boolean))];
  const enc=[...new Set(arr.map(codecValue).filter(Boolean))];
  const bits=[...new Set(arr.filter(x=>DEPTH.test(x)))];
@@ -49,7 +51,8 @@ export function releaseFallbackIntent(original,plan){
  if(first<0)return null;
  const tail=parts.slice(first);
  const meta=technicalFromName(tail.join(" "));
- const last=tail.at(-1);
+ const final=tail.at(-1);
+ const last=/^(?:mkv|mp4|avi|mov|torrent)$/i.test(final||"")?tail.at(-2):final;
  const requestedGroup=last&&!TECHNICAL.test(last)&&/^[a-z][a-z0-9]{1,19}$/i.test(last)?last:null;
  if(!meta.resolution&&!meta.codec&&!meta.bitDepth)return null;
  return {
