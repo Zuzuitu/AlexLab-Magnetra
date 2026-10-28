@@ -41,6 +41,17 @@ export default {
       rows[0].size!=="1.2 GB"||rows[0].details!=="https://btdig.com/torrent/"+hash||
       rows[0].seeders!==null||rows[0].peers!==null)
     invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields",extractedMagnet:rows[0]?.magnet||null});
+   // Real-source HTML may put individual fields directly under the
+   // result root instead of under an extra wrapper div. Both forms must
+   // preserve the one-title/one-magnet association in actual workerd.
+   const direct=sample.replace('<div class="one_result"><div>','<div class="one_result">')
+     .replace('</div></div>','</div>');
+   const unwrapped=await runHtmlAdapter("btdigg","ubuntu","all",async()=>new Response(direct,{
+     headers:{"content-type":"text/html"}
+   }));
+   if(unwrapped.length!==1||unwrapped[0].name!=="Ubuntu ISO fixture"||
+      unwrapped[0].magnet!==fullMagnet||unwrapped[0].size!=="1.2 GB")
+     invalid.push({id:"btdigg-unwrapped-fixture",error:"direct-sibling BTDigg result split or dropped"});
   }catch(e){invalid.push({id:"btdigg-fixture",error:String(e).slice(0,250)});}
   // Real Cloudflare workerd contract: href="...&amp;dn=..." must become
   // a usable magnet "&dn=..." for an original TheRarBg detail. This catches
