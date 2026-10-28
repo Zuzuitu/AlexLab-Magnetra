@@ -39,7 +39,7 @@ function harness(fetcher,initialStorage={},query=""){
  toast=()=>{};
  globalThis.testing={state,search,sendMagnet,ensureMagnet,magnetIdentity,
   chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg,
-  magnetFailureText};
+  selectedSearchItems,magnetFailureText};
  `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element,storage};
 }
@@ -87,6 +87,61 @@ test("selecting every curated source issues exactly one request per provider inc
  assert.equal(requested.filter(id=>id==="thepiratebay").length,1);
  assert.ok(maxConcurrent<=3,"PWA bound to three parallel providers");
 });
+test("exact release takes precedence across ALL selected sources; alternatives only after completion",async()=>{
+ let releaseSlow;
+ const slow=new Promise(resolve=>{releaseSlow=resolve;});
+ const {api,element}=harness(async(path)=>{
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  if(id==="slow")await slow;
+  if(id==="slow")return json({
+   results:[{id:"s1",provider:"slow",name:"The Dog Stars 2026 1080p 10bit WEBRip x265 HEVC PSA"}],
+   alternatives:[],stats:[{provider:id,ok:true,count:1,alternativeCount:0}],errors:[]
+  });
+  return json({
+   results:[],alternatives:[{id:"f1",provider:"fast",name:"The Dog Stars 2026 1080p 10bit WEB-DL x265 OTHER",releaseMatch:"quality-alternative"}],
+   fallbackCriteria:["1080p","x265","10bit"],requestedGroup:"PSA",
+   stats:[{provider:id,ok:true,count:0,alternativeCount:1}],errors:[]
+  });
+ });
+ element("query").value="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+ element("category").value="movies";
+ api.state.selected=new Set(["fast","slow"]);
+ const pending=api.search();
+ await tick();
+ assert.equal(api.state.items.length,0);
+ assert.equal(api.state.alternativeItems.length,1);
+ assert.equal(api.state.fallbackReady,false);
+ assert.equal(api.selectedSearchItems().items.length,0,"no alternatives shown while exact search is pending");
+ releaseSlow();
+ await pending;
+ assert.equal(api.state.items.length,1);
+ assert.equal(api.state.fallbackReady,true);
+ assert.deepEqual(Array.from(api.selectedSearchItems().items,x=>x.id),["s1"]);
+ assert.equal(api.selectedSearchItems().showAlternatives,false);
+});
+
+test("when NO source has PSA, quality-only alternatives become visible without new requests",async()=>{
+ let calls=0;
+ const {api,element}=harness(async(path)=>{
+  calls++;
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  return json({results:[],alternatives:[
+   {id:id+":alternative",provider:id,name:"The Dog Stars 2026 1080p 10bit x265 OTHER",releaseMatch:"quality-alternative"}
+  ],fallbackCriteria:["1080p","x265","10bit"],requestedGroup:"PSA",
+  stats:[{provider:id,ok:true,count:0,alternativeCount:1}],errors:[]});
+ });
+ element("query").value="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+ element("category").value="movies";
+ api.state.selected=new Set(["fast","other"]);
+ await api.search();
+ assert.equal(calls,2,"no automatic retries or second group-free source searches");
+ assert.equal(api.state.items.length,0);
+ assert.equal(api.selectedSearchItems().showAlternatives,true);
+ assert.deepEqual(Array.from(api.selectedSearchItems().items,x=>x.provider),["fast","other"]);
+ assert.deepEqual(Array.from(api.state.fallbackCriteria),["1080p","x265","10bit"]);
+ assert.equal(api.state.sessionAudit.fast.state,"results");
+});
+
 test("cancel search preserves completed results but ignores late and stale responses",async()=>{
  let releaseSlow;
  const slow=new Promise(resolve=>{releaseSlow=resolve;});
@@ -321,9 +376,9 @@ test("TheRarBg diagnostic mode is explicit and does not change source URL or nor
 
 test("UI discloses title-based search and does not claim an exact PSA release",()=>{
  assert.match(source,/state\.searchedAs=data\.searchedAs/);
- assert.match(source,/Searched sources by title: \{query\}\. Results must match every requested release term; verify the file details\./);
+ assert.match(source,/Some indexers searched by title: \{query\}\. Matching is checked against the original request\./);
  const i18n=readFileSync(new URL("../../web/i18n.js",import.meta.url),"utf8");
- assert.match(i18n,/Indexere interogate după titlul: \{query\}/);
+ assert.match(i18n,/Unele indexere au căutat după titlu: \{query\}/);
  assert.match(i18n,/Fonti interrogate per titolo: \{query\}/);
 });
 test("alternative search never reselects the failing TPB source",()=>{

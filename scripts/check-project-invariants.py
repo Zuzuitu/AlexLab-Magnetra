@@ -1033,8 +1033,10 @@ def check_web_parity_and_companion(config: dict) -> None:
                 fail("global query relevance guard missing: " + marker)
     if source_worker.is_file():
         worker_code = source_worker.read_text(encoding="utf-8")
-        for marker in ('from "./query-relevance.mjs"', "planSearchQuery(q)", "filterRelevance(found,q)",
-                       "rawCount:item.rawCount", "excludedOffTopic:item.excluded"):
+        for marker in ('from "./query-relevance.mjs"', "planSearchQuery(q)",
+                       'from "./release-fallback.mjs"', "partitionReleases(found,q,plan)",
+                       "exact,alternatives:qualityMatches", "rawCount:item.rawCount",
+                       "excludedOffTopic:item.excluded"):
             if marker not in worker_code:
                 fail("global Worker relevance enforcement missing: " + marker)
     if frontend.is_file():
@@ -1126,7 +1128,7 @@ def check_web_parity_and_companion(config: dict) -> None:
                 fail("source error status classifier is missing")
         if source_worker.is_file() and recovery.get("provider_errors_must_report_code"):
             worker_text_recovery = source_worker.read_text(encoding="utf-8")
-            if "classifyProviderError(e)" not in worker_text_recovery or "directSearchUrl(id,sourceQuery)" not in worker_text_recovery:
+            if "classifyProviderError(e)" not in worker_text_recovery or "directSearchUrl(id,providerQuery)" not in worker_text_recovery:
                 fail("Worker does not expose typed provider errors and exact source recovery URL")
         if frontend.is_file() and recovery.get("clipboard_read_requires_explicit_user_action"):
             frontend_clip = frontend.read_text(encoding="utf-8")

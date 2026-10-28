@@ -2,6 +2,19 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
+  "Some indexers searched by title: {query}. Matching is checked against the original request.":{
+    "ro":"Unele indexere au căutat după titlu: {query}. Potrivirea este verificată față de căutarea originală.",
+    "it":"Alcuni indici hanno cercato per titolo: {query}. Le corrispondenze sono verificate rispetto alla richiesta originale."
+  },
+  "No exact {group} release found in responding indexers. Showing alternatives matching {terms}.":{
+    "ro":"Niciun release exact {group} găsit în indexerele care au răspuns. Sunt afișate alternative cu {terms}.",
+    "it":"Nessuna release esatta {group} trovata negli indici che hanno risposto. Sono mostrate alternative con {terms}."
+  },
+  "Alternative group / release":{
+    "ro":"Grup / versiune alternativă",
+    "it":"Gruppo / release alternativa"
+  },
+  "requested":{"ro":"cerut","it":"richiesta"},
   "Searched sources by title: {query}. Results must match every requested release term; verify the file details.":{
     "ro":"Indexere interogate după titlul: {query}. Rezultatele trebuie să conțină toate detaliile cerute (calitate și grup). Verifică fișierul înainte de descărcare.",
     "it":"Fonti interrogate per titolo: {query}. I risultati devono contenere tutti i dettagli richiesti (qualità e gruppo). Verifica il file prima di scaricarlo."

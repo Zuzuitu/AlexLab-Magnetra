@@ -31,14 +31,14 @@ test("long video release filenames become one honest title/year query",()=>{
   "real release year must still match");
 });
 
-test("Worker searches the release title once per provider, not every quality or group token",async()=>{
+test("Worker preserves exact release metadata across curated search providers",async()=>{
  const before=globalThis.fetch;
  const seen=[];
  try{
   globalThis.fetch=async(url,opts)=>{
    seen.push({url:String(url),opts});
    assert.equal(String(url),"https://api.knaben.org/v1");
-   assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026");
+   assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026 1080p x265 10bit");
    return new Response(JSON.stringify({hits:[
     {id:"dog:1",title:"The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:7},
     {id:"dog:2",title:"The Dog Stars (2026) 1080p WEB-DL x265 BONE",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:70},
@@ -51,7 +51,8 @@ test("Worker searches the release title once per provider, not every quality or 
   assert.equal(res.status,200);
   const data=await res.json();
   assert.equal(data.query,raw);
-  assert.equal(data.searchedAs,"The Dog Stars 2026","must inform UI when original filename was simplified");
+  assert.equal(data.searchedAs,undefined,"curated exact searches must not claim title-only query");
+  assert.equal(data.stats[0].queryMode,"quality-terms-without-group");
   assert.equal(seen.length,1,"no hidden rerun, fallback or second provider query");
   assert.equal(data.total,1);
   assert.equal(data.excludedOffTopic,2,"other release groups and unrelated films are not accepted");
@@ -81,6 +82,45 @@ test("release quality and group terms remain strict even when provider lookup is
  assert.equal(relevantTitle("The Dog Stars 1080p PSA",exact),true);
  assert.equal(relevantTitle("The Dog Stars 1080p PSA","The.Dog.Stars.2026.1080p.WEBRip-x265-GALAXY"),false);
  assert.equal(relevantTitle("The Doa Stars 1080p PSA",exact),false);
+});
+
+test("BTDigg receives literal filename; Knaben receives all release terms once",async()=>{
+ const exact="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+ const secret="z".repeat(64);
+ const prior=globalThis.fetch,seen=[];
+ try{
+  globalThis.fetch=async(url,opts)=>{
+   const actual=String(url);seen.push({url:actual,opts});
+   if(actual.startsWith("https://btdigg-rock64.alexlab.media/v1/search?")){
+    const parsed=new URL(actual);
+    assert.equal(parsed.searchParams.get("q"),exact);
+    assert.equal(opts.headers.authorization,"Bearer "+secret);
+    return new Response("",{status:429});
+   }
+   if(actual==="https://api.knaben.org/v1"){
+    assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026 1080p x265 10bit");
+    return new Response(JSON.stringify({hits:[
+     {id:"source:valid",title:exact,magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:1},
+     {id:"source:wrong",title:"The Dog Stars 2026 1080p WEB-DL x265 OTHER",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:4}
+    ]}),{headers:{"content-type":"application/json"}});
+   }
+   throw Error("Unexpected transport");
+  };
+  const u="https://index.alexlab.media/api/search?q="+encodeURIComponent(exact)+
+    "&providers=btdigg,knaben&category=all";
+  const response=await worker.fetch(new Request(u),{BTDIGG_GATEWAY_TOKEN:secret});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.query,exact);
+  assert.equal(data.searchedAs,undefined);
+  assert.deepEqual(data.stats.map(x=>x.queryMode),["all-terms-literal","quality-terms-without-group"]);
+  assert.equal(seen.length,2);
+  assert.equal(data.errors.length,1);
+  assert.equal(data.errors[0].provider,"btdigg");
+  assert.equal(data.total,1);
+  assert.equal(data.results[0].name,exact);
+  assert.equal(data.excludedOffTopic,1);
+ }finally{globalThis.fetch=prior;}
 });
 
 test("screenshot regression: exact title and title-year match; unrelated hits excluded",()=>{
