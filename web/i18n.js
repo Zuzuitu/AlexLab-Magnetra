@@ -413,6 +413,10 @@ const DICTIONARY={
     "ro": "Nu ai favorite salvate.",
     "it": "Non hai ancora preferiti salvati."
   },
+  "Search incomplete: {n} source(s) failed. No matching releases were found among responding sources.": {
+    "ro": "Căutare incompletă: {n} surse nu au răspuns. Nu s-au găsit rezultate potrivite în sursele care au răspuns.",
+    "it": "Ricerca incompleta: {n} fonti non hanno risposto. Nessun risultato corrispondente tra le fonti che hanno risposto."
+  },
   "No matching titles. Try another title, fewer keywords or different indexers.": {
     "ro": "Niciun rezultat potrivit. Încearcă alt titlu sau alte surse.",
     "it": "Nessun risultato pertinente. Prova un altro titolo o altre fonti."
