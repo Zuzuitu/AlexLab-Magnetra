@@ -454,7 +454,7 @@ function renderResults(){
  $("resultCount").textContent=tr(state.bookmarksMode?"{n} SAVED":"{n} MATCHES",{n:sorted.length});
  $("resultsTitle").textContent=tr(state.bookmarksMode?"Saved bookmarks":"Search results");
  const qualityNotes=[];
- if(state.searchedAs)qualityNotes.push(tr("Searched by title: {query}. Quality and release group are not guaranteed.",{query:state.searchedAs}));
+ if(state.searchedAs)qualityNotes.push(tr("Searched sources by title: {query}. Results must match every requested release term; verify the file details.",{query:state.searchedAs}));
  if(state.excludedOffTopic)qualityNotes.push(tr("{n} unrelated source results excluded from this search. Only title-matching entries are shown.",{n:state.excludedOffTopic}));
  $("searchQuality").textContent=state.bookmarksMode?"":qualityNotes.join(" ");
  if(!sorted.length){
