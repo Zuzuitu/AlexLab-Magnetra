@@ -444,13 +444,17 @@ function renderPagination(total){
  );
  host.append(nav);
 }
-function renderResults(){
- const root=$("results");root.replaceChildren();
+function selectedSearchItems(){
  const showAlternatives=!state.bookmarksMode&&state.fallbackReady&&
   state.items.length===0&&state.alternativeItems.length>0;
  const items=(state.bookmarksMode?Object.values(state.bookmarks):
   showAlternatives?state.alternativeItems:state.items)
   .filter(item=>!hiddenIndexerIds.has(item.provider));
+ return {items,showAlternatives};
+}
+function renderResults(){
+ const root=$("results");root.replaceChildren();
+ const {items,showAlternatives}=selectedSearchItems();
  const sorted=sortItems(items);
  state.resultsPage=Math.max(1,Math.min(state.resultsPage,Math.max(1,Math.ceil(sorted.length/RESULTS_PER_PAGE))));
  renderPagination(sorted.length);
