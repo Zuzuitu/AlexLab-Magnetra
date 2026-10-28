@@ -36,9 +36,13 @@ def fetch_one(query: str, *, client=None) -> tuple[int, bytes]:
             or QUERY_INVALID.search(query)):
         raise ValueError("Invalid BTDigg query")
     if client is None:
-        # Lazy optional dependency. Not installed or enabled in production.
-        from curl_cffi import requests as client
+        # Deliberately ignore environment-supplied proxies; this candidate
+        # must never inherit unrelated Rock64 project network settings.
+        from curl_cffi import requests
+        with requests.Session(trust_env=False) as session:
+            return fetch_one(query, client=session)
 
+    response = None
     try:
         response = client.get(
             SEARCH_URL,
@@ -46,34 +50,49 @@ def fetch_one(query: str, *, client=None) -> tuple[int, bytes]:
             impersonate="chrome",
             timeout=TIMEOUT_SECONDS,
             allow_redirects=False,
+            stream=True,
         )
+        code = getattr(response, "status_code", None)
+        if code == 429:
+            return 429, b""
+        if code in (401, 403) or (isinstance(code, int) and 300 <= code < 400):
+            return 503, b""
+        if code != 200:
+            return 503, b""
+        headers = getattr(response, "headers", {})
+        if not hasattr(headers, "get"):
+            return 502, b""
+        try:
+            if int(headers.get("content-length", 0) or 0) > MAX_RESPONSE_BYTES:
+                return 502, b""
+        except (ValueError, TypeError, OverflowError):
+            return 502, b""
+        if "text/html" not in str(headers.get("content-type", "")).lower():
+            return 502, b""
+        # Stream bounded chunks; never buffer an untrusted 100MB response
+        # before applying the existing 3MB Rock64 gateway limit.
+        chunks = []
+        total = 0
+        for chunk in response.iter_content(chunk_size=65536):
+            if not isinstance(chunk, bytes):
+                return 502, b""
+            total += len(chunk)
+            if total > MAX_RESPONSE_BYTES:
+                return 502, b""
+            chunks.append(chunk)
+        body = b"".join(chunks)
+        snippet = body[:2400].lower()
+        if any(marker in snippet for marker in CHALLENGE_MARKERS):
+            return 503, b""
+        if not (b"<html" in snippet or b"<!doctype html" in snippet):
+            return 502, b""
+        return 200, body
     except Exception:
         # Do not emit exception text, URLs, cookies or query fragments.
         return 504, b""
-
-    code = getattr(response, "status_code", None)
-    if code == 429:
-        return 429, b""
-    if code in (401, 403) or (isinstance(code, int) and 300 <= code < 400):
-        return 503, b""
-    if code != 200:
-        return 503, b""
-    headers = getattr(response, "headers", {})
-    if not hasattr(headers, "get"):
-        return 502, b""
-    try:
-        if int(headers.get("content-length", 0) or 0) > MAX_RESPONSE_BYTES:
-            return 502, b""
-    except (ValueError, TypeError, OverflowError):
-        return 502, b""
-    if "text/html" not in str(headers.get("content-type", "")).lower():
-        return 502, b""
-    body = getattr(response, "content", b"")
-    if not isinstance(body, bytes) or len(body) > MAX_RESPONSE_BYTES:
-        return 502, b""
-    snippet = body[:2400].lower()
-    if any(marker in snippet for marker in CHALLENGE_MARKERS):
-        return 503, b""
-    if not (b"<html" in snippet or b"<!doctype html" in snippet):
-        return 502, b""
-    return 200, body
+    finally:
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
