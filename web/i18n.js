@@ -2,6 +2,16 @@
 // Public UI only: RO (default), IT. No external translation service or requests.
 (function(){
 const DICTIONARY={
+  "Exact release not found in responding indexers. Showing only the highest-ranked available alternatives. Different specifications are labeled.":{
+    "ro":"Varianta exactă nu a fost găsită în indexerele care au răspuns. Sunt afișate doar alternativele disponibile cel mai apropiate, cu diferențele marcate.",
+    "it":"Release esatta non trovata negli indici che hanno risposto. Sono mostrate solo le alternative disponibili più vicine, con le differenze evidenziate."
+  },
+  "Alternative release":{"ro":"Versiune alternativă","it":"Release alternativa"},
+  "Different: {terms}":{"ro":"Diferă: {terms}","it":"Differenze: {terms}"},
+  "resolution":{"ro":"rezoluția","it":"risoluzione"},
+  "codec":{"ro":"codecul","it":"codec"},
+  "bit depth":{"ro":"adâncimea de culoare","it":"profondità colore"},
+  "group":{"ro":"grupul","it":"gruppo"},
   "Some indexers searched by title: {query}. Matching is checked against the original request.":{
     "ro":"Unele indexere au căutat după titlu: {query}. Potrivirea este verificată față de căutarea originală.",
     "it":"Alcuni indici hanno cercato per titolo: {query}. Le corrispondenze sono verificate rispetto alla richiesta originale."
