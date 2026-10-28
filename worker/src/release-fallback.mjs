@@ -89,13 +89,29 @@ function depthRank(requested,actual){
  if(actual===requested)return 0;
  return actual?1:2;
 }
+// Curated full-release searches require the complete original source filename,
+// not just the unordered presence of every token. Container extensions are
+// transport details and do not change the named release.
+function releaseNameTokens(value){
+ const withoutExtension=String(value??"").trim().replace(/\.(?:mkv|mp4|avi|mov|torrent)$/i,"");
+ return words(withoutExtension.normalize("NFKD").replace(/[\u0300-\u036f]/g,""))
+  .map(token=>token.toLowerCase());
+}
+export function isLiteralReleaseMatch(actual,requested){
+ const a=releaseNameTokens(actual),b=releaseNameTokens(requested);
+ return a.length>0&&a.length===b.length&&a.every((term,index)=>term===b[index]);
+}
 function groupRank(group,name){
  if(!group)return 0;
- const literal=String(name||"").trim();
- if(new RegExp("(?:-|[\\s._])"+group+"(?:\\.[a-z0-9]+)?$","i").test(literal))return 0;
+ // REPACK/PROPER identify a revised edition, not a different release group.
+ // Remove only a recognized file extension; do not confuse arbitrary trailing
+ // tags or another group's name with the requested release group.
+ const literal=String(name||"").trim().replace(/\.(?:mkv|mp4|avi|mov|torrent)$/i,"");
+ const revision="(?:[\\s._-](?:repack|proper|rerip|internal|readnfo))*";
+ if(new RegExp("(?:-|[\\s._])"+group+revision+"$","i").test(literal))return 0;
  return 1;
 }
-function describeDifferences(intent,meta,name){
+function describeDifferences(intent,meta,name,original){
  const changes=[];
  if(intent.requestedResolution&&meta.resolution!==intent.requestedResolution)
   changes.push("resolution");
@@ -105,6 +121,8 @@ function describeDifferences(intent,meta,name){
   changes.push("bitDepth");
  if(intent.requestedGroup&&groupRank(intent.requestedGroup,name)!==0)
   changes.push("group");
+ // Technical equivalence alone does not prove identical release naming.
+ if(!changes.length&&!isLiteralReleaseMatch(name,original))changes.push("release");
  return changes;
 }
 export function rankReleaseAlternative(item,original,plan){
@@ -120,7 +138,7 @@ export function rankReleaseAlternative(item,original,plan){
  // The category order is intentional: SAME RESOLUTION with x264 always
  // outranks 720p x265 when the request was 1080p x265.
  const fallbackRank=resolution*1000+codec*100+bitDepth*10+group;
- return {fallbackRank,fallbackDifferences:describeDifferences(intent,meta,item.name),
+ return {fallbackRank,fallbackDifferences:describeDifferences(intent,meta,item.name,original),
    fallbackActual:{resolution:meta.resolution?meta.resolution+"p":null,
     codec:meta.codec,bitDepth:meta.bitDepth},
    fallbackGroupMatches:group===0};
@@ -129,9 +147,14 @@ export function matchesQualityFallback(item,original,plan){
  return rankReleaseAlternative(item,original,plan)!==null;
 }
 export function partitionReleases(found,original,plan){
- const {matches:exact}=filterRelevance(found,original);
- const ids=new Set(exact);
+ const {matches:strictRelevant}=filterRelevance(found,original);
  const intent=releaseFallbackIntent(original,plan);
+ // For real full-release searches, strict token presence alone is not exact:
+ // a REPACK, an extra suffix or reordered release terms is an alternative.
+ // A .mkv extension only in the query does not disqualify the same source
+ // name without extension. Non-release and hidden-provider logic stay intact.
+ const exact=intent?found.filter(row=>isLiteralReleaseMatch(row?.name,original)):strictRelevant;
+ const ids=new Set(exact);
  const alternatives=[];
  if(intent)for(const row of found){
   if(ids.has(row))continue;

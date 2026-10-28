@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.mjs";
 import {planSearchQuery} from "../src/query-relevance.mjs";
-import {releaseFallbackIntent,matchesQualityFallback,rankReleaseAlternative,partitionReleases} from "../src/release-fallback.mjs";
+import {releaseFallbackIntent,matchesQualityFallback,rankReleaseAlternative,partitionReleases,isLiteralReleaseMatch} from "../src/release-fallback.mjs";
 
 const requested="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
 const plan=planSearchQuery(requested);
@@ -85,6 +85,62 @@ test("partition keeps source magnet unchanged and never mislabels fallback as ex
  assert.equal(result.exact[0],exact);
  assert.deepEqual(result.criteria,["1080p","x265","10bit"]);
  assert.equal(result.requestedGroup,"PSA");
+});
+
+
+test("full release exactness respects term order and excludes extra REPACK labels",()=>{
+ const sameWithContainer=make("container",requested+".mkv");
+ const reversedTags=make("reordered","The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.HEVC.x265-PSA");
+ const repack=make("repack",requested+"-REPACK");
+ assert.equal(isLiteralReleaseMatch(sameWithContainer.name,requested),true);
+ assert.equal(isLiteralReleaseMatch(reversedTags.name,requested),false);
+ assert.equal(isLiteralReleaseMatch(repack.name,requested),false);
+ assert.equal(isLiteralReleaseMatch(requested,requested+".torrent"),true);
+ const partition=partitionReleases([reversedTags,repack,sameWithContainer],requested,plan);
+ assert.deepEqual(partition.exact,[sameWithContainer]);
+ assert.deepEqual(partition.alternatives.map(x=>x.id),["reordered","repack"]);
+ assert.equal(partition.excluded,0);
+ assert.deepEqual(partition.alternatives.find(x=>x.id==="repack").fallbackDifferences,["release"]);
+ assert.equal(partition.alternatives.find(x=>x.id==="repack").fallbackGroupMatches,true);
+ assert.deepEqual(partition.alternatives.find(x=>x.id==="reordered").fallbackDifferences,["release"]);
+});
+
+test("revision tags preserve source group while another group remains distinct",()=>{
+ const proper=make("proper",requested+"-PROPER.mkv");
+ const other=make("other","The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-OtherGroup-REPACK");
+ const same=rankReleaseAlternative(proper,requested,plan);
+ const different=rankReleaseAlternative(other,requested,plan);
+ assert.equal(same.fallbackGroupMatches,true);
+ assert.deepEqual(same.fallbackDifferences,["release"]);
+ assert.equal(different.fallbackGroupMatches,false);
+ assert.ok(different.fallbackDifferences.includes("group"));
+ assert.ok(same.fallbackRank<different.fallbackRank);
+});
+
+test("requested container extension is optional for exact source release identity",()=>{
+ const originalWithExt=requested+".mkv";
+ const plain=make("plain",requested);
+ const alt=make("alt",requested+"-REPACK");
+ const result=partitionReleases([plain,alt],originalWithExt,planSearchQuery(originalWithExt));
+ assert.deepEqual(result.exact,[plain]);
+ assert.deepEqual(result.alternatives.map(x=>x.id),["alt"]);
+ assert.equal(result.excluded,0);
+});
+
+test("same video/group but a different WEB release is visibly labeled as release variation",()=>{
+ const differentSource=make("webdl","The.Dog.Stars.2026.1080p.10bit.WEB-DL.6CH.x265.HEVC-PSA");
+ const r=rankReleaseAlternative(differentSource,requested,plan);
+ assert.equal(r.fallbackRank,0);
+ assert.deepEqual(r.fallbackDifferences,["release"]);
+ assert.equal(r.fallbackGroupMatches,true);
+});
+
+test("ordinary title searches still use existing unordered relevance matching",()=>{
+ const search="The Dog Stars 2026";
+ const ordinary=make("ordinary","2026 - Stars, The Dog - collection");
+ const result=partitionReleases([ordinary],search,planSearchQuery(search));
+ assert.deepEqual(result.exact,[ordinary]);
+ assert.deepEqual(result.alternatives,[]);
 });
 
 test("single real-source-mock response yields ranked alternatives, not extra search calls",async()=>{

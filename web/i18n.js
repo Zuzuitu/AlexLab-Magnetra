@@ -12,6 +12,7 @@ const DICTIONARY={
   "codec":{"ro":"codecul","it":"codec"},
   "bit depth":{"ro":"adâncimea de culoare","it":"profondità colore"},
   "group":{"ro":"grupul","it":"gruppo"},
+  "release naming":{"ro":"versiunea release-ului","it":"versione della release"},
   "Some indexers searched by title: {query}. Matching is checked against the original request.":{
     "ro":"Unele indexere au căutat după titlu: {query}. Potrivirea este verificată față de căutarea originală.",
     "it":"Alcuni indici hanno cercato per titolo: {query}. Le corrispondenze sono verificate rispetto alla richiesta originale."
