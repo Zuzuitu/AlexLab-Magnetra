@@ -83,6 +83,44 @@ test("release quality and group terms remain strict even when provider lookup is
  assert.equal(relevantTitle("The Doa Stars 1080p PSA",exact),false);
 });
 
+test("BTDigg receives original exact release once; other indexers receive title/year once",async()=>{
+ const exact="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+ const secret="z".repeat(64);
+ const prior=globalThis.fetch,seen=[];
+ try{
+  globalThis.fetch=async(url,opts)=>{
+   const actual=String(url);seen.push({url:actual,opts});
+   if(actual.startsWith("https://btdigg-rock64.alexlab.media/v1/search?")){
+    const parsed=new URL(actual);
+    assert.equal(parsed.searchParams.get("q"),exact);
+    assert.equal(opts.headers.authorization,"Bearer "+secret);
+    return new Response("",{status:429});
+   }
+   if(actual==="https://api.knaben.org/v1"){
+    assert.equal(JSON.parse(opts.body).query,"The Dog Stars 2026");
+    return new Response(JSON.stringify({hits:[
+     {id:"source:valid",title:exact,magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:1},
+     {id:"source:wrong",title:"The Dog Stars 2026 1080p WEB-DL x265 OTHER",magnetUrl:"magnet:?xt=urn:btih:"+hash,seeders:4}
+    ]}),{headers:{"content-type":"application/json"}});
+   }
+   throw Error("Unexpected transport");
+  };
+  const u="https://index.alexlab.media/api/search?q="+encodeURIComponent(exact)+
+    "&providers=btdigg,knaben&category=all";
+  const response=await worker.fetch(new Request(u),{BTDIGG_GATEWAY_TOKEN:secret});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.query,exact);
+  assert.equal(data.searchedAs,"The Dog Stars 2026");
+  assert.equal(seen.length,2);
+  assert.equal(data.errors.length,1);
+  assert.equal(data.errors[0].provider,"btdigg");
+  assert.equal(data.total,1);
+  assert.equal(data.results[0].name,exact);
+  assert.equal(data.excludedOffTopic,1);
+ }finally{globalThis.fetch=prior;}
+});
+
 test("screenshot regression: exact title and title-year match; unrelated hits excluded",()=>{
  const {matches,excluded}=filterRelevance(original,movie);
  assert.deepEqual(matches.map(x=>x.id),original.slice(0,3).map(x=>x.id));
