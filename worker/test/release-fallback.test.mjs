@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.mjs";
 import {planSearchQuery} from "../src/query-relevance.mjs";
-import {releaseFallbackIntent,matchesQualityFallback,rankReleaseAlternative,partitionReleases} from "../src/release-fallback.mjs";
+import {releaseFallbackIntent,matchesQualityFallback,rankReleaseAlternative,partitionReleases,isLiteralReleaseMatch} from "../src/release-fallback.mjs";
 
 const requested="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
 const plan=planSearchQuery(requested);
@@ -85,6 +85,30 @@ test("partition keeps source magnet unchanged and never mislabels fallback as ex
  assert.equal(result.exact[0],exact);
  assert.deepEqual(result.criteria,["1080p","x265","10bit"]);
  assert.equal(result.requestedGroup,"PSA");
+});
+
+
+test("full release exactness respects term order and excludes extra REPACK labels",()=>{
+ const sameWithContainer=make("container",requested+".mkv");
+ const reversedTags=make("reordered","The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.HEVC.x265-PSA");
+ const repack=make("repack",requested+"-REPACK");
+ assert.equal(isLiteralReleaseMatch(sameWithContainer.name,requested),true);
+ assert.equal(isLiteralReleaseMatch(reversedTags.name,requested),false);
+ assert.equal(isLiteralReleaseMatch(repack.name,requested),false);
+ assert.equal(isLiteralReleaseMatch(requested,requested+".torrent"),true);
+ const partition=partitionReleases([reversedTags,repack,sameWithContainer],requested,plan);
+ assert.deepEqual(partition.exact,[sameWithContainer]);
+ assert.deepEqual(partition.alternatives.map(x=>x.id),["reordered","repack"]);
+ assert.equal(partition.excluded,0);
+ assert.deepEqual(partition.alternatives.find(x=>x.id==="repack").fallbackDifferences,["group"]);
+});
+
+test("ordinary title searches still use existing unordered relevance matching",()=>{
+ const search="The Dog Stars 2026";
+ const ordinary=make("ordinary","2026 - Stars, The Dog - collection");
+ const result=partitionReleases([ordinary],search,planSearchQuery(search));
+ assert.deepEqual(result.exact,[ordinary]);
+ assert.deepEqual(result.alternatives,[]);
 });
 
 test("single real-source-mock response yields ranked alternatives, not extra search calls",async()=>{
