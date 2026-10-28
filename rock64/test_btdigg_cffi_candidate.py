@@ -18,6 +18,12 @@ class FakeResponse:
         self.status_code=status
         self.content=body
         self.headers={"content-type":"text/html; charset=utf-8"} if headers is None else headers
+        self.closed=False
+    def iter_content(self,chunk_size=65536):
+        for i in range(0,len(self.content),chunk_size):
+            yield self.content[i:i+chunk_size]
+    def close(self):
+        self.closed=True
 
 
 class FakeClient:
@@ -45,7 +51,9 @@ class TransportCandidateTests(unittest.TestCase):
         self.assertEqual(opts["timeout"],12)
         self.assertEqual(opts["impersonate"],"chrome")
         self.assertFalse(opts["allow_redirects"])
-        self.assertEqual(set(opts),{"params","impersonate","timeout","allow_redirects"})
+        self.assertEqual(set(opts),{"params","impersonate","timeout","allow_redirects","stream"})
+        self.assertTrue(opts["stream"])
+        self.assertTrue(c.response.closed,"stream response must close even on success")
 
     def test_bad_query_is_rejected_before_any_network_action(self):
         c=FakeClient()
@@ -70,6 +78,22 @@ class TransportCandidateTests(unittest.TestCase):
     def test_network_error_is_redacted_without_hidden_retry(self):
         c=FakeClient(error=RuntimeError("secret cookie or private query"))
         self.assertEqual(candidate.fetch_one("ubuntu",client=c),(504,b""))
+        self.assertEqual(len(c.calls),1)
+
+    def test_stream_has_hard_three_megabyte_limit_and_closes(self):
+        c=FakeClient(response=FakeResponse(body=b"<html>"+b"x"*(candidate.MAX_RESPONSE_BYTES+1)))
+        self.assertEqual(candidate.fetch_one("ubuntu",client=c),(502,b""))
+        self.assertTrue(c.response.closed)
+        self.assertEqual(len(c.calls),1)
+
+    def test_stream_failure_cannot_expose_raw_exception(self):
+        class ErrorResponse(FakeResponse):
+            def iter_content(self,chunk_size=65536):
+                raise OSError("secret source exception with private network path")
+                yield b""
+        c=FakeClient(response=ErrorResponse())
+        self.assertEqual(candidate.fetch_one("ubuntu",client=c),(504,b""))
+        self.assertTrue(c.response.closed)
         self.assertEqual(len(c.calls),1)
 
     def test_html_content_only_and_no_challenges(self):
