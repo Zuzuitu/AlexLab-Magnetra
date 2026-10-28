@@ -37,30 +37,31 @@ function runPicker(saved){
 }
 
 
-test("curated 11 picker restores all 34 previous hidden IDs plus SubsPlease",()=>{
+test("curated 10 picker hides AudioBookBay while preserving original 46 adapters",()=>{
  assert.equal(PROVIDERS.length,46);
  const {ui,elements}=runPicker();
- assert.equal(ui.hiddenIndexerIds.size,35);
- for(const id of ["subsplease","bt4g","eztvx","animetosho","mikanproject","fitgirlrepacks"])assert.ok(ui.hiddenIndexerIds.has(id),id);
- assert.equal(ui.selectableProviders().length,11);
+ assert.equal(ui.hiddenIndexerIds.size,36);
+ for(const id of ["subsplease","audiobookbay","bt4g","eztvx","animetosho","mikanproject","fitgirlrepacks"])assert.ok(ui.hiddenIndexerIds.has(id),id);
+ assert.equal(ui.selectableProviders().length,10);
  ui.renderProviders();
  const ids=elements.get("providerGrid").children.map(row=>row.children[0].children[0].value);
- assert.equal(ids.length,11);
+ assert.equal(ids.length,10);
  assert.deepEqual(ids.slice(0,3),["btdigg","torrent9","oxtorrent"]);
  assert.ok(!ids.includes("subsplease"));
- assert.match(elements.get("catalogSummary").textContent,/11 sources available/);
- assert.equal(elements.get("providerCount").textContent,"5/11");
+ assert.ok(!ids.includes("audiobookbay"));
+ assert.match(elements.get("catalogSummary").textContent,/10 sources available/);
+ assert.equal(elements.get("providerCount").textContent,"5/10");
 });
 
 test("migrates iPhone selected and paused lists without reintroducing hidden sources",()=>{
  const {ui,storage,elements}=runPicker({
-  "magnetra.providers.v1":["btdigg","bt4g","subsplease","animetosho","torrent9"],
-  "magnetra.paused-indexers.v1":["subsplease","nyaasi","knaben"]
+  "magnetra.providers.v1":["btdigg","bt4g","subsplease","audiobookbay","animetosho","torrent9"],
+  "magnetra.paused-indexers.v1":["subsplease","audiobookbay","nyaasi","knaben"]
  });
  assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
  assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
  assert.deepEqual([...ui.state.pausedIds],["knaben"]);
- assert.equal(elements.get("providerCount").textContent,"2/11");
+ assert.equal(elements.get("providerCount").textContent,"2/10");
 });
 
 test("legacy hidden-only selection recovers defaults but explicit saved [] stays empty",()=>{
@@ -68,7 +69,7 @@ test("legacy hidden-only selection recovers defaults but explicit saved [] stays
  assert.deepEqual([...a.ui.state.selected],["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"]);
  const b=runPicker({"magnetra.providers.v1":[]});
  assert.equal(b.ui.state.selected.size,0);
- assert.equal(b.elements.get("providerCount").textContent,"0/11");
+ assert.equal(b.elements.get("providerCount").textContent,"0/10");
  assert.equal(b.elements.get("selectAllProviders").textContent,"Select all available");
 });
 
@@ -76,9 +77,9 @@ test("select/deselect all toggle persists even across picker initialization",()=
  const {ui,storage,elements}=runPicker();
  assert.equal(elements.get("selectAllProviders").textContent,"Select all available");
  ui.toggleAllProviders();
- assert.equal(ui.state.selected.size,11);
+ assert.equal(ui.state.selected.size,10);
  assert.equal(elements.get("selectAllProviders").textContent,"Deselect all available");
- assert.equal(elements.get("providerCount").textContent,"11/11");
+ assert.equal(elements.get("providerCount").textContent,"10/10");
  ui.toggleAllProviders();
  assert.equal(ui.state.selected.size,0);
  assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),[]);
@@ -86,7 +87,7 @@ test("select/deselect all toggle persists even across picker initialization",()=
  ui.chooseProviders();
  assert.equal(ui.state.selected.size,0);
  ui.toggleAllProviders();
- assert.equal(ui.state.selected.size,11);
+ assert.equal(ui.state.selected.size,10);
  assert.doesNotMatch(app,/\$\("selectWorking"\)/);
  assert.match(html,/id="selectAllProviders">Selectează toate/);
 });
@@ -96,23 +97,24 @@ test("per-indexer checkbox changes also update dynamic bulk label",()=>{
  ui.toggleAllProviders();ui.renderProviders();
  const input=elements.get("providerGrid").children[0].children[0].children[0];
  input.checked=false;input.listeners.change();
- assert.equal(ui.state.selected.size,10);
+ assert.equal(ui.state.selected.size,9);
  assert.equal(elements.get("selectAllProviders").textContent,"Select all available");
  input.checked=true;input.listeners.change();
- assert.equal(ui.state.selected.size,11);
+ assert.equal(ui.state.selected.size,10);
  assert.equal(elements.get("selectAllProviders").textContent,"Deselect all available");
 });
 
 test("error panels and saved preferences exclude previously hidden adapters",()=>{
- const {ui,elements,storage}=runPicker({"magnetra.providers.v1":["btdigg","bangumimoe","ytsmx","torrent9"]});
+ const {ui,elements,storage}=runPicker({"magnetra.providers.v1":["btdigg","bangumimoe","audiobookbay","ytsmx","torrent9"]});
  assert.deepEqual([...ui.state.selected],["btdigg","torrent9"]);
  assert.deepEqual(JSON.parse(storage.get("magnetra.providers.v1")),["btdigg","torrent9"]);
  ui.renderProviderErrors([
   {provider:"subsplease",message:"Unavailable"},
+  {provider:"audiobookbay",message:"Timeout"},
   {provider:"animetosho",message:"Unreachable"},
   {provider:"btdigg",message:"Temporary timeout"}
  ]);
  const visible=JSON.stringify(elements.get("providerErrors"));
- assert.doesNotMatch(visible,/SubsPlease|subsplease|AnimeTosho|animetosho/);
+ assert.doesNotMatch(visible,/SubsPlease|subsplease|AudioBookBay|audiobookbay|AnimeTosho|animetosho/);
  assert.match(visible,/1 source\(s\) unavailable/);
 });

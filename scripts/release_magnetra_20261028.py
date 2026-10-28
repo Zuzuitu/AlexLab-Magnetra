@@ -22,19 +22,25 @@ from inspect_magnetra_fix_stage import binding_pairs
 from release_magnetra_ro_it_12 import verify_all_assets, verify_public_with_html_settle
 from release_magnetra_hide_anime_mikan import catalog_guard
 
-REVIEWED = "c724a7f9ee98a325577c1b0a5231acb9dc605f89"
+REVIEWED = "0ae9df97f43bb158c22e0251fc6a3a0c8dedef61"
 ACTION = "CONFIRM_MAGNETRA_20261028_ONLINE_OWNER"
 EXPECTED_DIFF = {
     ".github/workflows/magnetra-release-20261028.yml",
     "scripts/release_magnetra_20261028.py",
     "scripts/test_release_magnetra_20261028.py",
-    "docs/MAGNETRA_RELEASE_20261028_TRIGGER.md",
+    "web/app.js",
+    "config/project-invariants.json",
+    "scripts/check-project-invariants.py",
+    "worker/test/indexer-curation.test.mjs",
+    "worker/src/search-query-policy.mjs",
+    "worker/test/search-query-policy.test.mjs",
+    "worker/test/source-audit.test.mjs",
 }
 REQUIRED_SECRETS = ("BTDIGG_GATEWAY_TOKEN", "MAGNETRA_GATEWAY_TOKEN")
 
 
 def source_guard():
-    # Only reviewed #226 source plus release tooling is allowed in this run.
+    # Only the reviewed #226 deployed baseline and exact 10-indexer curation changes are permitted.
     try:
         subprocess.run(["git", "merge-base", "--is-ancestor", REVIEWED, "HEAD"],
                        cwd=ROOT, check=True, capture_output=True, timeout=10)
@@ -61,13 +67,19 @@ def source_guard():
     app = (ROOT / "web/app.js").read_text()
     i18n = (ROOT / "web/i18n.js").read_text()
     fallback = (ROOT / "worker/src/release-fallback.mjs").read_text()
-    if ("const hiddenIndexerIds=new Set([" not in app
+    curated = json.loads((ROOT / "config/project-invariants.json").read_text())["pwa_indexer_curation"]
+    if (curated.get("visible_picker_count") != 10
+        or curated.get("hidden_from_picker_and_pwa_search_count") != 36
+        or curated.get("original_adapter_ids_retained") != 46
+        or "audiobookbay" not in curated.get("hidden_ids", [])
+        or '"subsplease","audiobookbay"]);' not in app
+        or '"0magnet","audiobookbay"' in (ROOT / "worker/src/search-query-policy.mjs").read_text()
         or "RESULTS_PER_PAGE=50" not in app
         or "release naming" not in app
         or '"release naming"' not in i18n
         or "isLiteralReleaseMatch" not in fallback):
-        raise Stop("OWNER_11_INDEXER_RELEASE_SOURCE_UNVERIFIED")
-    print("REVIEWED_SOURCE_AND_ROUTE_PASS:#226,11-visible,50-per-page,Flud config")
+        raise Stop("OWNER_10_INDEXER_RELEASE_SOURCE_UNVERIFIED")
+    print("REVIEWED_SOURCE_AND_ROUTE_PASS:#226,10-visible,AudioBookBay-hidden,50-per-page,Flud config")
     return config
 
 
@@ -105,7 +117,7 @@ def upload(config, old):
             p = subprocess.run(
                 ["npx", "--yes", "wrangler@4.102.0", "versions", "upload",
                  "--config", str(temporary), "--keep-vars",
-                 "--message", "Magnetra #226 exact release and ranked fallback verified stage"],
+                 "--message", "Magnetra #226 plus AudioBookBay removal: 10 active source choices"],
                 cwd=ROOT, capture_output=True, text=True, timeout=220, check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
@@ -193,7 +205,7 @@ def publish():
         critical_binding_guard(old)
         critical_binding_guard(new)
         stable(full_dep, full)
-        print("MAGNETRA_226_ONLINE_100_PASS:" + new)
+        print("MAGNETRA_10_INDEXERS_ONLINE_100_PASS:" + new)
         print("OWNER_IPHONE_SOURCE_TEST_PENDING:does-not-certify-BTDigg-availability")
         return 0
     except (Stop, ValueError, KeyError, TypeError, OSError):

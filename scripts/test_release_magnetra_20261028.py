@@ -47,7 +47,8 @@ class Release226Tests(unittest.TestCase):
 
     def test_repo_allowlist_and_old_sha_pinned(self):
         self.assertEqual(len(mod.REVIEWED),40)
-        self.assertIn("docs/MAGNETRA_RELEASE_20261028_TRIGGER.md",mod.EXPECTED_DIFF)
+        self.assertIn("worker/test/indexer-curation.test.mjs",mod.EXPECTED_DIFF)
+        self.assertIn("web/app.js",mod.EXPECTED_DIFF)
         self.assertEqual(len(mod.REQUIRED_SECRETS),2)
 
 if __name__ == "__main__":

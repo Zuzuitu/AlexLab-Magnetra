@@ -70,8 +70,8 @@ const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Owner correction: restore 34 formerly hidden PWA IDs and additionally hide SubsPlease.
-// 11 curated visible sources; original 46 backend/Android adapters remain intact.
-const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease"]);
+// 10 curated visible sources; original 46 backend/Android adapters remain intact.
+const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease","audiobookbay"]);
 const RESULTS_PER_PAGE=50;
 const BTDIGG_MIN_GAP_MS=5500;
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry

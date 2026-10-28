@@ -42,8 +42,8 @@ test("source-selection UI never treats all implemented adapters as verified work
  const hiddenLine=src.split("\n").find(line=>line.startsWith("const hiddenIndexerIds=new Set("));
  assert.ok(hiddenLine);
  const hidden=JSON.parse(hiddenLine.slice("const hiddenIndexerIds=new Set(".length,-2));
- assert.equal(hidden.length,35);
- for(const id of ["subsplease","ytsmx","animetosho","mikanproject"])assert.ok(hidden.includes(id));
+ assert.equal(hidden.length,36);
+ for(const id of ["subsplease","audiobookbay","ytsmx","animetosho","mikanproject"])assert.ok(hidden.includes(id));
  assert.ok(src.includes('const ids=selectableProviders().map(p=>p.id);'));
  assert.ok(!html.includes('not live uptime'), 'audit diagnostics are not displayed in the UI');
 });

@@ -10,20 +10,22 @@ const normalized="The Dog Stars 2026";
 const short="The Dog Stars 2026";
 const plan=planSearchQuery(exact);
 
-test("strict 11 curated source contract equals current PWA visibility, without reviving hidden providers",()=>{
+test("strict 10 curated source contract equals current PWA visibility, without reviving hidden providers",()=>{
  const app=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
  const m=app.match(/const hiddenIndexerIds=new Set\(\[([^\]]+)\]\)/);
  assert.ok(m,"source-visibility manifest must be parsed exactly");
  const hidden=new Set(JSON.parse("["+m[1]+"]"));
  const visible=PROVIDERS.filter(p=>!hidden.has(p.id)).map(p=>p.id).sort();
- assert.equal(hidden.size,35);
- assert.equal(visible.length,11);
+ assert.equal(hidden.size,36);
+ assert.equal(visible.length,10);
  assert.deepEqual([...CURATED_EXACT_PROVIDER_IDS].sort(),visible);
  assert.equal(hidden.has("subsplease"),true);
+ assert.equal(hidden.has("audiobookbay"),true);
  assert.equal(CURATED_EXACT_PROVIDER_IDS.includes("subsplease"),false);
+ assert.equal(CURATED_EXACT_PROVIDER_IDS.includes("audiobookbay"),false);
 });
 
-test("BTDigg gets owner-proven literal; 10 others use one broad title/year request for all fallback tiers",()=>{
+test("BTDigg gets owner-proven literal; 9 others use one broad title/year request for all fallback tiers",()=>{
  assert.equal(plan.searchedAs,short);
  for(const id of CURATED_EXACT_PROVIDER_IDS){
   const actual=sourceQueryFor(id,exact,plan);
@@ -39,7 +41,7 @@ test("BTDigg gets owner-proven literal; 10 others use one broad title/year reque
  }
 });
 
-test("hidden 35 providers retain title/year discovery, but original strict matching is separate",()=>{
+test("hidden 36 providers retain title/year discovery, but original strict matching is separate",()=>{
  for(const provider of PROVIDERS.filter(x=>!CURATED_EXACT_PROVIDER_IDS.includes(x.id))){
   assert.equal(sourceQueryFor(provider.id,exact,plan),short,provider.id);
   assert.equal(sourceQueryModeFor(provider.id,exact,plan),"title",provider.id);

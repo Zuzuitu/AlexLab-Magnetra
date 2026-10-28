@@ -1,8 +1,8 @@
 import {releaseFallbackIntent} from "./release-fallback.mjs";
-// Exactly the owner's 11 curated visible PWA sources. The remaining 35
+// Exactly the owner's 10 curated visible PWA sources. The remaining 36
 // backend adapters remain unchanged and are NOT re-enabled in the UI.
 export const CURATED_EXACT_PROVIDER_IDS=Object.freeze([
- "0magnet","audiobookbay","btdigg","internetarchive","knaben",
+ "0magnet","btdigg","internetarchive","knaben",
  "nonameclub","oxtorrent","thepiratebay","therarbag","torrent9",
  "torrentscsv"
 ]);
