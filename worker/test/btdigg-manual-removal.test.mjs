@@ -17,7 +17,7 @@ test("BTDigg Safari bookmarks, instructions and clipboard imports are completely
  assert.equal(existsSync(fromRoot("worker/test/btdigg-browser-import.test.mjs")),false);
  assert.equal(existsSync(fromRoot("worker/test/btdigg-three-step-guide.test.mjs")),false);
  assert.equal(sw.includes("btdigg-bridge.js"),false);
- assert.equal(sw.includes("alexlab-magnetra-v13"),true);
+ assert.equal(sw.includes("alexlab-magnetra-v14"),true);
  assert.ok(sw.includes("/i18n.js"),"translation asset cached and refreshed");
 });
 
