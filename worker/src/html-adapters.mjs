@@ -12,11 +12,14 @@ export const HTML_PROVIDER_SPECS = Object.freeze({
   btdigg: {
     host:"https://btdig.com",
     search:q=>"https://btdig.com/search?q="+encodeURIComponent(q),
-    rows:"div.one_result > div",
-    name:"div.torrent_name > a",
-    magnet:"div.torrent_magnet > div.fa-magnet > a",
+    // One source-owned release is one row: title, size and magnet are
+    // nested inside the same div.one_result. Selecting direct children
+    // made separate rows and lost the real name↔magnet association.
+    rows:"div.one_result",
+    name:"div.torrent_name a",
+    magnet:'div.torrent_magnet a[href^="magnet:?xt=urn:btih:"]',
     size:"span.torrent_size",date:"span.torrent_age",
-    details:"div.torrent_name > a",
+    details:"div.torrent_name a",
   },
   dmhy: {
     host:"https://share.dmhy.org",
