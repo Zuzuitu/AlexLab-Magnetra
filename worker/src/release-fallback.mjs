@@ -89,6 +89,18 @@ function depthRank(requested,actual){
  if(actual===requested)return 0;
  return actual?1:2;
 }
+// Curated full-release searches require the complete original source filename,
+// not just the unordered presence of every token. Container extensions are
+// transport details and do not change the named release.
+function releaseNameTokens(value){
+ const withoutExtension=String(value??"").trim().replace(/\.(?:mkv|mp4|avi|mov|torrent)$/i,"");
+ return words(withoutExtension.normalize("NFKD").replace(/[\u0300-\u036f]/g,""))
+  .map(token=>token.toLowerCase());
+}
+export function isLiteralReleaseMatch(actual,requested){
+ const a=releaseNameTokens(actual),b=releaseNameTokens(requested);
+ return a.length>0&&a.length===b.length&&a.every((term,index)=>term===b[index]);
+}
 function groupRank(group,name){
  if(!group)return 0;
  const literal=String(name||"").trim();
@@ -129,9 +141,13 @@ export function matchesQualityFallback(item,original,plan){
  return rankReleaseAlternative(item,original,plan)!==null;
 }
 export function partitionReleases(found,original,plan){
- const {matches:exact}=filterRelevance(found,original);
- const ids=new Set(exact);
+ const {matches:strictRelevant}=filterRelevance(found,original);
  const intent=releaseFallbackIntent(original,plan);
+ // For real full-release searches, strict token presence alone is not exact:
+ // a REPACK, an extra suffix or reordered release terms is an alternative.
+ // Non-release searches and all hidden providers keep their legacy contracts.
+ const exact=intent?strictRelevant.filter(row=>isLiteralReleaseMatch(row?.name,original)):strictRelevant;
+ const ids=new Set(exact);
  const alternatives=[];
  if(intent)for(const row of found){
   if(ids.has(row))continue;
