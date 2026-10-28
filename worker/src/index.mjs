@@ -8,6 +8,7 @@ import {PROVIDERS, PROVIDER_MAP} from "./catalog.mjs";
 import {hasAdapter,searchProvider} from "./providers.mjs";
 import {filterRelevance,planSearchQuery} from "./query-relevance.mjs";
 import {sourceQueryFor,sourceQueryModeFor,CURATED_EXACT_PROVIDER_IDS} from "./search-query-policy.mjs";
+import {partitionReleases,releaseFallbackIntent} from "./release-fallback.mjs";
 import {rock64BTDiggFetcher} from "./btdigg-rock64.mjs";
 import {verifiedSourceCache} from "./verified-source-cache.mjs";
 import {rock64EZTVFetcher} from "./eztv-rock64.mjs";
@@ -47,7 +48,8 @@ async function getSearch(url,env) {
    if(ids.includes(id))htmlFetchers[id]=rock64HtmlFetcher(id,env);
  }
  catch(e){return error(String(e?.message||e),503);}
- const results=[],errors=[],stats=[],warnings=[];
+ const results=[],alternatives=[],errors=[],stats=[],warnings=[];
+ const fallback=releaseFallbackIntent(q,plan);
  // Bounded concurrency reduces load on providers and keeps resource consumption predictable.
  for(let i=0;i<ids.length;i+=3){
    const batch=await Promise.all(ids.slice(i,i+3).map(async id=>{
@@ -60,18 +62,19 @@ async function getSearch(url,env) {
        // each of the 11 curated indexers. Original strict filter is universal.
        const {items:found,cache}=await verifiedSourceCache.search(id,providerQuery,category,
          ()=>searchProvider(id,providerQuery,category,sourceFetch));
-       const {matches,excluded}=filterRelevance(found,q);
-       return {provider:id,results:matches,count:matches.length,
+       const {exact,alternatives:qualityMatches,excluded}=partitionReleases(found,q,plan);
+       return {provider:id,results:exact,alternatives:qualityMatches,
+         count:exact.length,alternativeCount:qualityMatches.length,
          rawCount:found.length,excluded,cache,queryMode};
      } catch(e){
        const reason=classifyProviderError(e);
-       return {provider:id,results:[],count:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
+       return {provider:id,results:[],alternatives:[],count:0,alternativeCount:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
          code:reason.code,message:reason.message,retryable:reason.retryable,queryMode,openUrl:id==="btdigg"?null:directSearchUrl(id,providerQuery)};
      }
    }));
    for(const item of batch){
-     stats.push({provider:item.provider,count:item.count,rawCount:item.rawCount,
-       excludedOffTopic:item.excluded,queryMode:item.queryMode,ok:!item.error,
+     stats.push({provider:item.provider,count:item.count,alternativeCount:item.alternativeCount,
+       rawCount:item.rawCount,excludedOffTopic:item.excluded,queryMode:item.queryMode,ok:!item.error,
        ...(item.cache?{cacheMode:item.cache.mode,cacheAgeSeconds:item.cache.ageSeconds}: {})});
      if(item.error)errors.push({provider:item.provider,error:item.error,
        code:item.code,message:item.message,retryable:item.retryable,openUrl:item.openUrl});
@@ -81,10 +84,16 @@ async function getSearch(url,env) {
      }
      results.push(...item.results.map(row=>item.cache
        ?{...row,cachedAgeSeconds:item.cache.ageSeconds}:row));
+     alternatives.push(...(item.alternatives||[]).map(row=>({
+       ...row,releaseMatch:"quality-alternative",
+       ...(item.cache?{cachedAgeSeconds:item.cache.ageSeconds}:{})
+     })));
    }
  }
  // Preserve source identities and identical hashes across providers for traceability.
- return json({query:q,...(plan.broadened&&ids.some(id=>!CURATED_EXACT_PROVIDER_IDS.includes(id))?{searchedAs:sourceQuery}:{}),category,results,stats,errors,warnings,total:results.length,
+ return json({query:q,...(plan.broadened&&ids.some(id=>!CURATED_EXACT_PROVIDER_IDS.includes(id))?{searchedAs:sourceQuery}:{}),category,results,alternatives,alternativeTotal:alternatives.length,
+    ...(fallback?{fallbackCriteria:fallback.technicalTerms,requestedGroup:fallback.requestedGroup}:{}),
+    stats,errors,warnings,total:results.length,
    excludedOffTopic:stats.reduce((sum,item)=>sum+item.excludedOffTopic,0)});
 }
 // SHA-256 fingerprint of an already-validated public detail link; no raw
