@@ -6,7 +6,7 @@ import {planSearchQuery} from "../src/query-relevance.mjs";
 import {CURATED_EXACT_PROVIDER_IDS,sourceQueryFor,sourceQueryModeFor} from "../src/search-query-policy.mjs";
 
 const exact="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
-const normalized="The Dog Stars 2026 1080p 10bit WEBRip 6CH x265 HEVC PSA";
+const normalized="The Dog Stars 2026 1080p x265 10bit";
 const short="The Dog Stars 2026";
 const plan=planSearchQuery(exact);
 
@@ -23,15 +23,19 @@ test("strict 11 curated source contract equals current PWA visibility, without r
  assert.equal(CURATED_EXACT_PROVIDER_IDS.includes("subsplease"),false);
 });
 
-test("all 11 visible indexers get every original release token in exactly ONE planned search",()=>{
+test("all 11 visible indexers retain title, resolution, codec and bit-depth in one source lookup",()=>{
  assert.equal(plan.searchedAs,short);
  for(const id of CURATED_EXACT_PROVIDER_IDS){
   const actual=sourceQueryFor(id,exact,plan);
   assert.equal(actual,id==="btdigg"?exact:normalized,id);
-  assert.equal(sourceQueryModeFor(id,exact,plan),id==="btdigg"?"all-terms-literal":"all-terms-normalized");
+  assert.equal(sourceQueryModeFor(id,exact,plan),id==="btdigg"?"all-terms-literal":"quality-terms-without-group");
   const terms=new Set((actual.match(/[\p{L}\p{N}]+/gu)||[]).map(x=>x.toLowerCase()));
-  for(const t of ["dog","stars","2026","1080p","10bit","webrip","6ch","x265","hevc","psa"])
+  for(const t of ["dog","stars","2026","1080p","10bit","x265"])
    assert.ok(terms.has(t),`${id} lost required release term ${t}`);
+  if(id!=="btdigg"){
+   for(const redundant of ["webrip","6ch","hevc","psa"])
+    assert.equal(terms.has(redundant),false,`${id} should not restrict fallback lookup with ${redundant}`);
+  }
  }
 });
 
