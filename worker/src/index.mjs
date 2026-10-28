@@ -65,16 +65,19 @@ async function getSearch(url,env) {
        const {exact,alternatives:qualityMatches,excluded}=partitionReleases(found,q,plan);
        return {provider:id,results:exact,alternatives:qualityMatches,
          count:exact.length,alternativeCount:qualityMatches.length,
-         rawCount:found.length,excluded,cache,queryMode};
+         rawCount:found.length,excluded,cache,
+         ...(CURATED_EXACT_PROVIDER_IDS.includes(id)?{queryMode}:{})};
      } catch(e){
        const reason=classifyProviderError(e);
        return {provider:id,results:[],alternatives:[],count:0,alternativeCount:0,rawCount:0,excluded:0,error:String(e?.message||e).slice(0,180),
-         code:reason.code,message:reason.message,retryable:reason.retryable,queryMode,openUrl:id==="btdigg"?null:directSearchUrl(id,providerQuery)};
+         code:reason.code,message:reason.message,retryable:reason.retryable,
+         ...(CURATED_EXACT_PROVIDER_IDS.includes(id)?{queryMode}:{}),openUrl:id==="btdigg"?null:directSearchUrl(id,providerQuery)};
      }
    }));
    for(const item of batch){
-     stats.push({provider:item.provider,count:item.count,alternativeCount:item.alternativeCount,
-       rawCount:item.rawCount,excludedOffTopic:item.excluded,queryMode:item.queryMode,ok:!item.error,
+     stats.push({provider:item.provider,count:item.count,
+       ...(CURATED_EXACT_PROVIDER_IDS.includes(item.provider)?{alternativeCount:item.alternativeCount,queryMode:item.queryMode}:{}),
+       rawCount:item.rawCount,excludedOffTopic:item.excluded,ok:!item.error,
        ...(item.cache?{cacheMode:item.cache.mode,cacheAgeSeconds:item.cache.ageSeconds}: {})});
      if(item.error)errors.push({provider:item.provider,error:item.error,
        code:item.code,message:item.message,retryable:item.retryable,openUrl:item.openUrl});
