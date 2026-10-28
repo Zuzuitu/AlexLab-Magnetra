@@ -32,6 +32,9 @@ EXPECTED_DIFF = {
     "config/project-invariants.json",
     "scripts/check-project-invariants.py",
     "worker/test/indexer-curation.test.mjs",
+    "worker/src/search-query-policy.mjs",
+    "worker/test/search-query-policy.test.mjs",
+    "worker/test/source-audit.test.mjs",
 }
 REQUIRED_SECRETS = ("BTDIGG_GATEWAY_TOKEN", "MAGNETRA_GATEWAY_TOKEN")
 
@@ -70,6 +73,7 @@ def source_guard():
         or curated.get("original_adapter_ids_retained") != 46
         or "audiobookbay" not in curated.get("hidden_ids", [])
         or '"subsplease","audiobookbay"]);' not in app
+        or '"0magnet","audiobookbay"' in (ROOT / "worker/src/search-query-policy.mjs").read_text()
         or "RESULTS_PER_PAGE=50" not in app
         or "release naming" not in app
         or '"release naming"' not in i18n
