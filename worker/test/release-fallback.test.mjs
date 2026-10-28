@@ -94,3 +94,28 @@ test("API allows alternatives only when there is no exact match, but never repre
   assert.equal(data.alternatives[0].releaseMatch,"quality-alternative");
  }finally{globalThis.fetch=before;}
 });
+
+test("all 35 hidden adapters retain strict title matching with no alternative release leakage",async()=>{
+ const previous=globalThis.fetch;
+ const observed=[];
+ try{
+  globalThis.fetch=async(url,options)=>{
+   observed.push(String(url));
+   assert.equal(String(url),"https://btsow.live/bts/data/api/search");
+   assert.equal(JSON.parse(options.body)[0].search,"The Dog Stars 2026");
+   return new Response(JSON.stringify({data:[
+    {hash:"e".repeat(40),name:alternate.name,size:"1.73 GB"}
+   ]}),{headers:{"content-type":"application/json"}});
+  };
+  const url="https://index.alexlab.media/api/search?q="+encodeURIComponent(requested)+
+   "&providers=btsow";
+  const data=await (await worker.fetch(new Request(url),{})).json();
+  assert.equal(observed.length,1);
+  assert.equal(data.total,0);
+  assert.equal(data.alternativeTotal,0);
+  assert.deepEqual(data.alternatives,[]);
+  assert.equal(data.requestedGroup,undefined);
+  assert.equal(data.stats[0].rawCount,1);
+  assert.equal(data.stats[0].excludedOffTopic,1);
+ }finally{globalThis.fetch=previous;}
+});
