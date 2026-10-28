@@ -445,8 +445,8 @@
   "pwa_indexer_curation": {
     "owner_approved_visible_only": true,
     "original_adapter_ids_retained": 46,
-    "hidden_from_picker_and_pwa_search_count": 35,
-    "visible_picker_count": 11,
+    "hidden_from_picker_and_pwa_search_count": 36,
+    "visible_picker_count": 10,
     "hidden_ids": [
       "anirena",
       "bt4g",
@@ -482,7 +482,8 @@
       "rutorinfo",
       "xxxtracker",
       "fitgirlrepacks",
-      "subsplease"
+      "subsplease",
+      "audiobookbay"
     ],
     "priority_visible_ids": [
       "btdigg",
@@ -524,7 +525,8 @@
       "iphone_physical_acceptance_confirmed": false,
       "no_new_paid_services": true,
       "no_rock64_flud_dns_changes": true
-    }
+    },
+    "audiobookbay_owner_removed_from_pwa_on": "2026-10-28"
   },
   "provider_recovery_v1": {
     "required_original_indexers": 46,
