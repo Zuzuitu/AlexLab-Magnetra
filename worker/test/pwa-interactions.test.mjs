@@ -39,7 +39,7 @@ function harness(fetcher,initialStorage={},query=""){
  toast=()=>{};
  globalThis.testing={state,search,sendMagnet,ensureMagnet,magnetIdentity,
   chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg,
-  selectedSearchItems,magnetFailureText};
+  selectedSearchItems,magnetFailureText,noResultsText};
  `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element,storage};
 }
@@ -434,4 +434,29 @@ test("alternative search never reselects the failing TPB source",()=>{
  const i18n=readFileSync(new URL("../../web/i18n.js",import.meta.url),"utf8");
  assert.match(i18n,/ThePirateBay limitează momentan solicitările/);
  assert.match(i18n,/ThePirateBay limita temporaneamente le richieste/);
+});
+
+test("real error responses retain incomplete-search notice rather than false absence",async()=>{
+ const {api,element}=harness(async path=>{
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  if(id==="btdigg")return json({results:[],errors:[{provider:id,code:"TIMEOUT",message:"Source timed out"}],
+   stats:[{provider:id,ok:false,count:0}]});
+  if(id==="thepiratebay")return json({results:[],errors:[{provider:id,code:"RATE_LIMIT",message:"429"}],
+   stats:[{provider:id,ok:false,count:0}]});
+  return json({results:[],errors:[],stats:[{provider:id,ok:true,count:0}]});
+ });
+ element("query").value="The Dog Stars 2026";
+ element("category").value="movies";
+ api.state.selected=new Set(["btdigg","thepiratebay","knaben"]);
+ await api.search();
+ assert.equal(api.state.lastFailedSourcesCount,2);
+ assert.match(api.noResultsText(),/Search incomplete: 2 source\(s\) failed/);
+ assert.equal(api.state.items.length,0);
+ assert.ok(api.state.pausedIds.has("btdigg"));
+ assert.ok(api.state.pausedIds.has("thepiratebay"));
+ // A clean later search clears the incomplete state; no fake source success.
+ api.state.selected=new Set(["knaben"]);
+ await api.search();
+ assert.equal(api.state.lastFailedSourcesCount,0);
+ assert.match(api.noResultsText(),/^No matching titles/);
 });
