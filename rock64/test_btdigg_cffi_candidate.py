@@ -143,6 +143,28 @@ class TransportCandidateTests(unittest.TestCase):
                 self.assertNotIn("cookie", text)
                 self.assertNotIn("btdig.com", text)
 
+    def test_real_cffi_intenum_error_codes_are_recognized(self):
+        from enum import IntEnum
+        class CurlCode(IntEnum):
+            DNS = 6
+            TCP = 7
+            TIMEOUT = 28
+        class CffiStyleError(Exception):
+            def __init__(self, value):
+                self.code = value
+                super().__init__("private URL and cookies")
+        for value,expected in [(CurlCode.DNS,"dns_resolution_failed"),
+                               (CurlCode.TCP,"connect_failed"),
+                               (CurlCode.TIMEOUT,"pre_headers_timeout_unresolved")]:
+            with self.subTest(code=value):
+                rows=[]
+                code,body=candidate.fetch_one("PSA 1080p", client=FakeClient(error=CffiStyleError(value)),
+                                              report=rows.append)
+                self.assertEqual((code,body),(504,b""))
+                self.assertEqual(rows[0]["failure"],expected)
+                self.assertEqual(rows[0]["curl_code"],int(value))
+                self.assertIs(type(rows[0]["curl_code"]),int)
+
     def test_cffi_generic_timeout_cannot_be_falsely_attributed_to_tcp(self):
         reports = []
         candidate.fetch_one("other terms", client=FakeClient(error=TimeoutError("sensitive")),
