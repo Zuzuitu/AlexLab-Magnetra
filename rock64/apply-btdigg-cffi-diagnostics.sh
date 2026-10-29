@@ -15,7 +15,9 @@ OVERRIDE=/etc/systemd/system/magnetra-btdigg.service.d/50-magnetra-cffi.conf
 SECRETS=/etc/magnetra-btdigg/gateway.env
 PYTHON="$DEST/.venv-cffi-0.17.0/bin/python"
 PREVIOUS_BLOB=8f70fefa6a06159626afc6c9ad7eb3c6b530d8d0
-for p in "$DEST" "$TARGET" "$SOURCE" "$OVERRIDE" "$PYTHON" "$SECRETS"; do
+# venv/bin/python is often a legitimate symlink to the system interpreter.
+# Check its executability and isolated imports below; other paths must be real.
+for p in "$DEST" "$TARGET" "$SOURCE" "$OVERRIDE" "$SECRETS"; do
   if [[ -L "$p" ]]; then echo "STOP: symlink on protected path" >&2; exit 1; fi
 done
 for p in "$TARGET" "$SOURCE" "$OVERRIDE" "$PYTHON" "$SECRETS"; do
