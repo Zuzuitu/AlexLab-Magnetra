@@ -31,7 +31,6 @@ CURL_FAILURES = {
     7: "connect_failed",
     28: "request_timeout",
     35: "tls_handshake_failed",
-    51: "tls_peer_verification_failed",
     52: "empty_response",
     55: "send_failed",
     56: "receive_failed",
