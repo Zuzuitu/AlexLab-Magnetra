@@ -111,5 +111,89 @@ class TransportCandidateTests(unittest.TestCase):
             self.assertEqual(body,b"")
 
 
+    def test_diagnostic_is_single_record_and_contains_no_query_or_exception(self):
+        records = []
+        secret = "PRIVATE_SEARCH_TERM_DO_NOT_LOG"
+        class CurlLikeError(Exception):
+            def __init__(self, code):
+                super().__init__("sensitive URL, token and cookie " + secret)
+                self.code = code
+        for code, expected in [
+            (6, "dns_resolution_failed"), (7, "connect_failed"),
+            (28, "pre_headers_timeout_unresolved"),
+            (35, "tls_handshake_failed"), (60, "tls_certificate_failed"),
+            (56, "receive_failed"), (99, "pre_headers_failed_unclassified")
+        ]:
+            with self.subTest(code=code):
+                records.clear()
+                c = FakeClient(error=CurlLikeError(code))
+                self.assertEqual(candidate.fetch_one(secret, client=c, report=records.append), (504, b""))
+                self.assertEqual(len(c.calls), 1, "no background retry")
+                self.assertEqual(len(records), 1)
+                item = records[0]
+                self.assertEqual(item["event"], "btdigg_cffi_transport")
+                self.assertEqual(item["gateway_status"], 504)
+                self.assertEqual(item["source_status"], None)
+                self.assertEqual(item["phase"], "pre_headers")
+                self.assertEqual(item["failure"], expected)
+                self.assertEqual(item["curl_code"], code if code in candidate.CURL_FAILURES else None)
+                self.assertGreaterEqual(item["duration_ms"], 0)
+                text = str(item)
+                self.assertNotIn(secret, text)
+                self.assertNotIn("cookie", text)
+                self.assertNotIn("btdig.com", text)
+
+    def test_cffi_generic_timeout_cannot_be_falsely_attributed_to_tcp(self):
+        reports = []
+        candidate.fetch_one("other terms", client=FakeClient(error=TimeoutError("sensitive")),
+                            report=reports.append)
+        self.assertEqual(reports[0]["failure"], "pre_headers_timeout_unresolved")
+        self.assertIsNone(reports[0]["curl_code"])
+
+    def test_body_stream_timeout_is_distinct_from_timeout_before_headers(self):
+        class CurlLikeError(Exception):
+            code = 28
+        class LateFailure(FakeResponse):
+            def iter_content(self, chunk_size=65536):
+                raise CurlLikeError("secret full URL")
+                yield b""
+        rows=[]
+        value=candidate.fetch_one("search phrase",client=FakeClient(response=LateFailure()),
+                                  report=rows.append)
+        self.assertEqual(value,(504,b""))
+        self.assertEqual(rows[0]["failure"],"body_timeout")
+        self.assertEqual(rows[0]["phase"],"body")
+        self.assertEqual(rows[0]["source_status"],200)
+
+    def test_diagnostic_on_http_429_and_genuine_success_preserves_status(self):
+        for status, expected in [(429,"http_429"),(200,"none")]:
+            rows=[]
+            c=FakeClient(response=FakeResponse(status=status))
+            code,content=candidate.fetch_one("terms",client=c,report=rows.append)
+            self.assertEqual(code,status)
+            self.assertEqual(rows[0]["gateway_status"],status)
+            self.assertEqual(rows[0]["source_status"],status)
+            self.assertEqual(rows[0]["failure"],expected)
+            self.assertEqual(len(c.calls),1)
+            if status==200:self.assertIn(b"one_result",content)
+
+    def test_journal_serializer_emits_only_numeric_or_fixed_public_keys(self):
+        import json
+        from unittest.mock import patch
+        with patch("builtins.print") as output:
+            candidate._journal({"event":"btdigg_cffi_transport","failure":"none",
+                                "gateway_status":200,"source_status":200,
+                                "phase":"body","curl_code":None,"duration_ms":10})
+        payload=output.call_args.args[0]
+        self.assertEqual(json.loads(payload)["event"],"btdigg_cffi_transport")
+        self.assertEqual(output.call_args.kwargs.get("flush"),True)
+
+    def test_diagnostic_reporter_failure_does_not_break_real_source_output(self):
+        def broken_report(record): raise RuntimeError("log system unavailable")
+        status, body=candidate.fetch_one("ubuntu",client=FakeClient(),report=broken_report)
+        self.assertEqual(status,200)
+        self.assertIn(b"one_result",body)
+
+
 if __name__=="__main__":
     unittest.main()
