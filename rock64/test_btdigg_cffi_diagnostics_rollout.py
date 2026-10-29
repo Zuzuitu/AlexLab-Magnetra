@@ -19,3 +19,6 @@ class DiagnosticsRolloutTest(unittest.TestCase):
         text=(HERE/"magnetra-btdigg.service").read_text()
         self.assertIn("ExecStart=/usr/bin/python3 -I /opt/magnetra-btdigg/btdigg_gateway.py",text)
         self.assertIn("DynamicUser=yes",text)
+        script=(HERE/"apply-btdigg-cffi-diagnostics.sh").read_text()
+        self.assertIn('for p in "$DEST" "$TARGET" "$SOURCE" "$OVERRIDE" "$SECRETS"; do',script)
+        self.assertIn('venv/bin/python is often a legitimate symlink',script)
