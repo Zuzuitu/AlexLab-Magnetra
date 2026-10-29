@@ -42,9 +42,13 @@ def _safe_failure(exc, phase):
     # Do NOT log str(exc), repr(exc), args or traceback. libcurl errors can
     # contain the full query URL, IPs, cookies, or diagnostic TLS messages.
     code = getattr(exc, "code", None)
-    if type(code) is not int:
+    if not isinstance(code, int) or isinstance(code, bool):
         code = getattr(exc, "curl_code", None)
-    if type(code) is not int or code not in CURL_FAILURES:
+    # curl_cffi uses CurlECode(IntEnum), not plain int. Canonicalize the
+    # bounded numeric value so it remains safe and JSON-serializable.
+    if isinstance(code, int) and not isinstance(code, bool):
+        code = int(code)
+    if code not in CURL_FAILURES:
         code = None
     if code == 28 or (code is None and isinstance(exc, TimeoutError)):
         failure = ("body_timeout" if phase == "body"
