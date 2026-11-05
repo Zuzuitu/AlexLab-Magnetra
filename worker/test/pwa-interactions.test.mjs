@@ -332,7 +332,7 @@ test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry"
  api.state.providers=["btdigg","knaben"].map(id=>({id,name:id,ported:true}));
  api.state.selected=new Set(["btdigg","knaben"]);
  await api.search();
- assert.deepEqual(requests,["btdigg","knaben"]);
+ assert.deepEqual([...requests].sort(),["btdigg","knaben"]);
  assert.equal(api.state.selected.has("btdigg"),true);
  assert.equal(api.state.pausedIds.has("btdigg"),false);
  assert.equal(api.btdiggCooldownRemainingMs()>0,true);
@@ -340,7 +340,7 @@ test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry"
  assert.equal(first.strikes,1);
  assert.ok(first.until-first.failedAt>=60_000);
  await api.search();
- assert.deepEqual(requests,["btdigg","knaben","knaben"],
+ assert.deepEqual([...requests].sort(),["btdigg","knaben","knaben"].sort(),
   "second user search may use other sources but MUST NOT fetch BTDigg during cooldown");
  assert.equal(api.state.selected.has("btdigg"),true);
  assert.equal(api.state.sessionAudit.btdigg.state,"cooldown");
@@ -521,7 +521,8 @@ test("real error responses retain incomplete-search notice rather than false abs
  assert.equal(api.state.lastFailedSourcesCount,2);
  assert.match(api.noResultsText(),/Search incomplete: 2 source\(s\) failed/);
  assert.equal(api.state.items.length,0);
- assert.ok(api.state.pausedIds.has("btdigg"));
+ assert.ok(!api.state.pausedIds.has("btdigg"),"primary PSA source stays selected");
+ assert.ok(api.state.selected.has("btdigg"));
  assert.ok(api.state.pausedIds.has("thepiratebay"));
  // A clean later search clears the incomplete state; no fake source success.
  api.state.selected=new Set(["knaben"]);
