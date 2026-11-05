@@ -704,7 +704,7 @@ async function search(){
      if(id==="btdigg"){
       if((data.errors||[]).some(e=>e.provider==="btdigg"&&e.code==="RATE_LIMIT"))
        recordBTDigg429();
-      else if((data.stats||[]).some(s=>s.provider==="btdigg"&&s.ok===true))
+      else if((data.stats||[]).some(s=>s.provider==="btdigg"&&s.ok===true&&!s.cacheMode))
        clearBTDigg429();
      }
      const observed=(data.stats||[]).find(s=>s.provider===id);
