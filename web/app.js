@@ -66,7 +66,7 @@ function magnetFailureText(item,error){
  }
  return genericError(error);
 }
-const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1"};
+const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1",btdiggCooldown:"magnetra.btdigg-cooldown.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Owner correction: restore 34 formerly hidden PWA IDs and additionally hide SubsPlease.
@@ -74,6 +74,32 @@ const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"
 const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease","audiobookbay"]);
 const RESULTS_PER_PAGE=50;
 const BTDIGG_MIN_GAP_MS=5500;
+// Preserve the primary indexer after a genuine 429 without automatic retries.
+const BTDIGG_429_DELAYS_MS=[60_000,120_000,300_000];
+const BTDIGG_429_RESET_MS=30*60_000;
+function btdiggCooldown(at=Date.now()){
+ const v=load(STORAGE.btdiggCooldown,null);
+ if(!v||!Number.isSafeInteger(v.until)||!Number.isSafeInteger(v.failedAt)||
+    !Number.isInteger(v.strikes)||v.strikes<1||v.strikes>BTDIGG_429_DELAYS_MS.length||
+    v.failedAt>at+1000||v.until<v.failedAt||
+    v.until-v.failedAt>300_000||at-v.failedAt>BTDIGG_429_RESET_MS)
+   return {until:0,failedAt:0,strikes:0};
+ return v;
+}
+function btdiggCooldownRemainingMs(at=Date.now()){
+ return Math.max(0,btdiggCooldown(at).until-at);
+}
+function recordBTDigg429(at=Date.now()){
+ const previous=btdiggCooldown(at);
+ const strikes=previous.strikes&&at-previous.failedAt<=BTDIGG_429_RESET_MS
+  ?Math.min(previous.strikes+1,BTDIGG_429_DELAYS_MS.length):1;
+ const until=at+BTDIGG_429_DELAYS_MS[strikes-1];
+ save(STORAGE.btdiggCooldown,{strikes,until,failedAt:at});
+ return until-at;
+}
+function clearBTDigg429(){
+ try{localStorage.removeItem(STORAGE.btdiggCooldown);}catch{}
+}
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
 // failed searches; it defers one user-requested search and is abortable.
 const btdiggPacing={nextAllowedAt:0,lastGoodQuery:null,lastGoodUntil:0};
@@ -170,7 +196,9 @@ function updateBookmarkCount(){const count=$("bookmarkCount");if(count)count.tex
  // No source retries, no removal of adapter identity and no changes to Flud.
 function pausedFromFailures(ids,failures,selected){
  const queried=new Set(ids);
- const failed=new Set(failures.map(f=>f.provider).filter(id=>queried.has(id)&&selected.has(id)));
+ // Never silently drop the owner's primary source on a transient failure.
+ const failed=new Set(failures.map(f=>f.provider).filter(id=>
+  id!=="btdigg"&&queried.has(id)&&selected.has(id)));
  const active=[...selected].filter(id=>queried.has(id)&&!failed.has(id));
  return active.length?[...failed]:[];
 }
@@ -215,8 +243,12 @@ function chooseProviders(){
  if(!state.selected.size&&!(Array.isArray(stored)&&stored.length===0))
   state.selected=new Set(preferred.filter(x=>valid.has(x)));
  const recorded=load(STORAGE.paused,[]);
+ // Restore BTDigg only when it was previously *automatically* paused.
+ // Manually deselected sources are not in pausedIds and remain deselected.
+ if(Array.isArray(recorded)&&recorded.includes("btdigg")&&valid.has("btdigg"))
+  state.selected.add("btdigg");
  state.pausedIds=new Set((Array.isArray(recorded)?recorded:[])
-  .filter(id=>valid.has(id)&&!state.selected.has(id)));
+  .filter(id=>id!=="btdigg"&&valid.has(id)&&!state.selected.has(id)));
  save(STORAGE.selected,[...state.selected]);
  savePausedSources();
  updateProviderCount();
@@ -568,8 +600,10 @@ function renderProviderErrors(failures,warnings=[]){
   const line=el("div","source-failure-content");
   const provider=state.providers.find(p=>p.id===failure.provider);
   line.append(el("strong","",provider?.name||failure.provider));
-  const message=failure.provider==="btdigg"&&failure.code==="RATE_LIMIT"
-   ?tr("BTDigg is limiting requests. Wait a few seconds before another search.")
+  const message=failure.provider==="btdigg"&&
+    ["RATE_LIMIT","RATE_LIMIT_COOLDOWN"].includes(failure.code)
+   ?tr("BTDigg is rate-limited. It stays selected; no source requests for another {n} seconds.",{
+     n:Math.max(1,Math.ceil(btdiggCooldownRemainingMs()/1000))})
    :failure.provider==="thepiratebay"&&failure.code==="RATE_LIMIT"
     ?tr("ThePirateBay is limiting requests right now. Try again later.")
     :genericError(failure);
@@ -641,7 +675,12 @@ async function search(){
     const url=new URL("/api/search",location.origin);
     url.searchParams.set("q",query);url.searchParams.set("category",category);
     url.searchParams.set("providers",id);
-    try{
+    if(id==="btdigg"&&btdiggCooldownRemainingMs()>0){
+    // Honor persisted cooldown across tab/reloads, never auto-fetch.
+    failures.push({provider:id,code:"RATE_LIMIT_COOLDOWN",retryable:false,
+     message:"BTDigg temporarily rate limited; no request sent."});
+    state.sessionAudit[id]={state:"cooldown",count:0,at:new Date().toLocaleString(currentLanguage())};
+   }else try{
      if(id==="btdigg"){
       await waitForBTDigg(query,controller.signal);
       // Guard even a cancelled HTTP request: Rock64 may still be working.
@@ -662,6 +701,12 @@ async function search(){
      state.excludedOffTopic+=Math.max(0,Number(quality?.excludedOffTopic)||0);
      for(const e of data.errors||[])failures.push(e);
      for(const w of data.warnings||[])state.cacheWarnings.push(w);
+     if(id==="btdigg"){
+      if((data.errors||[]).some(e=>e.provider==="btdigg"&&e.code==="RATE_LIMIT"))
+       recordBTDigg429();
+      else if((data.stats||[]).some(s=>s.provider==="btdigg"&&s.ok===true&&!s.cacheMode))
+       clearBTDigg429();
+     }
      const observed=(data.stats||[]).find(s=>s.provider===id);
      if(observed)state.sessionAudit[id]={
       state:observed.ok?((observed.count>0||observed.alternativeCount>0)?"results":"empty-unverified"):"error",
@@ -669,7 +714,7 @@ async function search(){
      };
      if(id==="btdigg"){
       // Only a real positive result is reused by Rock64's 20-minute cache.
-      if(observed?.ok&&observed.count>0){
+      if(observed?.ok&&(observed.count>0||observed.alternativeCount>0)){
        btdiggPacing.lastGoodQuery=query;
        btdiggPacing.lastGoodUntil=Date.now()+20*60*1000;
       }

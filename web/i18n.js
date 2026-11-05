@@ -545,6 +545,10 @@ const DICTIONARY={
     "ro": "Unele site-uri limitează căutarea automată. Poți deschide sursa direct sau folosi alte surse.",
     "it": "Alcuni siti limitano le ricerche automatiche. Puoi aprire la fonte direttamente o usarne altre."
   },
+  "BTDigg is rate-limited. It stays selected; no source requests for another {n} seconds.": {
+    "ro": "BTDigg limitează cererile. Rămâne selectat; nu trimitem cereri noi timp de încă {n} secunde.",
+    "it": "BTDigg limita le richieste. Resta selezionato; nessuna nuova richiesta per altri {n} secondi."
+  },
   "BTDigg is limiting requests. Wait a few seconds before another search.": {
     "ro": "BTDigg limitează cererile. Așteaptă câteva secunde.",
     "it": "BTDigg limita le richieste. Attendi qualche secondo."

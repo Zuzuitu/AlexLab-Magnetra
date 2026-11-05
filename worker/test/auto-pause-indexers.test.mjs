@@ -46,7 +46,8 @@ test("screenshot failure mix: only actual API errors are paused; healthy zero re
   {provider:"oxtorrent",code:"TIMEOUT"},
   {provider:"btdigg",code:"RATE_LIMIT"}];
  const paused=h.pausedFromFailures(ids,actual,selected);
- assert.deepEqual([...paused].sort(),["btdigg","oxtorrent","torrent9"]);
+ assert.deepEqual([...paused].sort(),["oxtorrent","torrent9"]);
+ assert.ok(!paused.includes("btdigg"),"primary PSA source cannot be auto-deselected after 429");
  assert.equal(selected.has("ytsmx"),true,"do not mutate input");
 });
 
@@ -104,6 +105,38 @@ test("paused provider metadata survives browser restart, while manual selection 
  assert.deepEqual([...h.state.selected].sort(),["knaben"]);
  assert.deepEqual([...h.state.pausedIds],["torrent9"]);
  assert.match(h.dom.get("sourceHealthSummary").textContent,/1 failed indexer\(s\)/);
+});
+
+test("previous automatic BTDigg pause heals across reload without overriding manual opt-out",()=>{
+ const h=harness();
+ h.state.providers=["btdigg","knaben","torrentscsv"].map(id=>({id,name:id,ported:true}));
+ h.storage.set("magnetra.providers.v1",JSON.stringify(["knaben"]));
+ h.storage.set("magnetra.paused-indexers.v1",JSON.stringify(["btdigg"]));
+ h.chooseProviders();
+ assert.deepEqual([...h.state.selected].sort(),["btdigg","knaben"]);
+ assert.deepEqual([...h.state.pausedIds],[]);
+ assert.deepEqual(JSON.parse(h.storage.get("magnetra.providers.v1")).sort(),["btdigg","knaben"]);
+ const other=harness();
+ other.state.providers=["btdigg","knaben"].map(id=>({id,name:id,ported:true}));
+ other.storage.set("magnetra.providers.v1",JSON.stringify(["knaben"]));
+ other.storage.set("magnetra.paused-indexers.v1",JSON.stringify([]));
+ other.chooseProviders();
+ assert.deepEqual([...other.state.selected],["knaben"],
+   "explicit manual exclusion of BTDigg must remain authoritative");
+});
+
+test("all BTDigg transient errors preserve owner's selected source",()=>{
+ const h=harness();
+ h.state.providers=["btdigg","knaben"].map(id=>({id,name:id,ported:true}));
+ h.state.selected=new Set(["btdigg","knaben"]);
+ assert.equal(h.pauseFailedSources(["btdigg","knaben"],[
+   {provider:"btdigg",code:"RATE_LIMIT"}
+ ]),0);
+ assert.equal(h.state.selected.has("btdigg"),true);
+ assert.equal(h.pauseFailedSources(["btdigg","knaben"],[
+   {provider:"btdigg",code:"TIMEOUT"}
+ ]),0);
+ assert.deepEqual([...h.state.pausedIds],[]);
 });
 
 test("no automatic remote probing, query changes or source deletions",()=>{
