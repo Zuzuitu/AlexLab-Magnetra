@@ -1,0 +1,58 @@
+# Explicit owner-authorized follow-up to PR #234, never generic PR deployment.
+name: "Magnetra BTDigg 429 guarded 0-5-100 release"
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compile guarded release code
+        run: python3 -m py_compile scripts/release_magnetra_btdigg_429_20261105.py
+      - name: Validate fail-closed release gates without Cloudflare
+        run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_btdigg_429_20261105.py' -v
+
+  release:
+    if: github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, '[magnetra-btdigg-429-20261105] ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    needs: offline-safety
+    steps:
+      - name: Checkout exact main SHA with full ancestry
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check invariants before any Cloudflare API call
+        run: python3 scripts/check-project-invariants.py
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check all provider and PWA contracts
+        run: |
+          node --test worker/test/*.test.mjs
+          npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Repeat offline release safety tests
+        run: python3 -m unittest discover -s scripts -p 'test_release_magnetra_btdigg_429_20261105.py' -v
+      - name: Owner-authorized immutable stage, canary, full, or safe restore
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_BTDIGG_429_ACTION: CONFIRM_MAGNETRA_BTDIGG_429_20261105_RELEASE
+        run: python3 scripts/release_magnetra_btdigg_429_20261105.py
