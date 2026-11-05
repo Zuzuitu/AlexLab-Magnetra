@@ -39,7 +39,7 @@ function harness(fetcher,initialStorage={},query=""){
  toast=()=>{};
  globalThis.testing={state,search,sendMagnet,ensureMagnet,magnetIdentity,
   chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg,
-  selectedSearchItems,magnetFailureText,noResultsText};
+  selectedSearchItems,magnetFailureText,noResultsText,btdiggCooldownRemainingMs,recordBTDigg429,clearBTDigg429};
  `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element,storage};
 }
@@ -315,6 +315,75 @@ test("rapid BTDigg distinct searches wait locally and aborted waits never reach 
  controller.abort();
  await assert.rejects(pending,/cancelled/i);
  assert.equal(calls,0,"cancelled, not-yet-sent searches do not hit Rock64");
+});
+
+test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry",async()=>{
+ const requests=[];
+ const fetcher=async(path)=>{
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  requests.push(id);
+  if(id==="btdigg")return json({results:[],stats:[{provider:id,ok:false,count:0}],
+   errors:[{provider:id,code:"RATE_LIMIT",message:"Provider rate-limited this connection."}]});
+  return json({results:[],stats:[{provider:id,ok:true,count:0}],errors:[]});
+ };
+ const {api,element,storage}=harness(fetcher);
+ element("query").value="Resident Evil 2026 1080p 10bit PSA";
+ element("category").value="movies";
+ api.state.providers=["btdigg","knaben"].map(id=>({id,name:id,ported:true}));
+ api.state.selected=new Set(["btdigg","knaben"]);
+ await api.search();
+ assert.deepEqual(requests,["btdigg","knaben"]);
+ assert.equal(api.state.selected.has("btdigg"),true);
+ assert.equal(api.state.pausedIds.has("btdigg"),false);
+ assert.equal(api.btdiggCooldownRemainingMs()>0,true);
+ const first=JSON.parse(storage.get("magnetra.btdigg-cooldown.v1"));
+ assert.equal(first.strikes,1);
+ assert.ok(first.until-first.failedAt>=60_000);
+ await api.search();
+ assert.deepEqual(requests,["btdigg","knaben","knaben"],
+  "second user search may use other sources but MUST NOT fetch BTDigg during cooldown");
+ assert.equal(api.state.selected.has("btdigg"),true);
+ assert.equal(api.state.sessionAudit.btdigg.state,"cooldown");
+ const restored=harness(fetcher,Object.fromEntries(storage));
+ restored.element("query").value="Another PSA variant";
+ restored.api.state.selected=new Set(["btdigg"]);
+ await restored.api.search();
+ assert.equal(requests.filter(x=>x==="btdigg").length,1,
+  "cooldown persists across browser and tab reloads without auto-retry");
+});
+
+test("BTDigg cooldown expires only for a new user action and escalates conservatively",async()=>{
+ let calls=0,fail=true;
+ const {api,element,storage}=harness(async(path)=>{
+  calls++;
+  return json(fail?{results:[],stats:[{provider:"btdigg",ok:false}],
+   errors:[{provider:"btdigg",code:"RATE_LIMIT"}]}
+   :{results:[{provider:"btdigg",id:"verified",name:"PSA verified"}],
+      stats:[{provider:"btdigg",ok:true,count:1}],errors:[]});
+ });
+ element("query").value="The Dog Stars PSA";
+ api.state.selected=new Set(["btdigg"]);
+ await api.search();
+ assert.equal(calls,1);
+ assert.equal(JSON.parse(storage.get("magnetra.btdigg-cooldown.v1")).strikes,1);
+ // Emulate an expired first cooldown without sleeping or sending source requests.
+ const now=Date.now();
+ storage.set("magnetra.btdigg-cooldown.v1",JSON.stringify({
+  until:now-1000,failedAt:now-61_000,strikes:1
+ }));
+ await api.search();
+ assert.equal(calls,2,"one additional fetch only after manual search");
+ const second=JSON.parse(storage.get("magnetra.btdigg-cooldown.v1"));
+ assert.equal(second.strikes,2);
+ assert.equal(second.until-second.failedAt,120_000);
+ fail=false;
+ storage.set("magnetra.btdigg-cooldown.v1",JSON.stringify({
+  until:now-1000,failedAt:now-61_000,strikes:2
+ }));
+ await api.search();
+ assert.equal(calls,3);
+ assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false,
+  "successful upstream response clears prior 429 state");
 });
 
 test("production 50 OxTorrent and 20 Torrent9 card Resolve requests choose canonical details, not advertising magnetSource",async()=>{
