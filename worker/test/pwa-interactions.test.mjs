@@ -386,6 +386,25 @@ test("BTDigg cooldown expires only for a new user action and escalates conservat
   "successful upstream response clears prior 429 state");
 });
 
+test("cached BTDigg source rows never masquerade as live 429 recovery",async()=>{
+ const {api,element,storage}=harness(async()=>json({
+  results:[{provider:"btdigg",id:"original",name:"Verified cached PSA"}],
+  stats:[{provider:"btdigg",ok:true,count:1,cacheMode:"stale"}],
+  errors:[],warnings:[{provider:"btdigg",code:"CACHED_AFTER_SOURCE_FAILURE",ageSeconds:300}]
+ }));
+ const now=Date.now();
+ storage.set("magnetra.btdigg-cooldown.v1",JSON.stringify({
+  until:now-1,failedAt:now-62000,strikes:1
+ }));
+ element("query").value="PSA cached only";
+ api.state.selected=new Set(["btdigg"]);
+ await api.search();
+ assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),true,
+  "stale source results are usable but do not prove a live upstream success");
+ assert.equal(api.state.items.length,1);
+ assert.equal(api.state.cacheWarnings.length,1);
+});
+
 test("production 50 OxTorrent and 20 Torrent9 card Resolve requests choose canonical details, not advertising magnetSource",async()=>{
  const submissions=[];
  const {api}=harness(async(path,options)=>{
