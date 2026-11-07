@@ -14,6 +14,9 @@ from __future__ import annotations
 import json
 import re
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from math import ceil
 
 ORIGIN = "https://btdig.com"
 SEARCH_URL = ORIGIN + "/search"
@@ -61,6 +64,42 @@ def _safe_failure(exc, phase):
         failure = "pre_headers_failed_unclassified"
     return failure, code
 
+# Source Retry-After is *not* the local gateway's unconditional 5-second
+# Retry-After. Record only validated finite numbers / categorical labels.
+# HTTP-date and delta-seconds are the two RFC formats; never retain raw text.
+MAX_RETRY_AFTER_SECONDS = 24 * 60 * 60
+
+
+def _source_retry_after(headers, now=None):
+    """Return (kind, seconds|None); never log raw headers or error messages."""
+    try:
+        raw = headers.get("retry-after") if hasattr(headers, "get") else None
+    except Exception:
+        return "invalid", None
+    if raw is None:
+        return "absent", None
+    if not isinstance(raw, str) or len(raw) > 96:
+        return "invalid", None
+    value = raw.strip()
+    if not value:
+        return "invalid", None
+    if re.fullmatch(r"[0-9]{1,8}", value):
+        seconds = int(value)
+        if seconds > MAX_RETRY_AFTER_SECONDS:
+            return "out_of_range", None
+        return "delta_seconds", seconds
+    try:
+        date = parsedate_to_datetime(value)
+        if date.tzinfo is None:
+            return "invalid", None
+        current = datetime.now(timezone.utc) if now is None else now
+        seconds = max(0, ceil((date - current).total_seconds()))
+    except (TypeError, ValueError, OverflowError):
+        return "invalid", None
+    if seconds > MAX_RETRY_AFTER_SECONDS:
+        return "out_of_range", None
+    return "http_date", seconds
+
 
 def _journal(record):
     print(json.dumps(record, sort_keys=True, separators=(",", ":")), flush=True)
@@ -91,6 +130,8 @@ def fetch_one(query: str, *, client=None, report=None) -> tuple[int, bytes]:
     curl_code = None
     upstream_status = None
     result_status = 504
+    retry_after_kind = None
+    retry_after_seconds = None
 
     try:
         response = client.get(
@@ -106,6 +147,11 @@ def fetch_one(query: str, *, client=None, report=None) -> tuple[int, bytes]:
         upstream_status = value if type(value) is int and 100 <= value <= 599 else None
 
         if upstream_status == 429:
+            # Observe (don't trust/reflect) the source's own Retry-After.
+            # Do not alter status, cache, gateway header or pacing here.
+            retry_after_kind, retry_after_seconds = _source_retry_after(
+                getattr(response, "headers", None)
+            )
             result_status, failure = 429, "http_429"
             return 429, b""
         if upstream_status in (401, 403) or (
@@ -175,6 +221,9 @@ def fetch_one(query: str, *, client=None, report=None) -> tuple[int, bytes]:
                 "source_status": upstream_status,
                 "curl_code": curl_code,
             }
+            if upstream_status == 429:
+                record["source_retry_after_kind"] = retry_after_kind
+                record["source_retry_after_seconds"] = retry_after_seconds
             try:
                 report(record)
             except Exception:
