@@ -215,7 +215,7 @@ class TransportCandidateTests(unittest.TestCase):
             ({"retry-after": "999999"}, ("out_of_range", None)),
             ({"retry-after": "not-an-http-date"}, ("invalid", None)),
             ({"retry-after": "private token " + "x"*180}, ("invalid", None)),
-            ({"retry-after": None}, ("invalid", None)),
+            ({"retry-after": None}, ("absent", None)),
             ({"retry-after": format_datetime(now + timedelta(days=2), usegmt=True)},
              ("out_of_range", None)),
         ]
