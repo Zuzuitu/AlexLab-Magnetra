@@ -199,6 +199,64 @@ class TransportCandidateTests(unittest.TestCase):
             self.assertEqual(len(c.calls),1)
             if status==200:self.assertIn(b"one_result",content)
 
+    def test_retry_after_parsing_delta_http_date_and_malformed_values(self):
+        from datetime import datetime, timedelta, timezone
+        from email.utils import format_datetime
+        now = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
+        valid_cases = [
+            ({}, ("absent", None)),
+            ({"retry-after": "0"}, ("delta_seconds", 0)),
+            ({"retry-after": "300"}, ("delta_seconds", 300)),
+            ({"retry-after": "86400"}, ("delta_seconds", 86400)),
+            ({"retry-after": format_datetime(now + timedelta(seconds=120), usegmt=True)},
+             ("http_date", 120)),
+            ({"retry-after": format_datetime(now - timedelta(seconds=30), usegmt=True)},
+             ("http_date", 0)),
+            ({"retry-after": "999999"}, ("out_of_range", None)),
+            ({"retry-after": "not-an-http-date"}, ("invalid", None)),
+            ({"retry-after": "private token " + "x"*180}, ("invalid", None)),
+            ({"retry-after": None}, ("invalid", None)),
+            ({"retry-after": format_datetime(now + timedelta(days=2), usegmt=True)},
+             ("out_of_range", None)),
+        ]
+        for headers, expected in valid_cases:
+            with self.subTest(headers=list(headers)):
+                self.assertEqual(candidate._source_retry_after(headers, now), expected)
+
+    def test_source_429_logs_only_safe_retry_after_categories_no_raw_header(self):
+        for raw, kind, value in [
+            ("180", "delta_seconds", 180),
+            ("Bearer SECRET_TOKEN_OR_QUERY", "invalid", None),
+            (None, "absent", None),
+        ]:
+            rows = []
+            header = {"content-type": "text/html"}
+            if raw is not None:
+                header["retry-after"] = raw
+            response = FakeResponse(status=429, headers=header)
+            code, body = candidate.fetch_one("Private.PSA.Release.2026",
+                                             client=FakeClient(response=response),
+                                             report=rows.append)
+            self.assertEqual((code, body), (429, b""))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["source_status"], 429)
+            self.assertEqual(rows[0]["gateway_status"], 429)
+            self.assertEqual(rows[0]["source_retry_after_kind"], kind)
+            self.assertEqual(rows[0]["source_retry_after_seconds"], value)
+            self.assertNotIn("SECRET_TOKEN", str(rows))
+            self.assertNotIn("Private.PSA.Release", str(rows))
+            self.assertNotIn("retry-after", str(rows).lower())
+            self.assertTrue(response.closed)
+
+    def test_success_does_not_log_retry_after_or_change_source_output(self):
+        rows = []
+        response = FakeResponse(status=200,headers={"content-type":"text/html","retry-after":"300"})
+        result = candidate.fetch_one("ubuntu",client=FakeClient(response=response),report=rows.append)
+        self.assertEqual(result[0],200)
+        self.assertIn(b"one_result",result[1])
+        self.assertNotIn("source_retry_after_kind",rows[0])
+        self.assertNotIn("source_retry_after_seconds",rows[0])
+
     def test_journal_serializer_emits_only_numeric_or_fixed_public_keys(self):
         import json
         from unittest.mock import patch
