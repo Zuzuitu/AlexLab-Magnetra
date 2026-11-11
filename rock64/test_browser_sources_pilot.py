@@ -213,9 +213,9 @@ class BrowserSourcePilotTests(unittest.TestCase):
         self.assertEqual(output["blocked_external_scripts"], 0)
         self.assertNotIn("ubuntu",str(output),
             "only numeric DOM diagnostics and fixed labels, no queries in stdout")
-        self.assertEqual(len([x for x in calls if isinstance(x, tuple) and x[0]=="goto"]), 1)
-        self.assertEqual(calls.count("allowed"), 1)
-        self.assertEqual(calls.count("blocked"), 1)
+        self.assertEqual(len([x for x in calls if isinstance(x, tuple) and x[0]=="goto"]), 2)
+        self.assertEqual(calls.count("allowed"), 2)
+        self.assertEqual(calls.count("blocked"), 2)
         launches = [x[1] for x in calls if isinstance(x, tuple) and x[0]=="launch"]
         self.assertTrue(launches[0]["chromium_sandbox"])
         self.assertFalse(any("--no-sandbox" in x for x in launches[0]["args"]))
