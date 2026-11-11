@@ -96,6 +96,13 @@ class BrowserSourcePilotTests(unittest.TestCase):
         }), "no_rows_unverified")
         self.assertEqual(pilot.classify_page("btdigg", status=200, **common),
                          "rendered_rows")
+        self.assertEqual(pilot.classify_page(
+            "btdigg", status=200, verified_rows=0, **common),
+            "no_rows_unverified",
+            "unpaired name/magnet elements must not certify result records")
+        self.assertEqual(pilot.classify_page(
+            "btdigg", status=200, verified_rows=3, **common),
+            "rendered_rows")
 
     def test_tpb_nested_api_429_visible_even_if_html_navigation_is_200(self):
         site = pilot.search_target("thepiratebay", "ubuntu")
@@ -178,6 +185,16 @@ class BrowserSourcePilotTests(unittest.TestCase):
         self.assertFalse(output["search_results_extracted"])
         self.assertFalse(output["production_changed"])
         self.assertEqual(output["rendered_rows"], 2)
+        self.assertEqual(output["raw_dom_result_blocks"], 2)
+        self.assertEqual(output["raw_dom_name_links"], 2)
+        self.assertEqual(output["raw_dom_magnet_candidates"], 2)
+        self.assertEqual(output["magnet_links"], 2)
+        self.assertEqual(output["verified_dom_result_pairs"], 2)
+        self.assertEqual(output["result_structure"], "paired_result_rows")
+        self.assertEqual(output["blocked_external_resources"], 1)
+        self.assertEqual(output["blocked_external_scripts"], 0)
+        self.assertNotIn("ubuntu",str(output),
+            "only numeric DOM diagnostics and fixed labels, no queries in stdout")
         self.assertEqual(len([x for x in calls if isinstance(x, tuple) and x[0]=="goto"]), 1)
         self.assertEqual(calls.count("allowed"), 1)
         self.assertEqual(calls.count("blocked"), 1)
