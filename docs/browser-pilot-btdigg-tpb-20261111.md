@@ -29,6 +29,30 @@ credential import, anti-bot evasion, background polling or automatic retries.
   That requires a successful original-browser navigation proof and a separate
   guarded browser gateway design with rollback.
 
+## Observed real BTDigg result and corrected metrics (11 Nov 2026)
+
+A one-off Rock64 Chromium test for a very specific movie release returned
+HTTP 200 and state `no_rows_unverified`. Original pilot code masked the
+`rendered_rows` and `magnet_links` counters to **zero** whenever strict
+validation failed. Those zeros therefore did NOT prove the page was empty.
+This follow-up patch reports bounded raw counts separately:
+`raw_dom_result_blocks`, `raw_dom_name_links`,
+`raw_dom_magnet_candidates`, `magnet_links`,
+`verified_dom_result_pairs`, and the number of external resources/scripts
+blocked by the fixed-origin security policy. None contains page text or
+magnet URLs. `rendered_rows` means verified pairs for BTDigg, not raw blocks.
+
+The existing 429 from curl_cffi is still genuine. HTTP 200 from Chromium
+proves the top-level browser navigation worked, **not** that it returned
+torrent results or that this method will remain available.
+
+**Diagnostic next action, if owner decides to run a new single search:**
+Use a reasonably broad title and year, e.g. `The Dog Stars 2026`,
+rather than an entire release string with codec, resolution and group.
+Do not automatically issue an additional query after a 429; the pilot
+never loops or retries. Genuine results must still be validated locally
+for title, release group, codec and quality before being classified as PSA.
+
 ## Safe prerequisite check on Rock64 (no installation)
 
 Run as runner, not root:
