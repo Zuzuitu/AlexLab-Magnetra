@@ -181,6 +181,24 @@ class BrowserSourcePilotTests(unittest.TestCase):
                 "btdigg", "ubuntu", chromium_path="/usr/bin/chromium",
                 playwright_manager=FakeManager,
             )
+            # A browser page can contain row and magnet elements that do NOT
+            # belong to the same release. Do not mask raw counts when rejected.
+            class FakeUnpairedPage(FakePage):
+                def locator(self, selector):
+                    if ":has(" in selector:
+                        return SimpleNamespace(count=lambda: 0)
+                    return super().locator(selector)
+            with patch.object(FakeContext, "new_page", return_value=FakeUnpairedPage()):
+                unpaired = pilot.owner_probe(
+                    "btdigg", "ubuntu", chromium_path="/usr/bin/chromium",
+                    playwright_manager=FakeManager,
+                )
+        self.assertEqual(unpaired["state"], "no_rows_unverified")
+        self.assertEqual(unpaired["raw_dom_result_blocks"], 2)
+        self.assertEqual(unpaired["magnet_links"], 2)
+        self.assertEqual(unpaired["verified_dom_result_pairs"], 0)
+        self.assertEqual(unpaired["rendered_rows"], 0)
+        self.assertEqual(unpaired["result_structure"], "unpaired_result_elements")
         self.assertEqual(output["state"], "rendered_rows")
         self.assertFalse(output["search_results_extracted"])
         self.assertFalse(output["production_changed"])
