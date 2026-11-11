@@ -90,7 +90,7 @@ def approved_landing(provider, current_url):
 
 
 def classify_page(provider, *, status, landing, title, rows, magnets,
-                  tpb_api_status=None):
+                  tpb_api_status=None, verified_rows=None):
     """Pure, fixture-testable categorization; never treats absence as proof of no matches."""
     if not approved_landing(provider, landing):
         return "redirect_or_origin_refused"
@@ -102,7 +102,9 @@ def classify_page(provider, *, status, landing, title, rows, magnets,
         return "source_non_200"
     if any(s in str(title).lower() for s in CHALLENGE_TITLES):
         return "challenge_not_solved"
-    if rows > 0 and magnets > 0 and provider == "btdigg":
+    if provider == "btdigg" and (
+        verified_rows > 0 if verified_rows is not None else rows > 0 and magnets > 0
+    ):
         return "rendered_rows"
     if magnets > 0 and provider == "thepiratebay":
         return "rendered_rows"
@@ -153,10 +155,18 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                 )
                 try:
                     page = context.new_page()
+                    blocked_resources = {"total": 0, "scripts": 0}
                     def route_handler(route):
                         if allowed_resource(provider, route.request.url):
                             route.continue_()
                         else:
+                            blocked_resources["total"] = min(
+                                100, blocked_resources["total"] + 1
+                            )
+                            if getattr(route.request, "resource_type", None) == "script":
+                                blocked_resources["scripts"] = min(
+                                    100, blocked_resources["scripts"] + 1
+                                )
                             route.abort()
                     page.route("**/*", route_handler)
                     api_statuses = []
@@ -175,15 +185,32 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                     # Short bounded visual settle, NOT a request retry/poll loop.
                     page.wait_for_timeout(SETTLE_MS)
                     status = result.status
+                    # These are independent RAW DOM counts, not inferred matches.
+                    # Never mask them to zero merely because strict validation fails.
                     rows = min(MAX_DOM_ROWS, page.locator(".one_result").count())
+                    name_links = min(MAX_DOM_ROWS, page.locator(
+                        "div.one_result div.torrent_name a").count())
+                    magnet_candidates = min(MAX_DOM_ROWS, page.locator(
+                        'a[href^="magnet:?"]').count())
                     magnets = min(MAX_DOM_ROWS, page.locator(
                         'a[href^="magnet:?xt=urn:btih:"]').count())
+                    verified_rows = min(MAX_DOM_ROWS, page.locator(
+                        'div.one_result:has(div.torrent_name a):has(a[href^="magnet:?xt=urn:btih:"])'
+                    ).count()) if provider == "btdigg" else 0
                     final_url = page.url
                     classification = classify_page(
                         provider, status=status, landing=final_url,
                         title=page.title(), rows=rows, magnets=magnets,
                         tpb_api_status=429 if 429 in api_statuses
                           else (403 if 403 in api_statuses else None),
+                        verified_rows=verified_rows if provider == "btdigg" else None,
+                    )
+                    structure = (
+                        "paired_result_rows" if verified_rows else
+                        "rows_without_btih_magnets" if rows and not magnets else
+                        "unpaired_result_elements" if rows and magnets else
+                        "magnet_without_result_rows" if magnets else
+                        "no_result_selectors"
                     )
                     return {
                         "provider": provider,
@@ -192,8 +219,16 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                         "navigation_status": status,
                         "tpb_api_status": 429 if 429 in api_statuses
                           else (403 if 403 in api_statuses else None),
-                        "rendered_rows": rows if classification == "rendered_rows" else 0,
-                        "magnet_links": magnets if classification == "rendered_rows" else 0,
+                        "rendered_rows": verified_rows if provider == "btdigg"
+                            else rows,
+                        "magnet_links": magnets,
+                        "raw_dom_result_blocks": rows,
+                        "raw_dom_name_links": name_links,
+                        "raw_dom_magnet_candidates": magnet_candidates,
+                        "verified_dom_result_pairs": verified_rows,
+                        "result_structure": structure,
+                        "blocked_external_resources": blocked_resources["total"],
+                        "blocked_external_scripts": blocked_resources["scripts"],
                         "search_results_extracted": False,
                         "production_changed": False,
                     }
