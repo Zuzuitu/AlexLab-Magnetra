@@ -221,7 +221,9 @@ class SearchProvider:
         """Sanitized local deadline for HTTP Retry-After, never contacts origin."""
         with self._lock:
             remaining = self._source_blocked_until - self.clock()
-            return max(0, math.ceil(remaining))
+            if not math.isfinite(remaining) or remaining <= 0:
+                return 0
+            return math.ceil(remaining)
 
     def search(self, query: str) -> tuple[int, bytes]:
         with self._lock:
