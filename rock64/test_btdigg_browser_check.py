@@ -132,7 +132,7 @@ class BrowserLocalCheckTests(TestCase):
                 "markers_may_indicate_current_running_browser")
             self.assertNotIn("DO_NOT_PRINT", out.getvalue())
             self.assertNotIn(str(prefs), out.getvalue())
-            self.assertEqual(out.getvalue().count("\\n"), 1)
+            self.assertEqual(out.getvalue().count(chr(10)), 1)
 
     def test_profile_marker_refuses_symlink_without_reading(self):
         with TemporaryDirectory() as root:
