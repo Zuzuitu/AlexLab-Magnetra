@@ -10,7 +10,7 @@ CAPTCHA automatically.
 
 - Run unprivileged as `runner` on Rock64, not as root.
 - Debian 13 ARM64 packages: `chromium xvfb xauth x11vnc novnc websockify`.
-- Tailscale active on Rock64, providing its normal `100.64.0.0/10` IPv4.
+- Tailscale active on Rock64, providing its normal Tailscale's allocated address range IPv4.
 - **Enable the Tailscale app on the iPhone**, logged into the same tailnet.
 - The desktop is accessed only over Tailscale, not the public Internet, router
   port forwarding, or Cloudflare Tunnel.
