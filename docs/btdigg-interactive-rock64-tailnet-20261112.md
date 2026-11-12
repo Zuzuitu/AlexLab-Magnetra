@@ -8,21 +8,21 @@ CAPTCHA automatically.
 
 ## Prerequisites
 
-- Run unprivileged as \`runner\` on Rock64, not as root.
-- Debian 13 ARM64 packages: \`chromium xvfb xauth x11vnc novnc websockify\`.
-- Tailscale active on Rock64, providing its normal \`100.64.0.0/10\` IPv4.
+- Run unprivileged as `runner` on Rock64, not as root.
+- Debian 13 ARM64 packages: `chromium xvfb xauth x11vnc novnc websockify`.
+- Tailscale active on Rock64, providing its normal `100.64.0.0/10` IPv4.
 - **Enable the Tailscale app on the iPhone**, logged into the same tailnet.
 - The desktop is accessed only over Tailscale, not the public Internet, router
   port forwarding, or Cloudflare Tunnel.
 
 After updating the Git checkout:
 
-\`\`\`bash
+```bash
 cd "$HOME/magnetra-cffi-live-20261028"
 git pull --ff-only
 python3 -B -m unittest rock64/test_btdigg_visual_session.py -v
 bash rock64/run-btdigg-visual-session.sh
-\`\`\`
+```
 
 The script prompts for a fresh **temporary VNC password**. Choose at least
 eight characters. Note that classic VNC authentication uses **only the first
@@ -31,14 +31,14 @@ network transport. Never put the password in a shell command or URL.
 
 Once it launches, it prints a link in this form:
 
-\`\`\`text
+```text
 http://100.x.y.z:6088/vnc.html?autoconnect=1&resize=remote
-\`\`\`
+```
 
 Open that link in Safari while Tailscale is connected on the iPhone. Enter the
 temporary VNC password. The graphical Chromium should already be at the exact
-owner-verified BTDigg search URL, with \`order=0\`, searching
-\`The Dog Stars 2026\`.
+owner-verified BTDigg search URL, with `order=0`, searching
+`The Dog Stars 2026`.
 
 If a CAPTCHA appears, **the owner** may choose to interact with it manually
 in the site as normal. Observe whether ordinary source result cards and
@@ -48,10 +48,10 @@ HTTP 200 is **not** search success.
 ## Network and cleanup boundaries
 
 - Xvfb chooses an isolated display and disables X11 TCP connections;
-  \`xvfb-run\` manages Xauthority.
-- \`x11vnc\` listens on **loopback only**, port 5993, and requires the
+  `xvfb-run` manages Xauthority.
+- `x11vnc` listens on **loopback only**, port 5993, and requires the
   temporary password file with mode 0600.
-- \`websockify\` binds explicitly to the **Rock64 Tailscale IPv4 only**,
+- `websockify` binds explicitly to the **Rock64 Tailscale IPv4 only**,
   port 6088, serving Debian's local noVNC files.
 - Chromium uses a temporary, private on-disk browser profile that is deleted
   when the session exits; no browser session is imported.
@@ -70,11 +70,11 @@ background scraper or reuse CAPTCHA session cookies.
 
 ### Diagnostic errors
 
-- \`Missing xauth\`: the \`xauth\` package was not installed.
-- \`Tailscale has no IPv4\`: verify \`tailscale status\` and the login.
-- \`websockify failed to bind\`: port 6088 may already be occupied or the
+- `Missing xauth`: the `xauth` package was not installed.
+- `Tailscale has no IPv4`: verify `tailscale status` and the login.
+- `websockify failed to bind`: port 6088 may already be occupied or the
   Tailscale interface is down.
-- \`x11vnc failed to start\`: verify Debian package installation and that the
+- `x11vnc failed to start`: verify Debian package installation and that the
   Xvfb session is available.
 - noVNC page unreachable: confirm the iPhone's Tailscale app is connected
   and tailnet ACLs allow the iPhone to reach port 6088 on Rock64.
