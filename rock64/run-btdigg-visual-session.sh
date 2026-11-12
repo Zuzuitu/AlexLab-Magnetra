@@ -17,7 +17,8 @@ TS_IP="$(tailscale ip -4 2>/dev/null | head -n1)"
 python3 - "$TS_IP" <<'PY' || fail 'Not a valid 100.64.0.0/10 Tailscale IPv4 address.'
 import ipaddress, sys
 try:
-    assert ipaddress.IPv4Address(sys.argv[1]) in ipaddress.IPv4Network('100.64.0.0/10')
+    octets = ipaddress.IPv4Address(sys.argv[1]).packed
+    assert octets[0] == 100 and 64 <= octets[1] < 128
 except (ValueError, AssertionError):
     sys.exit(1)
 PY
