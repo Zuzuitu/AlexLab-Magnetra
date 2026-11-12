@@ -1,14 +1,33 @@
 name: Build staging APK
 
+# Avoid Android builds on source-only PWA, Rock64, docs, and CI changes.
+# Manual workflow_dispatch remains available for a deliberate APK build.
 on:
   push:
     branches: [ "main" ]
-    paths-ignore:
-      - 'README.md'
-      - 'CHANGELOG.md'
-      - 'fastlane/*'
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'build.gradle*'
+      - 'settings.gradle*'
+      - 'gradle.properties'
+      - '.github/workflows/debug_build.yml'
+      - '.github/workflows/staging_build.yml'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'build.gradle*'
+      - 'settings.gradle*'
+      - 'gradle.properties'
+      - '.github/workflows/debug_build.yml'
+      - '.github/workflows/staging_build.yml'
+  workflow_dispatch:
 
 jobs:
   staging-build:
