@@ -16,11 +16,46 @@ import urllib.request
 LOCAL = "http://127.0.0.1:18896"
 STATE = Path.home() / ".local" / "state" / "magnetra-btdigg-browser"
 TOKEN_FILE = STATE / "gateway.token"
+PREFERENCES_FILE = STATE / "profile" / "Default" / "Preferences"
+
+
+def local_profile_exit_state(path=PREFERENCES_FILE):
+    """Read only two nonsecret Chromium profile markers. No browser requests.
+
+    Chromium can mark a profile unclean WHILE it is running, so this is not
+    a verdict on whether a previous Ctrl+C was graceful. Compare only after
+    an intentional clean shutdown, never write or repair Preferences here.
+    """
+    try:
+        if (path.is_symlink() or path.parent.is_symlink()
+                or path.parent.parent.is_symlink()
+                or not path.is_file() or path.stat().st_size > 8_000_000):
+            return {"profile_marker_available": False}
+        data = json.loads(path.read_text(encoding="utf-8"))
+        profile = data.get("profile", {})
+        if not isinstance(profile, dict):
+            profile = {}
+        marker = profile.get("exit_type")
+        if marker not in ("Normal", "Crashed", "SessionEnded"):
+            marker = "unknown"
+        clean = profile.get("exited_cleanly")
+        if type(clean) is not bool:
+            clean = None
+        return {
+            "profile_marker_available": True,
+            "exit_type": marker,
+            "exited_cleanly": clean,
+            "runtime_caveat": "markers_may_indicate_current_running_browser",
+        }
+    except (OSError, ValueError, TypeError, UnicodeError):
+        return {"profile_marker_available": False}
 
 
 def main():
     parser = argparse.ArgumentParser()
     tests = parser.add_mutually_exclusive_group()
+    tests.add_argument("--profile-exit-state", action="store_true",
+                       help="Read Chromium exit markers locally, never contact gateway")
     tests.add_argument("--browser-status", action="store_true",
                        help="Inspect existing Chromium tabs without source requests")
     tests.add_argument("--test-search", action="store_true",
@@ -28,6 +63,10 @@ def main():
     tests.add_argument("--test-next-search", action="store_true",
                        help="Perform one distinct follow-up query in the same browser")
     args = parser.parse_args()
+    if args.profile_exit_state:
+        print(json.dumps({"local_profile": local_profile_exit_state()},
+                         sort_keys=True))
+        return
     search_performed = args.test_search or args.test_next_search
     try:
         if TOKEN_FILE.is_symlink() or not TOKEN_FILE.is_file():
