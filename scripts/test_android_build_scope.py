@@ -116,6 +116,8 @@ class AndroidBuildScopeTests(TestCase):
             self.assertIn("scripts/android_build_scope.py", content)
             self.assertIn("python3 scripts/check-project-invariants.py", content)
             self.assertIn("Skip APK build for non-Android changes", content)
+            self.assertIn("retention-days: 3", content,
+                          "temporary debug/staging artifacts must expire promptly")
             # Every expensive step (JDKs, Gradle, rename/upload) is gated.
             for name in (
                 "Set up JDK 17",
