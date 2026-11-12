@@ -228,6 +228,11 @@ class BrowserBackendTests(TestCase):
         class BrokenContext:
             def __init__(self):
                 self.calls = 0
+            @property
+            def pages(self):
+                # Real Playwright contexts always expose their open tabs.
+                # The simulated failure must occur at new_page(), not before.
+                return [original]
             def new_page(self):
                 self.calls += 1
                 raise RuntimeError("simulated local Playwright error")
