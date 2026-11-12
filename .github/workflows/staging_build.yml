@@ -6,9 +6,9 @@ on:
     paths-ignore:
       - 'README.md'
       - 'CHANGELOG.md'
-      - 'fastlane/*'
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   staging-build:
@@ -17,11 +17,26 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v7.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Determine Android build scope (fail open)
+      id: android_scope
+      env:
+        MAGNETRA_CI_EVENT: ${{ github.event_name }}
+        MAGNETRA_CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        MAGNETRA_CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      run: python3 scripts/android_build_scope.py
+
+    - name: Skip APK build for non-Android changes
+      if: steps.android_scope.outputs.build_required != 'true'
+      run: echo "Android sources/toolchain unchanged; skipping JDK, Gradle and APK artifact."
 
     - name: Check project invariants
       run: python3 scripts/check-project-invariants.py
 
     - name: Set up JDK 17
+      if: steps.android_scope.outputs.build_required == 'true'
       uses: actions/setup-java@v6.0.1
       with:
         java-version: '17'
@@ -29,6 +44,7 @@ jobs:
         cache: gradle
 
     - name: Set up JetBrains Runtime 21 for Gradle daemon
+      if: steps.android_scope.outputs.build_required == 'true'
       uses: actions/setup-java@v6.0.1
       with:
         java-version: '21'
@@ -39,18 +55,23 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Grant execute permission for gradlew
+      if: steps.android_scope.outputs.build_required == 'true'
       run: chmod +x gradlew
 
     - name: Assemble staging APK with gradlew
+      if: steps.android_scope.outputs.build_required == 'true'
       run: ./gradlew app:assembleStaging
 
     - name: Rename APK file to torrentsearch-staging.apk
+      if: steps.android_scope.outputs.build_required == 'true'
       run: |
         cd app/build/outputs/apk/staging
         mv app-staging.apk torrentsearch-staging.apk
 
     - name: Upload staging APK
+      if: steps.android_scope.outputs.build_required == 'true'
       uses: actions/upload-artifact@v7.0.1
       with:
         path: app/build/outputs/apk/staging/torrentsearch-staging.apk
         archive: false
+        retention-days: 3
