@@ -105,6 +105,45 @@ class BrowserLocalCheckTests(TestCase):
             self.assertNotIn("magnet:", out.getvalue())
             self.assertNotIn("x" * 64, out.getvalue())
 
+    def test_profile_exit_state_reads_nonsecret_markers_without_network(self):
+        with TemporaryDirectory() as root:
+            profile = Path(root) / "profile"
+            prefdir = profile / "Default"
+            prefdir.mkdir(parents=True)
+            prefs = prefdir / "Preferences"
+            prefs.write_text(json.dumps({
+                "profile": {"exit_type": "Crashed", "exited_cleanly": False},
+                "secret": "DO_NOT_PRINT",
+                "cookies": "DO_NOT_PRINT",
+            }))
+            out = StringIO()
+            with patch.object(PROBE, "PREFERENCES_FILE", prefs), \
+                 patch.object(PROBE.urllib.request, "urlopen",
+                              side_effect=AssertionError("NO_NETWORK")), \
+                 patch.object(PROBE.argparse._sys, "argv",
+                              ["local-probe", "--profile-exit-state"]), \
+                 redirect_stdout(out):
+                PROBE.main()
+            result = json.loads(out.getvalue())["local_profile"]
+            self.assertEqual(result["exit_type"], "Crashed")
+            self.assertFalse(result["exited_cleanly"])
+            self.assertEqual(
+                result["runtime_caveat"],
+                "markers_may_indicate_current_running_browser")
+            self.assertNotIn("DO_NOT_PRINT", out.getvalue())
+            self.assertNotIn(str(prefs), out.getvalue())
+            self.assertEqual(out.getvalue().count("\\n"), 1)
+
+    def test_profile_marker_refuses_symlink_without_reading(self):
+        with TemporaryDirectory() as root:
+            target = Path(root) / "protected.json"
+            target.write_text('{"profile":{"exit_type":"Normal"}}')
+            alias = Path(root) / "Preferences"
+            alias.symlink_to(target)
+            self.assertEqual(
+                PROBE.local_profile_exit_state(alias),
+                {"profile_marker_available": False})
+
     def test_local_probe_never_calls_source_without_private_token(self):
         with TemporaryDirectory() as root:
             token = Path(root) / "gateway.token"
