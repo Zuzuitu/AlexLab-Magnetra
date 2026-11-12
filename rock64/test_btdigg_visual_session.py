@@ -38,6 +38,37 @@ class VisualSessionTests(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, s)
 
+    def test_persistent_backend_remains_optin_and_private(self):
+        s = self.source
+        required = [
+            "--persistent-backend",
+            "MAGNETRA_BTDIGG_BROWSER_OPT_IN=1",
+            "MAGNETRA_BTDIGG_BROWSER_PORT=8798",
+            "MAGNETRA_BROWSER_PROFILE",
+            "MAGNETRA_BROWSER_PYTHON",
+            "MAGNETRA_BROWSER_ENTRY",
+            "chmod 700",
+            "chmod 600",
+            "magnetra-btdigg-browser",
+            "gateway.token",
+            "MAGNETRA_VNC_PASS",
+            "mktemp -d",
+            "trap cleanup EXIT",
+        ]
+        for term in required:
+            with self.subTest(term=term):
+                self.assertIn(term, s)
+        self.assertIn('VISUAL_MODE=temporary', s)
+        self.assertIn('VISUAL_MODE=persistent', s)
+        self.assertIn('[[ "$MAGNETRA_VISUAL_MODE" == persistent ]]', s)
+        for forbidden in [
+            "MAGNETRA_BTDIGG_PRODUCTION_OPT_IN=1",
+            "MAGNETRA_BTDIGG_BROWSER_PORT=8796",
+            "--remote-debugging-port",
+            "chmod 777",
+        ]:
+            self.assertNotIn(forbidden, s)
+
     def test_session_is_interactive_one_page_without_scraping(self):
         s = self.source
         self.assertIn("https://btdig.com/search?order=0&q=The+Dog+Stars+2026", s)
