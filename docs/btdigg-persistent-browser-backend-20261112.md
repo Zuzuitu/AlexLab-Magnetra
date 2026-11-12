@@ -154,6 +154,24 @@ GitHub changes. Avoid restarting a live session simply for this diagnostic:
 a restart could reload/reopen a source page even when the browser does not
 deliberately run a new query.
 
+## Older running Chromium process and source-status uncertainty
+
+A Rock64 code update does not reload the process already launched in tmux.
+The older `/v1/browser-state` route may omit
+`visible_source_rate_limited`, even while the visible GUI still shows a
+BTDigg refusal. The local read-only checker now reports that generation as
+`diagnostic_capability: legacy_navigation_latch_only`,
+`visible_source_rate_limited: null`, and
+`new_searches_paused: null`, while retaining
+`in_process_navigation_latch` as a historical process-only field.
+Null is UNKNOWN, not a signal to send a new query. The newer process
+reports `diagnostic_capability: visible_source_rate_limit_detection`
+with the actual boolean fields.
+
+Use `python3 rock64/check-btdigg-browser-backend.py --browser-status`
+without restarting Chromium or visiting the source. This only queries the
+already-running authenticated loopback gateway.
+
 ## Read-only browser state after owner-controlled tmux detach
 
 The owner physically confirmed persistent Chromium/noVNC remains available
