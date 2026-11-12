@@ -118,6 +118,46 @@ class BrowserSourcePilotTests(unittest.TestCase):
             "btdigg", status=200, verified_rows=3, **common),
             "rendered_rows")
 
+    def test_response_html_evidence_distinguishes_search_shell_from_result_html(self):
+        cases = [
+            ('<!doctype html><html><form><input name="q"></form></html>',
+             (False, True, False)),
+            ('<html><div class="one_result"><a href="magnet:?xt=urn:btih:FAKE">x</a></div></html>',
+             (True, False, False)),
+            ('<html><script src="/recaptcha/api.js"></script></html>',
+             (False, False, True)),
+            ('<html><title>Just a moment</title></html>',
+             (False, False, True)),
+        ]
+        for markup, expected in cases:
+            with self.subTest(expected=expected):
+                facts = pilot.classify_document_markup(markup, "text/html")
+                self.assertEqual(
+                    (facts["response_markup_result_marker"],
+                     facts["response_search_form_marker"],
+                     facts["response_verification_marker"]), expected)
+                self.assertTrue(facts["response_is_html"])
+                self.assertEqual(facts["response_html_chars"], len(markup))
+                self.assertNotIn(markup, str(facts))
+        facts = pilot.classify_document_markup(None, None)
+        self.assertIsNone(facts["response_markup_result_marker"])
+        self.assertIsNone(facts["response_html_chars"])
+
+    def test_blocked_script_categories_never_expose_raw_url(self):
+        cases = [
+            ("https://www.google.com/recaptcha/api.js?k=PRIVATE_TOKEN", "verification"),
+            ("https://www.gstatic.com/recaptcha/releases/x/recaptcha__en.js", "verification"),
+            ("https://cdnjs.cloudflare.com/ajax/libs/jquery.js", "static_cdn"),
+            ("https://cdn.jsdelivr.net/npm/foo.js", "static_cdn"),
+            ("https://tracker.example/path?q=PRIVATE_QUERY", "other"),
+            ("not a url", "other"),
+        ]
+        for url, expected in cases:
+            with self.subTest(expected=expected):
+                actual = pilot.classify_blocked_script(url)
+                self.assertEqual(actual, expected)
+                self.assertNotIn("PRIVATE_", actual)
+
     def test_tpb_nested_api_429_visible_even_if_html_navigation_is_200(self):
         site = pilot.search_target("thepiratebay", "ubuntu")
         self.assertEqual(pilot.classify_page(
@@ -164,7 +204,11 @@ class BrowserSourcePilotTests(unittest.TestCase):
             def goto(self, url, **kwargs):
                 calls.append(("goto", url))
                 self.url = url
-                return SimpleNamespace(status=200)
+                return SimpleNamespace(
+                    status=200,
+                    text=lambda: '<html><div class="one_result"><input name="q"></div></html>',
+                    headers={"content-type": "text/html; charset=utf-8"},
+                )
             def wait_for_timeout(self, millis): calls.append(("settle", millis))
             def locator(self, selector):
                 if ".one_result" == selector: return SimpleNamespace(count=lambda: 2)
