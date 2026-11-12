@@ -15,15 +15,22 @@ runs a new offline path-filter regression check on each PR. The owner does
 not plan to use Android now; this is a CI scheduling optimization, **not**
 a deletion of Android sources or a change to the 46 providers.
 
-Current GitHub billing documentation confirms standard GitHub-hosted
-runners in PUBLIC repositories are free of billable compute minutes.
-A GitHub usage warning cannot by itself be attributed to the public
-Magnetra APK jobs: private repositories, larger runners and artifact/cache
-storage have distinct billing. Need the owner's warning body or account
-usage breakdown to attribute it correctly. Potential required-check
-settings must be reviewed if an APK job had been required for all PRs:
-GitHub path-filtered jobs may be absent for unrelated PRs, whereas the
-always-on PWA/contract job remains a separate check.
+The owner received the actual GitHub email "You have used 90% of
+the Actions storage included for the Zuzuitu account" on 12 Nov: 0.45 GB
+used of 0.50 GB included, with the next billing reset quoted as 1 Dec
+2026. This warning concerns **artifact/cache storage**, NOT GitHub Actions
+minutes. Standard public-repo GitHub-hosted runners remain free of
+billable compute minutes, but artifacts can consume account storage.
+A read-only check of two recent Magnetra debug/staging APK build pairs
+found 20,223,105 bytes + 3,645,376 bytes per pair and their original
+retention was approximately 90 days. New debug/staging APK artifacts
+use `retention-days: 1` to reduce ongoing storage; old artifacts are NOT
+retroactively deleted or modified. No direct artifact deletion occurred.
+Owner may use GitHub Billing budgets (e.g. $0) to cap overage.
+Potential required-check settings must be reviewed if an APK job had
+been required on all PRs: GitHub path-filtered workflows can remain
+pending when configured as mandatory, whereas PWA/contract checks stay
+always on.
 
 ## 12 NOV 2026 — BTDIGG COLD-START NO-SEARCH GUARD + LOCAL CHROMIUM EXIT MARKERS
 
