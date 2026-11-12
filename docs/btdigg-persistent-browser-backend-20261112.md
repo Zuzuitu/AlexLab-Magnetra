@@ -52,7 +52,12 @@ bash rock64/setup-btdigg-browser-env.sh --check
 python3 -B -m unittest rock64/test_btdigg_browser_setup.py -v
 ```
 
-The installer pins Playwright 1.65.1, restricts installation to an unprivileged
+Existing, healthy Playwright 1.65.0 or 1.65.1 environments are accepted without
+a new download. On an existing venv, ownership and group/world-writable
+permissions of the venv root and `pyvenv.cfg` are checked read-only; insecure
+permissions fail closed until the owner corrects them, without deleting files.
+
+The installer pins Playwright 1.65.1 for fresh environments, restricts installation to an unprivileged
 Linux ARM64 user, requires 512 MiB free space, refuses symlinked paths and
 existing non-matching environments, and does not install Playwright's browser
 bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
