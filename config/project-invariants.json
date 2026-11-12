@@ -259,6 +259,10 @@
     "no_negative_results_cached": true,
     "no_source_auto_retry": true,
     "retry_after_header_matches_remaining_source_refusal": true,
+    "429_scope_header_distinguishes_source_from_local_pacing": true,
+    "worker_bounded_private_source_retry_after_ms": 1800000,
+    "legacy_gateway_without_scope_header_fails_closed": true,
+    "local_pacing_does_not_trigger_worker_source_429_cooldown": true,
     "no_user_request_to_restart_running_browser": true,
     "cloudflare_worker_production_and_port_8796_unchanged": true
   },

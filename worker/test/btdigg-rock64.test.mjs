@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {rock64BTDiggFetcher,BTDIGG_GATEWAY_ORIGIN} from "../src/btdigg-rock64.mjs";
+import {rock64BTDiggFetcher,BTDIGG_GATEWAY_ORIGIN,boundedBTDiggRetryAfterMs} from "../src/btdigg-rock64.mjs";
 
 const secret="x".repeat(64);
 test("only configured server can use Rock64's fixed BTDigg endpoint",async()=>{
@@ -53,4 +53,52 @@ test("intermittent gateway failures expose safe, BTDigg-only cause and never aut
   await assert.rejects(()=>fetcher(original),pattern);
   assert.equal(calls,1,"a failed BTDigg search must never retry automatically");
  }
+});
+
+test("gateway source refusal carries bounded Retry-After to the Worker cache",async()=>{
+ const url="https://btdig.com/search?q=release-PSA";
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:secret},
+  async()=>new Response("",{status:429,headers:{
+   "retry-after":"601","x-magnetra-btdigg-429-scope":"source"
+  }}));
+ await assert.rejects(()=>adapter(url),e=>{
+  assert.match(e.message,/HTTP 429/);
+  assert.equal(e.retryAfterMs,601_000);
+  assert.doesNotMatch(String(e),/Bearer|magnet:|token/i);
+  return true;
+ });
+ for(const [value,expected] of [
+  ["5",5000],["1800",1800_000],["1801",1800_000],
+  ["999999",1800_000],["0",null],["-1",null],
+  ["1.2",null],[" 30 ",null],["Wed, 12 Nov",null],["",null],
+  [null,null],["1234567",null]
+ ])assert.equal(boundedBTDiggRetryAfterMs(value),expected,String(value));
+});
+
+test("local 5-second gateway pacing is not mislabeled as upstream refusal",async()=>{
+ let calls=0;
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:secret},
+  async()=>{calls++;return new Response("",{status:429,headers:{
+   "retry-after":"5","x-magnetra-btdigg-429-scope":"local-pacing"
+  }});});
+ await assert.rejects(()=>adapter("https://btdig.com/search?q=first"),e=>{
+  assert.equal(e.message,"BTDigg Rock64 local pacing.");
+  assert.doesNotMatch(e.message,/HTTP 429/);
+  assert.equal(e.retryAfterMs,undefined);
+  return true;
+ });
+ assert.equal(calls,1,"one bounded local response, no source retry");
+});
+
+test("older gateway without a scope header fails closed on 429",async()=>{
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:secret},
+  async()=>new Response("",{status:429,headers:{"retry-after":"9"}}));
+ await assert.rejects(()=>adapter("https://btdig.com/search?q=original"),e=>{
+  assert.match(e.message,/HTTP 429/);
+  assert.equal(e.retryAfterMs,9000);
+  return true;
+ });
 });

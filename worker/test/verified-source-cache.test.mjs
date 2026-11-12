@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createVerifiedSourceCache,FRESH_MS,STALE_MAX_MS,BTDIGG_DEFAULT_COOLDOWN_MS,BTDIGG_MAX_COOLDOWN_MS} from "../src/verified-source-cache.mjs";
+import {rock64BTDiggFetcher} from "../src/btdigg-rock64.mjs";
 
 test("same original source and exact query only; no cross-provider substitution",async()=>{
  let now=0,n=0;const cache=createVerifiedSourceCache(()=>now);
@@ -287,4 +288,52 @@ test("BTDigg cooldown is not a claim of global coordination across isolates",asy
  await assert.rejects(()=>one.search("btdigg","a","all",source),/429/);
  await assert.rejects(()=>two.search("btdigg","b","all",source),/429/);
  assert.equal(calls,2,"a separate Worker isolate has independent in-memory state");
+});
+
+test("private gateway 10-minute source Retry-After reaches BTDigg Worker cache without extra fetch",async()=>{
+ let now=0,transportCalls=0;
+ const cache=createVerifiedSourceCache(()=>now);
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:"t".repeat(64)},
+  async()=>{transportCalls++;return new Response("",{
+   status:429,headers:{
+    "retry-after":"600",
+    "x-magnetra-btdigg-429-scope":"source"
+   }});
+  });
+ const search=q=>cache.search("btdigg",q,"all",async()=>{
+  await adapter("https://btdig.com/search?q="+encodeURIComponent(q));
+  return [];
+ });
+ await assert.rejects(()=>search("first-PSA"),/HTTP 429/);
+ now=BTDIGG_DEFAULT_COOLDOWN_MS+1;
+ await assert.rejects(()=>search("another-PSA"),/HTTP 429/);
+ assert.equal(transportCalls,1,
+  "ten-minute real Retry-After must block second source lookup past five-minute default");
+ now=600_001;
+ await assert.rejects(()=>search("another-PSA"),/HTTP 429/);
+ assert.equal(transportCalls,2,
+  "only a new explicit request after expiry can contact the private gateway");
+});
+
+test("local five-second gateway pacing does not create a five-minute Worker cooldown",async()=>{
+ let now=0,transportCalls=0;
+ const cache=createVerifiedSourceCache(()=>now);
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:"t".repeat(64)},
+  async()=>{transportCalls++;return new Response("",{
+   status:429,headers:{
+    "retry-after":"5",
+    "x-magnetra-btdigg-429-scope":"local-pacing"
+   }});
+  });
+ const search=q=>cache.search("btdigg",q,"all",async()=>{
+  await adapter("https://btdig.com/search?q="+encodeURIComponent(q));
+  return [];
+ });
+ await assert.rejects(()=>search("one"),/local pacing/);
+ now=6000;
+ await assert.rejects(()=>search("two"),/local pacing/);
+ assert.equal(transportCalls,2,
+  "a short local pace is not evidence that origin refused future requests");
 });

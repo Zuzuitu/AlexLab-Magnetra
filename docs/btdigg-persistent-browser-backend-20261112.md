@@ -98,6 +98,31 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Private BTDigg rate-limit scope header (Worker ↔ Rock64 source only)
+
+When the Rock64 gateway responds with HTTP 429, it now labels its *own*
+authenticated response with `x-magnetra-btdigg-429-scope: source` if the
+real fetcher previously received source 429, or `local-pacing` if the
+five-second minimum search gap was enforced locally without source traffic.
+The `Retry-After` header remains numeric seconds, with a local-pacing
+minimum of five seconds; a source refusal reports its remaining five-minute
+deadline. The header does not expose queries, cookies, tokens, IPs or magnets.
+
+The private Worker BTDigg adapter treats `local-pacing` as a safe
+`RATE_LIMIT` error but does **not** start the Worker five-minute upstream
+refusal timer. For source refusal it passes a strictly parsed numeric
+`Retry-After` into the existing BTDigg Worker-isolate cache, capped at
+30 minutes, with no automated retry. Missing scope on older gateways
+continues to be treated conservatively as source 429. This is protocol
+parity and offline test coverage, not a live switch to browser port 18896.
+
+The owner physically confirmed 18/18 offline tests on Rock64 at main
+`8da0b7d` before this source-only change. No restart is needed to
+run new offline tests after pulling the source. The already-running
+Chromium backend, gateway on port 18896 and active production port
+8796 do not hot-reload from a Git pull. Don't restart them to test 429
+metadata while BTDigg is refusing searches.
+
 ## Source HTTP 429 pause in gateway (not the live browser)
 
 The new gateway-source candidate adds one source-only five-minute refusal

@@ -164,13 +164,14 @@ class GatewayTests(unittest.TestCase):
                              headers={"Authorization": "Bearer " + TOKEN})
                 response = conn.getresponse()
                 response.read()
-                return response.status, response.getheader("retry-after")
+                return (response.status, response.getheader("retry-after"),
+                        response.getheader("x-magnetra-btdigg-429-scope"))
             finally:
                 conn.close()
         try:
-            self.assertEqual(call("first"), (429, str(gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS)))
+            self.assertEqual(call("first"), (429, str(gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS), "source"))
             self.now[0] += 6
-            self.assertEqual(call("different"), (429, str(gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS-6)))
+            self.assertEqual(call("different"), (429, str(gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS-6), "source"))
             self.assertEqual(calls, ["first"])
         finally:
             server.shutdown()
@@ -247,6 +248,28 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(empty.search("ubuntu")[0], 200)
         self.assertFalse(empty._cache, "empty or challenge-like HTML cannot be cached")
 
+
+    def test_local_pacing_returns_short_retry_after_and_not_source_refusal(self):
+        self.assertEqual(self.call("/v1/search?q=ubuntu")[0], 200)
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", self.server.server_port, timeout=3)
+        try:
+            connection.request(
+                "GET", "/v1/search?q=debian",
+                headers={"Authorization": "Bearer " + TOKEN})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 429)
+            self.assertEqual(response.getheader("retry-after"),
+                             str(gateway.MIN_SEARCH_INTERVAL))
+            self.assertEqual(
+                response.getheader("x-magnetra-btdigg-429-scope"),
+                "local-pacing")
+            response.read()
+            self.assertEqual(self.provider.source_retry_after_seconds(), 0)
+            self.assertEqual(self.requests, ["ubuntu"],
+                             "local pacing must never contact BTDigg")
+        finally:
+            connection.close()
 
     @staticmethod
     def _simulated_connection(status=200, body=b'<div class="one_result">ok</div>',
