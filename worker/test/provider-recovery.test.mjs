@@ -33,6 +33,8 @@ test("provider error categories distinguish timeouts, rate limits, access denial
  assert.equal(classifyProviderError("BTDigg Rock64 source timed out (HTTP 504).").code,"BTDIGG_SOURCE_TIMEOUT");
  assert.equal(classifyProviderError("BTDigg Rock64 tunnel Cloudflare 1042.").code,"BTDIGG_TUNNEL_1042");
  assert.equal(classifyProviderError("BTDigg Rock64 gateway transport failed.").code,"BTDIGG_TUNNEL_ERROR");
+ assert.equal(classifyProviderError("BTDigg Rock64 local pacing.").code,"RATE_LIMIT");
+ assert.match(classifyProviderError("BTDigg Rock64 local pacing.").message,/gateway is spacing requests/);
 });
 test("provider timeouts have explicit recovery metadata, not opaque failure text",async()=>{
  const original=globalThis.fetch;
