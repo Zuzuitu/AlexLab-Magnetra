@@ -32,11 +32,25 @@ class BrowserSourcePilotTests(unittest.TestCase):
                 u = urlsplit(result)
                 self.assertEqual(u.path, path)
                 self.assertEqual(parse_qs(u.query)["q"], ["PSA 1080p x265 10bit"])
+                if provider == "btdigg":
+                    self.assertEqual(u.query, "order=0&q=PSA+1080p+x265+10bit")
+                    self.assertEqual(parse_qs(u.query)["order"], ["0"])
                 self.assertEqual(u.scheme, "https")
                 self.assertTrue(pilot.approved_landing(provider, result))
         self.assertEqual(parse_qs(urlsplit(
             pilot.search_target("thepiratebay", "ubuntu", "movies")
         ).query)["cat"], ["200"])
+
+    def test_exact_owner_verified_bt_digg_url_and_fixed_first_page_sort(self):
+        self.assertEqual(
+            pilot.search_target("btdigg", "The Dog Stars 2026"),
+            "https://btdig.com/search?order=0&q=The+Dog+Stars+2026",
+        )
+        self.assertEqual(
+            pilot.search_target("btdigg", "The.Dog.Stars.2026.1080p.x265-PSA"),
+            "https://btdig.com/search?order=0&q=The.Dog.Stars.2026.1080p.x265-PSA",
+        )
+        self.assertNotIn("order=0", pilot.search_target("thepiratebay", "ubuntu"))
 
     def test_input_validation_never_expands_source_scope(self):
         for text in ["", "X", "\r\n", "example\nsecret", "A"*181,
