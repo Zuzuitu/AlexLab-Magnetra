@@ -29,7 +29,7 @@ existing HTMLRewriter parser and PSA, group, codec and resolution ranking;
 those components are unchanged.
 
 **Not live:** Default public BTDigg remains the existing cffi gateway.
-The new gateway is opt-in only, listens on private loopback port 8798,
+The new gateway is opt-in only, listens on private loopback port 18896,
 and requires a separate private bearer credential. The existing port
 8796 is blocked by independent source-permission and production gates.
 
