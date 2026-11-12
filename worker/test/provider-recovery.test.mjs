@@ -34,22 +34,6 @@ test("provider error categories distinguish timeouts, rate limits, access denial
  assert.equal(classifyProviderError("BTDigg Rock64 tunnel Cloudflare 1042.").code,"BTDIGG_TUNNEL_1042");
  assert.equal(classifyProviderError("BTDigg Rock64 gateway transport failed.").code,"BTDIGG_TUNNEL_ERROR");
 });
-test("BTDigg HTTP 429 is reported without prompting the discarded manual browser workflow",async()=>{
- const original=globalThis.fetch;
- try{
-  globalThis.fetch=async()=>new Response("Rate limited",{status:429});
-  const res=await worker.fetch(new Request("https://index.alexlab.media/api/search?q=ubuntu&providers=btdigg"),{});
-  assert.equal(res.status,200);
-  const data=await res.json();
-  assert.equal(data.total,0);
-  assert.equal(data.errors.length,1);
-  assert.equal(data.errors[0].provider,"btdigg");
-  assert.equal(data.errors[0].code,"RATE_LIMIT");
-  assert.equal(data.errors[0].retryable,false);
-  assert.equal(data.errors[0].openUrl,null);
-  assert.deepEqual(data.results,[],"Never impersonate another source's results as BTDigg");
- }finally{globalThis.fetch=original;}
-});
 test("provider timeouts have explicit recovery metadata, not opaque failure text",async()=>{
  const original=globalThis.fetch;
  try{
@@ -116,6 +100,24 @@ test("public BTDigg API distinguishes upstream HTTP 504 from tunnel fetch timeou
  }finally{globalThis.fetch=original;}
 });
 
+// A provider 429 deliberately latches the shared Worker-isolate cache.
+// Exercise 503/504 mocks before this terminal refusal scenario.
+test("BTDigg HTTP 429 is reported without prompting the discarded manual browser workflow",async()=>{
+ const original=globalThis.fetch;
+ try{
+  globalThis.fetch=async()=>new Response("Rate limited",{status:429});
+  const res=await worker.fetch(new Request("https://index.alexlab.media/api/search?q=ubuntu&providers=btdigg"),{});
+  assert.equal(res.status,200);
+  const data=await res.json();
+  assert.equal(data.total,0);
+  assert.equal(data.errors.length,1);
+  assert.equal(data.errors[0].provider,"btdigg");
+  assert.equal(data.errors[0].code,"RATE_LIMIT");
+  assert.equal(data.errors[0].retryable,false);
+  assert.equal(data.errors[0].openUrl,null);
+  assert.deepEqual(data.results,[],"Never impersonate another source's results as BTDigg");
+ }finally{globalThis.fetch=original;}
+});
 test("PWA uses translated categorical BTDigg errors without exposing developer codes",()=>{
  const app=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
  assert.match(app,/const genericError=\(failure\)=>/);
