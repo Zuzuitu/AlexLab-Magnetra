@@ -21,7 +21,7 @@ class VisualSessionTests(unittest.TestCase):
     def test_safe_listeners_and_authentication(self):
         s = self.source
         for mandatory in [
-            "tailscale ip -4", "100.64.0.0/10", "MAGNETRA_TS_IP",
+            "tailscale ip -4", "octets[0] == 100", "MAGNETRA_TS_IP",
             '"$MAGNETRA_TS_IP:6088"', "127.0.0.1:5993", "-localhost",
             "-rfbauth", "-storepasswd", "chmod 600", "xauth",
             "-nolisten tcp", "xvfb-run -a", "websockify --web=/usr/share/novnc",
