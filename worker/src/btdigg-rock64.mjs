@@ -3,6 +3,14 @@
 // No browser-supplied URL, open proxy, external redirects, or secret in public assets.
 export const BTDIGG_GATEWAY_ORIGIN = "https://btdigg-rock64.alexlab.media";
 
+// Rock64 emits decimal seconds on its authenticated 429 responses. Do not
+// trust arbitrary Retry-After strings, follow redirects or create retry timers.
+export function boundedBTDiggRetryAfterMs(value) {
+ if(typeof value!=="string"||!(/^[1-9][0-9]{0,5}$/).test(value))return null;
+ const seconds=Number(value);
+ return Number.isSafeInteger(seconds)?Math.min(30*60_000,seconds*1000):null;
+}
+
 export function rock64BTDiggFetcher(env, transport=fetch) {
  const secret=env?.BTDIGG_GATEWAY_TOKEN;
  if(secret==null||secret==="")return null;
@@ -40,7 +48,18 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
    throw Error("BTDigg gateway redirect refused.");
   if(response.status===401||response.status===403)
    throw Error("BTDigg Rock64 gateway authorization failed.");
-  if(response.status===429)throw Error("BTDigg gateway/provider HTTP 429 (rate limited).");
+  if(response.status===429){
+   // The newer private gateway distinguishes an origin denial from a
+   // five-second local pacing rejection. A legacy gateway has no scope:
+   // fail closed and keep the existing conservative source-429 pause.
+   const scope=response.headers.get("x-magnetra-btdigg-429-scope");
+   if(scope==="local-pacing")
+    throw Error("BTDigg Rock64 local pacing.");
+   const err=Error("BTDigg gateway/provider HTTP 429 (rate limited).");
+   err.retryAfterMs=boundedBTDiggRetryAfterMs(
+    response.headers.get("retry-after"));
+   throw err;
+  }
   if(response.status===504)throw Error("BTDigg Rock64 source timed out (HTTP 504).");
   if(!response.ok)throw Error("BTDigg Rock64 gateway HTTP "+response.status);
   if(!/text\/html/i.test(response.headers.get("content-type")||""))
