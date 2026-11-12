@@ -94,6 +94,25 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(html, HTML.encode())
         self.assertEqual(page.goto_calls, [])
 
+    def test_manually_typed_lowercase_search_reuses_current_page(self):
+        page = FakePage(url=backend.query_url("the dog stars 2026"))
+        status, html = backend.VisibleBrowserFetcher(page).fetch(
+            "The Dog Stars 2026")
+        self.assertEqual((status, html), (200, HTML.encode("utf-8")))
+        self.assertEqual(page.goto_calls, [],
+                         "case-only differences must not create a source request")
+        self.assertEqual(page.waits, [])
+
+    def test_casefold_does_not_accept_unrelated_query(self):
+        self.assertTrue(backend.same_search_query(
+            "the dog stars 2026", "The Dog Stars 2026"))
+        self.assertFalse(backend.same_search_query(
+            "the dog stars 2025", "The Dog Stars 2026"))
+        self.assertFalse(backend.same_search_query(
+            None, "The Dog Stars 2026"))
+        self.assertFalse(backend.same_search_query(
+            "the dog stars 2026 720p", "The Dog Stars 2026"))
+
     def test_redirect_to_wrong_query_refuses_html_even_if_rows_visible(self):
         page = FakePage()
         original_goto = page.goto

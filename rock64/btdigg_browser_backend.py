@@ -70,6 +70,20 @@ def source_landing(url):
     return source_query(url) is not None
 
 
+def same_search_query(source_value, requested_value):
+    """Source search query matching ignores letter case, not query contents.
+
+    A manual lowercase search must not trigger another source request when a
+    later owner-invoked gateway probe uses title case. Never match missing or
+    unrelated queries and still require authentic source HTML and magnet rows.
+    """
+    return (
+        isinstance(source_value, str)
+        and isinstance(requested_value, str)
+        and source_value.casefold() == requested_value.strip().casefold()
+    )
+
+
 def validated_result_html(page):
     """Return only genuine source-owned result HTML; otherwise no bytes.
 
@@ -106,9 +120,9 @@ class VisibleBrowserFetcher:
             current = self.page.url
             if not validated_result_html(self.page):
                 return 503, b""
-            # + vs %20 are equivalent URL encodings for the SAME query;
-            # do not trigger an unnecessary second browser navigation.
-            if source_query(current) != query.strip():
+            # + vs %20 URL encodings and title-case vs lowercase are equivalent
+            # searches. Do not trigger another navigation from a verified page.
+            if not same_search_query(source_query(current), query):
                 result = self.page.goto(
                     target, wait_until="domcontentloaded", timeout=10000)
                 if result is None:
@@ -119,7 +133,7 @@ class VisibleBrowserFetcher:
                     return 503, b""
                 self.page.wait_for_timeout(900)
             html = validated_result_html(self.page)
-            if source_query(self.page.url) != query.strip() or html is None:
+            if not same_search_query(source_query(self.page.url), query) or html is None:
                 return 503, b""
             return 200, html
         except (ValueError, TypeError):

@@ -22,8 +22,12 @@ session** controlled through Playwright's private pipe.
 
 A challenge page is **not** reported as zero matches. Without verified
 source result rows, search returns HTTP 503 without retrying upstream.
-Once the human-verified browser has results, a subsequent owner-triggered
-request can navigate within that same browser and pass original HTML back
+Once the human-verified browser has results, a case-only query difference
+(e.g., manual `the dog stars 2026` vs. owner probe `The Dog Stars 2026`)
+reuses the current verified page without triggering a second navigation.
+A genuinely different search still requires its own explicit request.
+A subsequent owner-triggered request can navigate within that same browser
+and pass original HTML back
 to the existing authenticated gateway. The Cloudflare Worker has its
 existing HTMLRewriter parser and PSA, group, codec and resolution ranking;
 those components are unchanged.
