@@ -1,5 +1,30 @@
 # AlexLab Magnetra — Project State
 
+## 12 NOV 2026 — ANDROID CI INPUT FILTERING (OWNER DECISION)
+
+Owner explicitly confirmed Android APKs are currently unused and that repeated
+debug/staging Gradle builds on Magnetra's Rock64/PWA-only PRs waste time. The
+two standard GitHub Actions APK workflows now use symmetrical `push` and
+`pull_request` `paths` filters: they run for `app/**`, root Gradle wrapper
+and configuration inputs, or either debug/staging workflow's own definition;
+`workflow_dispatch` remains available for manual builds. The signed release
+workflow stays manual and unchanged. Work on `rock64/**`, `worker/**`,
+`web/**`, docs, CI checks and unrelated Python tests no longer triggers an
+Android APK build. The existing PWA/provider workflow remains required and
+runs a new offline path-filter regression check on each PR. The owner does
+not plan to use Android now; this is a CI scheduling optimization, **not**
+a deletion of Android sources or a change to the 46 providers.
+
+Current GitHub billing documentation confirms standard GitHub-hosted
+runners in PUBLIC repositories are free of billable compute minutes.
+A GitHub usage warning cannot by itself be attributed to the public
+Magnetra APK jobs: private repositories, larger runners and artifact/cache
+storage have distinct billing. Need the owner's warning body or account
+usage breakdown to attribute it correctly. Potential required-check
+settings must be reviewed if an APK job had been required for all PRs:
+GitHub path-filtered jobs may be absent for unrelated PRs, whereas the
+always-on PWA/contract job remains a separate check.
+
 ## 12 NOV 2026 — BTDIGG COLD-START NO-SEARCH GUARD + LOCAL CHROMIUM EXIT MARKERS
 
 Current repository audit found an explicit startup `page.goto(query_url("The Dog Stars 2026"))` whenever the selected Playwright persistent page did not have a canonical BTDigg search URL. This could independently request the upstream source on a fresh/blank browser launch, even though the owner has observed `Too Many Requests`. Source-only candidate removes that unconditional bootstrap navigation: a new/blank persistent browser starts blank until the owner navigates manually; existing pages are only inspected. **Chromium itself may restore/reload tabs from its persistent profile**, so this does not guarantee a fully network-free process restart. The currently running tmux session must not be restarted just to test this source change.
