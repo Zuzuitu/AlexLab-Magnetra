@@ -77,7 +77,9 @@ class VisualSessionTests(unittest.TestCase):
         self.assertIn('rm -rf -- "$SESSION_DIR"', s)
         self.assertIn("mktemp -d", s)
         self.assertNotIn("magnet:?xt=", s)
-        self.assertNotIn("playwright", s.lower())
+        # The default manual mode still launches normal Chromium directly.
+        # The separate opt-in persistent mode intentionally uses Playwright.
+        self.assertIn('  else\n    chromium --user-data-dir=', s)
         self.assertNotIn("captcha.solve", s.lower())
         self.assertNotIn("curl ", s)
 
