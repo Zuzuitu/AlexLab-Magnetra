@@ -21,7 +21,7 @@ FAKE_PS = """8503 1 Xvfb Xvfb :99 -screen 0 1280x800x24 -auth /tmp/old/private
 15096 15086 Xvfb Xvfb :102 -screen 0 1280x800x24
 15099 15086 bash bash -c 'secret bearer password btdig.com'
 15100 15099 x11vnc x11vnc -norc -display :102 -localhost -rfbauth /private/password
-15101 15099 python3 /usr/bin/python3 /usr/bin/websockify --web=/usr/share/novnc 100.79.134.61:6088 127.0.0.1:5993
+15101 15099 python3 /usr/bin/python3 /usr/bin/websockify --web=/usr/share/novnc TAILSCALE_IP_REDACTED:6088 127.0.0.1:5993
 15103 15099 python /home/runner/.venvs/magnetra-browser/bin/python /home/runner/magnetra-cffi-live-20261028/rock64/btdigg_browser_backend.py
 """
 
@@ -41,7 +41,7 @@ class VisualProcessAuditTests(TestCase):
                          [":99", ":100", ":101"])
         self.assertEqual(result["source_requests"], 0)
         text = json.dumps(result)
-        for forbidden in ("secret", "btdig.com", "100.79.134.61",
+        for forbidden in ("secret", "btdig.com", "TAILSCALE_IP_REDACTED",
                           "password", "magnet:?xt"):
             self.assertNotIn(forbidden, text)
 
@@ -81,7 +81,7 @@ class VisualProcessAuditTests(TestCase):
         self.assertEqual(json.loads(text)["browser_backend_pids"], [15103])
         self.assertNotIn("secret", text)
         self.assertNotIn("btdig.com", text)
-        self.assertNotIn("100.79.134.61", text)
+        self.assertNotIn("TAILSCALE_IP_REDACTED", text)
 
     def test_fail_closed_if_ps_unavailable_and_tmux_missing(self):
         out = StringIO()
