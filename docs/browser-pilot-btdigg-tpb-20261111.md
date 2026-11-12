@@ -92,6 +92,61 @@ is introduced. TPB scope and existing Cloudflare/Flud services are unchanged.
 Only after the owner inspects this single response can we decide whether
 the browser is getting a soft-block page, a search shell or missing markup.
 
+## Evidence: BTDigg serves Google reCAPTCHA assets to Rock64
+
+The 12 November 2026 owner-run probe for the **exact** BTDigg URL
+`https://btdig.com/search?order=0&q=The+Dog+Stars+2026` observed
+`navigation_status=200`, `response_html_chars=59181`,
+`response_markup_result_marker=false`,
+`response_search_form_marker=false`,
+`response_verification_marker=true`, all genuine DOM counts zero, and
+`blocked_script_categories.verification=1`. The pilot's `verification`
+classification is **not generic**: it recognizes only Google reCAPTCHA
+paths on the official `www.google.com`, `www.gstatic.com` or
+`recaptcha.google.com` hosts. Thus one real **Google reCAPTCHA resource**
+was requested and blocked by the pilot. This is strong evidence of a
+verification/interstitial response instead of real search HTML. It does
+**not** prove that the response uses a particular reCAPTCHA variant or
+that completing a verification guarantees subsequent programmatic access.
+
+### Opt-in normal Google resources — experimental, NOT production
+
+The original default continues to block all third-party assets, including
+reCAPTCHA. This revision adds an explicit **owner-invoked test mode**:
+`--allow-recaptcha-assets`. For BTDigg **only**, it permits HTTPS paths
+under `/recaptcha/` on exactly the three official hosts above. Other
+Google services, third-party trackers, scripts/CDNs, nonstandard ports,
+insecure HTTP, redirected page navigations, TPB and all eight other PWA
+indexers remain outside this exception.
+
+This is **not** a CAPTCHA solver, challenge bypass, fingerprint
+spoofing, cookie/session replay, proxy, IP rotation or search API. It
+does not persist sessions. A visible human challenge cannot be solved
+through this headless diagnostic; such an outcome must remain
+`no_rows_unverified` and must never become fabricated results. One
+top-level, owner-triggered navigation only; ordinary reCAPTCHA
+subresources and external verification requests may be made by the page.
+
+Optional after code merge and offline tests PASS:
+
+    cd "$HOME/magnetra-cffi-live-20261028"
+    "$HOME/.venvs/magnetra-browser/bin/python" rock64/browser_sources_pilot.py --provider btdigg --category movies --allow-recaptcha-assets
+
+Enter `The Dog Stars 2026` once. Inspect
+`recaptcha_assets_mode`, `recaptcha_subresources`,
+`response_recaptcha_script_marker`,
+`response_recaptcha_widget_marker`,
+`response_recaptcha_invisible_marker`,
+`response_verification_marker` and
+`verified_dom_result_pairs`. Do **not** repeat after an upstream
+429/403 or treat a successful CAPTCHA-resource load as a successful
+source search.
+
+If the site requires a human challenge, a future mode would have to be
+explicitly interactive and respect the site's access policy. Until then,
+regular iPhone Safari/Chrome manually copying a magnet into the existing
+Magnetra Flud Companion action is the proven workaround.
+
 ## Safe prerequisite check on Rock64 (no installation)
 
 Run as runner, not root:
