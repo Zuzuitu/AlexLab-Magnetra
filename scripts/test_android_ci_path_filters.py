@@ -49,6 +49,8 @@ class AndroidCIPathFilterTests(unittest.TestCase):
                 self.assertEqual(len(pre_jobs), 2, "jobs: missing")
                 section = pre_jobs[0]
                 self.assertNotIn("paths-ignore:", section)
+                self.assertIn("retention-days: 1", content,
+                              "temporary APKs must not use 90-day retention")
                 self.assertRegex(section, r"(?m)^  workflow_dispatch:\s*$")
                 found = {}
                 for event in ("push", "pull_request"):
