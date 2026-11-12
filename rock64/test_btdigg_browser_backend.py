@@ -392,7 +392,7 @@ class BrowserBackendTests(TestCase):
 
     def test_persistent_chromium_does_not_auto_visit_on_startup(self):
         source = Path(backend.__file__).read_text()
-        startup = source.split("\\ndef main():", 1)[1]
+        startup = source.split("def main():", 1)[1]
         self.assertIn("launch_persistent_context(", startup)
         self.assertIn("context.pages[0] if context.pages else context.new_page()", startup)
         self.assertNotIn(".goto(", startup,
