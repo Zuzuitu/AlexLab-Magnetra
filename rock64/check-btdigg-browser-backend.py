@@ -20,9 +20,13 @@ TOKEN_FILE = STATE / "gateway.token"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--test-search", action="store_true",
-                        help="Perform exactly one human-invoked BTDigg browser query")
+    tests = parser.add_mutually_exclusive_group()
+    tests.add_argument("--test-search", action="store_true",
+                       help="Fetch original owner-verified search once")
+    tests.add_argument("--test-next-search", action="store_true",
+                       help="Perform one distinct follow-up query in the same browser")
     args = parser.parse_args()
+    search_performed = args.test_search or args.test_next_search
     try:
         if TOKEN_FILE.is_symlink() or not TOKEN_FILE.is_file():
             raise ValueError("missing private token")
@@ -32,9 +36,13 @@ def main():
         if not re.fullmatch(r"[A-Za-z0-9_-]{48,256}", token):
             raise ValueError("invalid token")
         path = "/healthz"
-        if args.test_search:
-            path = "/v1/search?q=" + urllib.parse.quote(
-                "The Dog Stars 2026", safe="")
+        if search_performed:
+            # Real source screenshot confirms 720p rows for this title/year.
+            # This is different from Chromium's boot query and proves that
+            # the browser can navigate for one user-invoked search.
+            query = ("The Dog Stars 2026 720p"
+                     if args.test_next_search else "The Dog Stars 2026")
+            path = "/v1/search?q=" + urllib.parse.quote(query, safe="")
         req = urllib.request.Request(
             LOCAL + path,
             headers={"authorization": "Bearer " + token,
@@ -43,8 +51,8 @@ def main():
         with urllib.request.urlopen(req, timeout=14) as r:
             body = r.read(3_000_001)
             status = r.status
-        result = {"local_gateway_status": status, "search_performed": args.test_search}
-        if args.test_search:
+        result = {"local_gateway_status": status, "search_performed": search_performed}
+        if search_performed:
             result.update({
                 "source_html_bounded": 0 < len(body) <= 3_000_000,
                 "source_result_marker": b"one_result" in body.lower(),
@@ -54,7 +62,7 @@ def main():
     except urllib.error.HTTPError as e:
         print(json.dumps({
             "local_gateway_status": e.code,
-            "search_performed": args.test_search,
+            "search_performed": search_performed,
             "verified_results": False,
         }, sort_keys=True))
     except (OSError, ValueError, urllib.error.URLError):
