@@ -113,6 +113,51 @@ def classify_page(provider, *, status, landing, title, rows, magnets,
     return "no_rows_unverified"
 
 
+def classify_blocked_script(url):
+    """Coarse categories only, never emit an external path, host or URL."""
+    try:
+        parsed = urlsplit(url)
+        host = (parsed.hostname or "").lower()
+        path = parsed.path.lower()
+        if (host in {"www.google.com", "www.gstatic.com",
+                     "recaptcha.google.com"}
+                and ("recaptcha" in path or host == "recaptcha.google.com")):
+            return "verification"
+        if host in {"cdnjs.cloudflare.com", "cdn.jsdelivr.net",
+                    "unpkg.com", "code.jquery.com"}:
+            return "static_cdn"
+    except (TypeError, ValueError):
+        pass
+    return "other"
+
+
+def classify_document_markup(markup, content_type=None):
+    """Read-only metadata from response body; never persist or output markup."""
+    if not isinstance(markup, str):
+        return {
+            "response_html_chars": None,
+            "response_markup_result_marker": None,
+            "response_search_form_marker": None,
+            "response_verification_marker": None,
+            "response_is_html": None,
+        }
+    lower = markup[:3_000_000].lower()
+    return {
+        "response_html_chars": min(len(markup), 3_000_000),
+        "response_markup_result_marker": bool(re.search(
+            r"""\bclass\s*=\s*['"][^'"]*\bone_result\b""", lower)),
+        "response_search_form_marker": (
+            'name="q"' in lower or "name='q'" in lower
+        ),
+        "response_verification_marker": any(x in lower for x in (
+            "cf-mitigated", "just a moment", "checking your browser",
+            "verify you are human", "recaptcha", "captcha"
+        )),
+        "response_is_html": ("text/html" in str(content_type).lower())
+            if content_type is not None else None,
+    }
+
+
 def _no_proxy_environment():
     return not any(value for name, value in os.environ.items()
                    if name.upper() in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"})
@@ -156,6 +201,8 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                 try:
                     page = context.new_page()
                     blocked_resources = {"total": 0, "scripts": 0}
+                    script_categories = {"verification": 0,
+                                         "static_cdn": 0, "other": 0}
                     def route_handler(route):
                         if allowed_resource(provider, route.request.url):
                             route.continue_()
@@ -166,6 +213,12 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                             if getattr(route.request, "resource_type", None) == "script":
                                 blocked_resources["scripts"] = min(
                                     100, blocked_resources["scripts"] + 1
+                                )
+                                category = classify_blocked_script(
+                                    route.request.url
+                                )
+                                script_categories[category] = min(
+                                    100, script_categories[category] + 1
                                 )
                             route.abort()
                     page.route("**/*", route_handler)
@@ -185,6 +238,26 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                     # Short bounded visual settle, NOT a request retry/poll loop.
                     page.wait_for_timeout(SETTLE_MS)
                     status = result.status
+                    # The original navigation response body is ALREADY loaded.
+                    # Read it locally without any additional BTDigg request.
+                    # Never print source HTML, query, cookie, magnets or URLs.
+                    markup = None
+                    try:
+                        read_text = getattr(result, "text", None)
+                        if callable(read_text):
+                            markup = read_text()
+                    except Exception:
+                        pass
+                    content_type = None
+                    try:
+                        content_type = getattr(result, "headers", {}).get(
+                            "content-type"
+                        )
+                    except Exception:
+                        pass
+                    response_features = classify_document_markup(
+                        markup, content_type
+                    )
                     # These are independent RAW DOM counts, not inferred matches.
                     # Never mask them to zero merely because strict validation fails.
                     rows = min(MAX_DOM_ROWS, page.locator(".one_result").count())
@@ -229,6 +302,8 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                         "result_structure": structure,
                         "blocked_external_resources": blocked_resources["total"],
                         "blocked_external_scripts": blocked_resources["scripts"],
+                        "blocked_script_categories": script_categories,
+                        **response_features,
                         "search_results_extracted": False,
                         "production_changed": False,
                     }
