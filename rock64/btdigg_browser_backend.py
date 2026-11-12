@@ -48,15 +48,26 @@ def query_url(query):
     return SOURCE + "/search?order=0&q=" + quote(query, safe="")
 
 
-def source_landing(url):
+def source_query(url):
+    """Only canonical BTDigg search pages; never trust a redirect's query."""
     try:
         u = urlsplit(url)
-        return (u.scheme == "https" and u.hostname == "btdig.com"
+        params = parse_qs(u.query, keep_blank_values=True)
+        if not (u.scheme == "https" and u.hostname == "btdig.com"
                 and u.username is None and u.password is None
                 and u.port in (None, 443) and u.path == "/search"
-                and "q" in parse_qs(u.query))
-    except (ValueError, TypeError):
-        return False
+                and not u.fragment and set(params) == {"order", "q"}
+                and params["order"] == ["0"]
+                and len(params["q"]) == 1
+                and 2 <= len(params["q"][0]) <= QUERY_LIMIT):
+            return None
+        return params["q"][0]
+    except (ValueError, TypeError, KeyError):
+        return None
+
+
+def source_landing(url):
+    return source_query(url) is not None
 
 
 def validated_result_html(page):
@@ -95,7 +106,9 @@ class VisibleBrowserFetcher:
             current = self.page.url
             if not validated_result_html(self.page):
                 return 503, b""
-            if current != target:
+            # + vs %20 are equivalent URL encodings for the SAME query;
+            # do not trigger an unnecessary second browser navigation.
+            if source_query(current) != query.strip():
                 result = self.page.goto(
                     target, wait_until="domcontentloaded", timeout=10000)
                 if result is None:
@@ -106,7 +119,7 @@ class VisibleBrowserFetcher:
                     return 503, b""
                 self.page.wait_for_timeout(900)
             html = validated_result_html(self.page)
-            if html is None:
+            if source_query(self.page.url) != query.strip() or html is None:
                 return 503, b""
             return 200, html
         except (ValueError, TypeError):
