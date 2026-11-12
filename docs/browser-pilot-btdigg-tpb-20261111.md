@@ -61,6 +61,37 @@ Do not automatically issue an additional query after a 429; the pilot
 never loops or retries. Genuine results must still be validated locally
 for title, release group, codec and quality before being classified as PSA.
 
+## Rock64 Chromium HTTP 200 with zero real DOM selectors (12 Nov 2026)
+
+Owner's latest **one-shot** normal Chromium test for `The Dog Stars 2026`,
+using the verified exact BTDigg URL `/search?order=0&q=The+Dog+Stars+2026`,
+reported: navigation HTTP 200; 0 genuine `.one_result` DOM blocks,
+0 title links, 0 BTIH magnets, and **one blocked external script**.
+
+By contrast, normal iPhone browser screenshots show thousands of real source
+results for that query and genuine magnets while on home Wi-Fi. This rules
+out a missing-title explanation. A 200 response does **not** prove full
+search access or genuine server-rendered result HTML.
+
+**Do not presume the blocked script is causal.** Independent HTML adapters
+parse `one_result` markup from BTDigg without running JavaScript; an
+external verification/analytics script may be unrelated to result rendering.
+Do not disable the allowlist, bypass CAPTCHA/verification or fake results.
+
+A read-only next revision adds *metadata only*, from the **same, already
+loaded navigation response** and the existing blocked requests:
+- `response_html_chars`, `response_is_html`;
+- `response_markup_result_marker` and `response_search_form_marker`;
+- `response_verification_marker` (presence of known verification strings
+  is **not** conclusive evidence of blocking);
+- `blocked_script_categories` grouped as verification/static_cdn/other.
+
+No raw HTML, blocked URLs/hosts, queries, magnets, tokens, source headers,
+or cookies are printed; no additional BTDigg request or second page load
+is introduced. TPB scope and existing Cloudflare/Flud services are unchanged.
+Only after the owner inspects this single response can we decide whether
+the browser is getting a soft-block page, a search shell or missing markup.
+
 ## Safe prerequisite check on Rock64 (no installation)
 
 Run as runner, not root:
