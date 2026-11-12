@@ -60,7 +60,7 @@ PY
   chmod 600 "$TOKEN_FILE"
   export MAGNETRA_BTDIGG_TOKEN="$(cat "$TOKEN_FILE")"
   export MAGNETRA_BTDIGG_BROWSER_OPT_IN=1
-  export MAGNETRA_BTDIGG_BROWSER_PORT=8798
+  export MAGNETRA_BTDIGG_BROWSER_PORT=18896
   export MAGNETRA_BROWSER_PROFILE="$STATE_DIR/profile"
   export MAGNETRA_BROWSER_PYTHON="$HOME/.venvs/magnetra-browser/bin/python"
   export MAGNETRA_BROWSER_ENTRY="$(pwd -P)/rock64/btdigg_browser_backend.py"
@@ -138,7 +138,7 @@ xvfb-run -a -s '-screen 0 1280x800x24 -nolisten tcp' bash -c '
   printf "http://%s:6088/vnc.html?autoconnect=1&resize=remote\n" "$MAGNETRA_TS_IP"
   printf "Enter your VNC password. Interact with CAPTCHA manually if shown.\n"
   if [[ "$MAGNETRA_VISUAL_MODE" == persistent ]]; then
-    printf "Local authenticated browser gateway is on loopback port 8798.\n"
+    printf "Local authenticated browser gateway is on loopback port 18896.\n"
     printf "Press Ctrl+C to stop it. Browser verification is saved in your private profile.\n"
     printf "No Cloudflare tunnel or Magnetra production route was changed.\n"
   else
