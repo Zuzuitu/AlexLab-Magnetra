@@ -19,13 +19,15 @@ TOKEN_FILE = STATE / "gateway.token"
 PREFERENCES_FILE = STATE / "profile" / "Default" / "Preferences"
 
 
-def local_profile_exit_state(path=PREFERENCES_FILE):
+def local_profile_exit_state(path=None):
     """Read only two nonsecret Chromium profile markers. No browser requests.
 
     Chromium can mark a profile unclean WHILE it is running, so this is not
     a verdict on whether a previous Ctrl+C was graceful. Compare only after
     an intentional clean shutdown, never write or repair Preferences here.
     """
+    if path is None:
+        path = PREFERENCES_FILE
     try:
         if (path.is_symlink() or path.parent.is_symlink()
                 or path.parent.parent.is_symlink()
