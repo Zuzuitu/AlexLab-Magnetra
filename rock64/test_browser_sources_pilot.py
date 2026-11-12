@@ -158,6 +158,128 @@ class BrowserSourcePilotTests(unittest.TestCase):
                 self.assertEqual(actual, expected)
                 self.assertNotIn("PRIVATE_", actual)
 
+    def test_official_google_recaptcha_allowlist_is_strict_and_btdigg_only(self):
+        allowed = [
+            "https://www.google.com/recaptcha/api.js?render=PRIVATE_KEY",
+            "https://www.google.com/recaptcha/api2/anchor?k=PRIVATE_KEY",
+            "https://www.gstatic.com/recaptcha/releases/hash/recaptcha__en.js",
+            "https://recaptcha.google.com/recaptcha/api2/bframe",
+        ]
+        disallowed = [
+            "http://www.google.com/recaptcha/api.js",
+            "https://www.google.com/search?q=PRIVATE_QUERY",
+            "https://www.google.com/recaptcha",
+            "https://www.google.com:8443/recaptcha/api.js",
+            "https://malicious.example/recaptcha/api.js",
+            "https://www.google.com.evil.example/recaptcha/api.js",
+            "https://evil@www.google.com/recaptcha/api.js",
+            "https://recaptcha.google.com.evil.example/recaptcha/api2/anchor",
+            "https://www.gstatic.com/other/script.js",
+            "data:text/javascript,bad",
+            "file:///etc/passwd",
+        ]
+        for url in allowed:
+            with self.subTest(url=url):
+                self.assertTrue(
+                    pilot.approved_google_recaptcha_resource("btdigg", url))
+                self.assertFalse(
+                    pilot.approved_google_recaptcha_resource("thepiratebay", url))
+                self.assertFalse(
+                    pilot.allowed_resource("btdigg", url),
+                    "secure default must still block the new opt-in Google origins")
+        for url in disallowed:
+            with self.subTest(url=url):
+                self.assertFalse(
+                    pilot.approved_google_recaptcha_resource("btdigg", url))
+        with self.assertRaisesRegex(
+                pilot.PilotStop, "verification_assets_only_for_btdigg"):
+            pilot.owner_probe("thepiratebay", "ubuntu",
+                              allow_recaptcha_assets=True)
+
+    def test_recaptcha_markup_markers_are_only_non_sensitive_hints(self):
+        cases = [
+            ('<script src="https://www.google.com/recaptcha/api.js?render=SITEKEY"></script>',
+             (True, False, True)),
+            ('<div class="g-recaptcha" data-sitekey="PRIVATE"></div>',
+             (False, True, False)),
+            ('<script>grecaptcha.execute("PRIVATE")</script>',
+             (False, False, True)),
+            ('<div>normal torrent result</div>',
+             (False, False, False))
+        ]
+        for html, expected in cases:
+            data = pilot.classify_document_markup(html, "text/html")
+            self.assertEqual(
+                (data["response_recaptcha_script_marker"],
+                 data["response_recaptcha_widget_marker"],
+                 data["response_recaptcha_invisible_marker"]), expected)
+            self.assertNotIn("PRIVATE", str(data))
+            self.assertNotIn("SITEKEY", str(data))
+
+    def test_optin_navigation_loads_only_standard_recaptcha_not_arbitrary_third_parties(self):
+        calls = []
+        recaptcha = "https://www.google.com/recaptcha/api.js?render=PRIVATE_SITEKEY"
+        target = pilot.search_target("btdigg", "ubuntu")
+        class Route:
+            def __init__(self, url):
+                self.request = SimpleNamespace(url=url, resource_type="script")
+            def continue_(self): calls.append("allowed")
+            def abort(self): calls.append("blocked")
+        class Page:
+            url = target
+            def route(self, pattern, cb):
+                for address in [target, recaptcha,
+                                "https://www.google.com/search?q=PRIVATE",
+                                "https://tracker.example/pixel"]:
+                    cb(Route(address))
+            def on(self, event, cb):
+                if event=="response":
+                    cb(SimpleNamespace(url=recaptcha,status=200))
+            def goto(self, url, **kwargs):
+                calls.append(("goto",url))
+                return SimpleNamespace(status=200,
+                    text=lambda: '<html><script src="/recaptcha/api.js"></script></html>',
+                    headers={"content-type":"text/html"})
+            def wait_for_timeout(self, value): calls.append(("settle",value))
+            def locator(self,selector): return SimpleNamespace(count=lambda:0)
+            def title(self): return "BTDigg"
+        class Context:
+            def new_page(self):return Page()
+            def close(self):calls.append("context.close")
+        class Browser:
+            def new_context(self,**kwargs):
+                calls.append(("context",kwargs))
+                return Context()
+            def close(self):calls.append("browser.close")
+        class Manager:
+            def __enter__(self):
+                return SimpleNamespace(chromium=SimpleNamespace(
+                    launch=lambda **kwargs:Browser()))
+            def __exit__(self,*args):pass
+        with patch.object(pilot.os,"geteuid",return_value=1000), \
+             patch.object(pilot,"_no_proxy_environment",return_value=True), \
+             patch.object(pilot.os.path,"isfile",return_value=True), \
+             patch.object(pilot.os,"access",return_value=True):
+            data=pilot.owner_probe(
+                "btdigg","ubuntu",chromium_path="/usr/bin/chromium",
+                playwright_manager=Manager,allow_recaptcha_assets=True)
+        self.assertEqual(data["recaptcha_assets_mode"],"official_google_only")
+        self.assertEqual(data["recaptcha_subresources"],
+                         {"requests":1,"ok":1,"blocked":0})
+        self.assertEqual(data["blocked_external_resources"],2)
+        self.assertEqual(data["blocked_external_scripts"],2)
+        self.assertEqual(data["state"],"no_rows_unverified",
+                         "loading official CAPTCHA assets does not mean passing the challenge")
+        self.assertEqual(calls.count("allowed"),2)
+        self.assertEqual(calls.count("blocked"),2)
+        self.assertEqual([item for item in calls
+                          if isinstance(item,tuple) and item[0]=="settle"],
+                         [("settle",pilot.VERIFICATION_SETTLE_MS)])
+        self.assertEqual(len([item for item in calls
+                              if isinstance(item,tuple) and item[0]=="goto"]),1)
+        self.assertNotIn("PRIVATE",str(data))
+        self.assertEqual(calls[-2:],["context.close","browser.close"])
+
     def test_tpb_nested_api_429_visible_even_if_html_navigation_is_200(self):
         site = pilot.search_target("thepiratebay", "ubuntu")
         self.assertEqual(pilot.classify_page(

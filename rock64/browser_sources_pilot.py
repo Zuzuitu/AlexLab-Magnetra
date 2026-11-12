@@ -34,6 +34,7 @@ TPB_CATEGORIES = {
 MAX_QUERY_CHARS = 180
 PAGE_TIMEOUT_MS = 15000
 SETTLE_MS = 1500
+VERIFICATION_SETTLE_MS = 5000
 MAX_DOM_ROWS = 100
 CHALLENGE_TITLES = ("just a moment", "checking your browser", "attention required")
 
@@ -77,6 +78,26 @@ def allowed_resource(provider, url):
                 and not parsed.password and parsed.port in (None, 443)
                 and f"{parsed.scheme}://{parsed.hostname}"
                     in ALLOWED_SUBRESOURCE_ORIGINS[provider])
+    except (TypeError, ValueError):
+        return False
+
+
+def approved_google_recaptcha_resource(provider, url):
+    """ONLY standard Google reCAPTCHA assets; not a proxy or challenge bypass.
+
+    Never add arbitrary third-party origins. No redirects, challenge solving,
+    cookies, sitekey or target URL exposure to any Magnetra endpoint.
+    """
+    if provider != "btdigg":
+        return False
+    try:
+        parsed = urlsplit(url)
+        if (parsed.scheme != "https" or parsed.username or parsed.password
+                or parsed.port not in (None, 443)):
+            return False
+        return (parsed.hostname in {
+            "www.google.com", "www.gstatic.com", "recaptcha.google.com"
+        } and parsed.path.startswith("/recaptcha/"))
     except (TypeError, ValueError):
         return False
 
@@ -140,6 +161,9 @@ def classify_document_markup(markup, content_type=None):
             "response_search_form_marker": None,
             "response_verification_marker": None,
             "response_is_html": None,
+            "response_recaptcha_script_marker": None,
+            "response_recaptcha_widget_marker": None,
+            "response_recaptcha_invisible_marker": None,
         }
     lower = markup[:3_000_000].lower()
     return {
@@ -148,6 +172,17 @@ def classify_document_markup(markup, content_type=None):
             r"""\bclass\s*=\s*['"][^'"]*\bone_result\b""", lower)),
         "response_search_form_marker": (
             'name="q"' in lower or "name='q'" in lower
+        ),
+        # Hints only, not proof of reCAPTCHA version or solved challenge.
+        "response_recaptcha_script_marker": (
+            "/recaptcha/" in lower
+        ),
+        "response_recaptcha_widget_marker": (
+            "g-recaptcha" in lower or "data-sitekey" in lower
+        ),
+        "response_recaptcha_invisible_marker": (
+            "grecaptcha.execute" in lower or
+            "api.js?render=" in lower
         ),
         "response_verification_marker": any(x in lower for x in (
             "cf-mitigated", "just a moment", "checking your browser",
@@ -164,9 +199,11 @@ def _no_proxy_environment():
 
 
 def owner_probe(provider, query, category="all", *, chromium_path=None,
-                playwright_manager=None):
+                playwright_manager=None, allow_recaptcha_assets=False):
     """At most one top-level navigation; subresources restricted to fixed origins."""
     target = search_target(provider, query, category)
+    if allow_recaptcha_assets and provider != "btdigg":
+        raise PilotStop("verification_assets_only_for_btdigg")
     if os.geteuid() == 0:
         raise PilotStop("must_run_unprivileged")
     if not _no_proxy_environment():
@@ -201,10 +238,19 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                 try:
                     page = context.new_page()
                     blocked_resources = {"total": 0, "scripts": 0}
+                    allowed_verification = {"requests": 0, "ok": 0,
+                                            "blocked": 0}
                     script_categories = {"verification": 0,
                                          "static_cdn": 0, "other": 0}
                     def route_handler(route):
                         if allowed_resource(provider, route.request.url):
+                            route.continue_()
+                        elif (allow_recaptcha_assets
+                              and approved_google_recaptcha_resource(
+                                  provider, route.request.url)):
+                            allowed_verification["requests"] = min(
+                                100, allowed_verification["requests"] + 1
+                            )
                             route.continue_()
                         else:
                             blocked_resources["total"] = min(
@@ -224,6 +270,18 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                     page.route("**/*", route_handler)
                     api_statuses = []
                     def record_response(response):
+                        if (allow_recaptcha_assets
+                            and approved_google_recaptcha_resource(
+                                provider, response.url)):
+                            status = response.status
+                            if 200 <= status <= 299:
+                                allowed_verification["ok"] = min(
+                                    100, allowed_verification["ok"] + 1
+                                )
+                            elif status in (401, 403, 429):
+                                allowed_verification["blocked"] = min(
+                                    100, allowed_verification["blocked"] + 1
+                                )
                         if (provider == "thepiratebay"
                             and allowed_resource("thepiratebay", response.url)
                             and urlsplit(response.url).hostname == "apibay.org"):
@@ -236,7 +294,10 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                     if result is None:
                         raise PilotStop("navigation_no_response")
                     # Short bounded visual settle, NOT a request retry/poll loop.
-                    page.wait_for_timeout(SETTLE_MS)
+                    page.wait_for_timeout(
+                        VERIFICATION_SETTLE_MS if allow_recaptcha_assets
+                        else SETTLE_MS
+                    )
                     status = result.status
                     # The original navigation response body is ALREADY loaded.
                     # Read it locally without any additional BTDigg request.
@@ -303,6 +364,9 @@ def owner_probe(provider, query, category="all", *, chromium_path=None,
                         "blocked_external_resources": blocked_resources["total"],
                         "blocked_external_scripts": blocked_resources["scripts"],
                         "blocked_script_categories": script_categories,
+                        "recaptcha_assets_mode": ("official_google_only"
+                            if allow_recaptcha_assets else "blocked"),
+                        "recaptcha_subresources": allowed_verification,
                         **response_features,
                         "search_results_extracted": False,
                         "production_changed": False,
@@ -323,12 +387,15 @@ def main(argv=None):
         "Read-only, one-request Chromium browser capability pilot for BTDigg or TPB")
     parser.add_argument("--provider", choices=tuple(SOURCE_ORIGINS), required=True)
     parser.add_argument("--category", choices=tuple(TPB_CATEGORIES), default="all")
+    parser.add_argument("--allow-recaptcha-assets", action="store_true",
+        help="Opt in to loading ONLY Google's standard reCAPTCHA resources on BTDigg; no challenge solving")
     args = parser.parse_args(argv)
     try:
         if sys.stdin.isatty():
             print("Introduce o cautare de test (nu este afisata in jurnal):", file=sys.stderr)
         query = sys.stdin.readline(MAX_QUERY_CHARS + 2).rstrip("\r\n")
-        report = owner_probe(args.provider, query, args.category)
+        report = owner_probe(args.provider, query, args.category,
+                             allow_recaptcha_assets=args.allow_recaptcha_assets)
     except PilotStop as exc:
         print(json.dumps({"provider": args.provider, "mode": "isolated_chromium",
                           "state": str(exc), "production_changed": False}))
