@@ -135,12 +135,12 @@ class BrowserBackendTests(TestCase):
                 "MAGNETRA_BTDIGG_BROWSER_OPT_IN": "1",
                 "MAGNETRA_BTDIGG_TOKEN": "x" * 64,
                 "MAGNETRA_BROWSER_PROFILE": str(p),
-                "MAGNETRA_BTDIGG_BROWSER_PORT": "8798",
+                "MAGNETRA_BTDIGG_BROWSER_PORT": "18896",
             }
             with patch.dict(backend.os.environ, env, clear=True), \
                  patch.object(backend.os, "geteuid", return_value=1000):
                 token, folder, port = backend.validate_configuration()
-                self.assertEqual((token, folder, port), ("x" * 64, p, 8798))
+                self.assertEqual((token, folder, port), ("x" * 64, p, 18896))
                 backend.os.environ["MAGNETRA_BTDIGG_BROWSER_PORT"] = "8796"
                 with self.assertRaisesRegex(SystemExit, "explicit authorization"):
                     backend.validate_configuration()
