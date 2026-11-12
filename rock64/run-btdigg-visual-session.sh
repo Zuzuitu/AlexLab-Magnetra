@@ -94,15 +94,28 @@ xvfb-run -a -s '-screen 0 1280x800x24 -nolisten tcp' bash -c '
   set -Eeuo pipefail
   VNC_PID=""; WS_PID=""; CHROME_PID=""
   cleanup() {
-    for pid in "$CHROME_PID" "$WS_PID" "$VNC_PID"; do
+    # Let Playwright close Chromium and flush its private persistent profile
+    # before stopping VNC. Only force-kill if the bounded grace expires.
+    if [[ -n "$CHROME_PID" ]]; then
+      kill -TERM "$CHROME_PID" 2>/dev/null || true
+      for _ in {1..40}; do
+        if ! kill -0 "$CHROME_PID" 2>/dev/null; then break; fi
+        sleep 0.25
+      done
+      if kill -0 "$CHROME_PID" 2>/dev/null; then
+        kill -KILL "$CHROME_PID" 2>/dev/null || true
+      fi
+      wait "$CHROME_PID" 2>/dev/null || true
+    fi
+    for pid in "$WS_PID" "$VNC_PID"; do
       if [[ -n "$pid" ]]; then kill "$pid" 2>/dev/null || true; fi
     done
-    for pid in "$CHROME_PID" "$WS_PID" "$VNC_PID"; do
+    for pid in "$WS_PID" "$VNC_PID"; do
       if [[ -n "$pid" ]]; then wait "$pid" 2>/dev/null || true; fi
     done
   }
   trap cleanup EXIT
-  trap "exit 130" INT TERM
+  trap "exit 130" HUP INT TERM
 
   x11vnc -norc -display "$DISPLAY" -localhost -rfbauth \
     "$MAGNETRA_VNC_PASS" -rfbport 5993 -forever -shared \

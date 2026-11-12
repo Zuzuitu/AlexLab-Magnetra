@@ -106,42 +106,81 @@ def validated_result_html(page):
 
 
 class VisibleBrowserFetcher:
-    """Runs exclusively on the HTTP server's one main Playwright thread."""
+    """One-thread Playwright gateway; preserve verified tabs on source refusal.
+
+    A different query opens one tab in the SAME browser context, with the same
+    network identity. This does not circumvent challenges or rate limiting.
+    One source refusal stops new navigations for this foreground process.
+    """
 
     def __init__(self, page):
         self.page = page
+        self.reference_page = page
+        self._source_stopped = None
 
     def fetch(self, query):
         try:
             target = query_url(query)
-            # With a fresh profile the owner has to complete verification.
-            # Never navigate again automatically when a CAPTCHA is currently
-            # displayed: one source challenge must not trigger a retry loop.
-            current = self.page.url
-            if not validated_result_html(self.page):
+            current_html = validated_result_html(self.page)
+            if current_html is None:
                 return 503, b""
-            # + vs %20 URL encodings and title-case vs lowercase are equivalent
-            # searches. Do not trigger another navigation from a verified page.
-            if not same_search_query(source_query(current), query):
-                result = self.page.goto(
+
+            # The owner might have searched in lowercase in the visible GUI.
+            if same_search_query(source_query(self.page.url), query):
+                return 200, current_html
+
+            if self._source_stopped is not None:
+                # A failed query cannot trigger another upstream request.
+                return self._source_stopped, b""
+
+            candidate = None
+            accepted = False
+            try:
+                # Exactly one owner-triggered navigation in the original context.
+                candidate = self.page.context.new_page()
+                response = candidate.goto(
                     target, wait_until="domcontentloaded", timeout=10000)
-                if result is None:
+                if response is None:
+                    self._source_stopped = 503
                     return 503, b""
-                if result.status == 429:
+                if response.status == 429:
+                    self._source_stopped = 429
                     return 429, b""
-                if result.status != 200:
+                if response.status != 200:
+                    self._source_stopped = 503
                     return 503, b""
-                self.page.wait_for_timeout(900)
-            html = validated_result_html(self.page)
-            if not same_search_query(source_query(self.page.url), query) or html is None:
-                return 503, b""
-            return 200, html
+
+                candidate.wait_for_timeout(900)
+                html = validated_result_html(candidate)
+                if (not same_search_query(source_query(candidate.url), query)
+                        or html is None):
+                    self._source_stopped = 503
+                    return 503, b""
+
+                old = self.page
+                self.page = candidate
+                accepted = True
+                # Keep the initial owner-verified tab plus one latest success.
+                if old is not self.reference_page:
+                    try:
+                        old.close()
+                    except Exception:
+                        pass
+                return 200, html
+            except Exception:
+                # Do not emit query, URLs, source HTML or Playwright exceptions.
+                self._source_stopped = 504
+                return 504, b""
+            finally:
+                if candidate is not None and not accepted:
+                    try:
+                        candidate.close()
+                    except Exception:
+                        pass
         except (ValueError, TypeError):
             return 400, b""
         except Exception:
-            # No raw Playwright exceptions: they may contain query/URL/site data.
             return 504, b""
-
 
 def validate_configuration():
     if os.geteuid() == 0:

@@ -22,6 +22,35 @@ session** controlled through Playwright's private pipe.
 
 A challenge page is **not** reported as zero matches. Without verified
 source result rows, search returns HTTP 503 without retrying upstream.
+
+## Isolated next-query tab and session shutdown (12 Nov owner test)
+
+The owner physically verified the private browser gateway: the original
+`--test-search` returned local 200 with genuine bounded HTML and both
+source-result and magnet markers. One explicitly different query
+`The Dog Stars 2026 720p` navigated the browser but displayed
+"Too Many Requests"; local gateway returned 503. This is not a proven empty
+search, nor evidence of unrestricted automatic browsing.
+
+One new, explicitly requested query now opens a separate tab **in the same
+browser context**. The original owner-verified result tab remains available.
+Only a successful HTTP 200 with the correct BTDigg search query and paired
+result/magnet HTML promotes the new page. Failed tabs are closed. The first
+source refusal or browser navigation failure latches for the lifetime of
+that foreground process, preventing repeat upstream requests; previously
+verified results remain readable. On success, keep only the reference and
+latest successful tab. A new tab neither rotates IPs nor clears cookies,
+nor bypasses CAPTCHA or provider rate limits.
+
+The Chromium "Restore pages?" banner shown by the owner is consistent with
+a prior unclean shutdown. Closing the foreground terminal also stops the
+browser process, though the private browser profile survives. The launcher
+now tries a bounded graceful Playwright shutdown (up to 10 seconds) before
+stopping VNC; a forced termination, power loss or SIGKILL still cannot be
+guaranteed clean. To keep an interactive test running across SSH disconnects,
+the owner can optionally start the foreground script from a tmux session
+(if tmux is installed), detach with Ctrl+B then D, and later explicitly
+stop it with Ctrl+C. This is not a systemd service or production deployment.
 Once the human-verified browser has results, a case-only query difference
 (e.g., manual `the dog stars 2026` vs. owner probe `The Dog Stars 2026`)
 reuses the current verified page without triggering a second navigation.

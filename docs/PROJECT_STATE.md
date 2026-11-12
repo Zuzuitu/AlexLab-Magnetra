@@ -1,5 +1,11 @@
 # AlexLab Magnetra — Project State
 
+## 12 NOV 2026 — OWNER HARDWARE PROOF, SECOND QUERY REFUSAL, SOURCE-ONLY TAB ISOLATION
+
+Physical owner result: experimental Rock64 browser gateway 127.0.0.1:18896 passed /healthz (200). After the owner manually loaded a genuine BTDigg result page, `--test-search` returned HTTP 200 with bounded source HTML, results and magnet markers. The distinct `--test-next-search` navigated to the new query but visually showed "Too Many Requests"; local HTTP 503, **not confirmed second-query results**. A restored Chromium page after session restart showed "Restore pages?", evidence of a previous unclean closure, not proof that it caused the provider's limitation.
+
+Next source-only implementation candidate: distinct queries use one new Chromium tab in the same profile/context, retaining the initial verified tab. On original-source refusal or invalid results, close the failed tab, latch failure (no automatic retry), preserve prior verified results. On success, verify real title/magnet pairs and canonical source query before promoting; limit to reference plus latest successful tab. The foreground launcher attempts bounded graceful shutdown of Playwright before VNC. This does not circumvent CAPTCHA, provider 429, or remove official source access/production authorization gates. Rock64 physical test of the new behavior remains **not yet executed**; no change to production port 8796, Cloudflare, TPB, Flud or PWA.
+
 ## 12 NOV 2026 — BTDIGG VISUAL PROOF + PERSISTENT CHROMIUM CANDIDATE (SOURCE ONLY)
 
 **Read this section before the historic 28 Oct entries.** GitHub latest observed commit for this checkpoint: [a212baa6](https://github.com/Zuzuitu/AlexLab-Magnetra/commit/a212baa6d3f1d374f501c3bb69b8288dcc44b416), PR #243. Verify live `main`, CI, Rock64 and Cloudflare again before changing anything. This section records repository code and owner reports; it is **not** a production deployment claim.

@@ -69,6 +69,15 @@ class VisualSessionTests(unittest.TestCase):
         ]:
             self.assertNotIn(forbidden, s)
 
+    def test_graceful_chromium_stop_precedes_vnc_cleanup(self):
+        source = self.source
+        self.assertIn('kill -TERM "$CHROME_PID"', source)
+        self.assertIn('wait "$CHROME_PID"', source)
+        self.assertIn('trap "exit 130" HUP INT TERM', source)
+        self.assertIn('for _ in {1..40}', source)
+        self.assertLess(source.index('kill -TERM "$CHROME_PID"'),
+                        source.index('for pid in "$WS_PID" "$VNC_PID"'))
+
     def test_session_is_interactive_one_page_without_scraping(self):
         s = self.source
         self.assertIn("https://btdig.com/search?order=0&q=The+Dog+Stars+2026", s)
