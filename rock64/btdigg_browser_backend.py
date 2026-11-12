@@ -20,9 +20,10 @@ import signal
 import sys
 from urllib.parse import quote, parse_qs, urlsplit
 
-from btdigg_gateway import (
-    BIND, PORT, SIZE_LIMIT, SearchProvider, handler_class,
-)
+if __package__:
+    from .btdigg_gateway import BIND, PORT, SIZE_LIMIT, SearchProvider, handler_class
+else:
+    from btdigg_gateway import BIND, PORT, SIZE_LIMIT, SearchProvider, handler_class
 
 TEST_PORT = 8798
 QUERY_LIMIT = 180
