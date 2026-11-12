@@ -135,7 +135,7 @@ xvfb-run -a -s '-screen 0 1280x800x24 -nolisten tcp' bash -c '
 
   printf "\n=== BTDIGG INTERACTIVE BROWSER ===\n"
   printf "Open the Tailscale iPhone app, then Safari:\n"
-  printf "http://%s:6088/vnc.html?autoconnect=1&resize=remote\n" "$MAGNETRA_TS_IP"
+  printf "http://%s:6088/vnc.html?autoconnect=1&resize=scale\n" "$MAGNETRA_TS_IP"
   printf "Enter your VNC password. Interact with CAPTCHA manually if shown.\n"
   if [[ "$MAGNETRA_VISUAL_MODE" == persistent ]]; then
     printf "Local authenticated browser gateway is on loopback port 18896.\n"
