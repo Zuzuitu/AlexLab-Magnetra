@@ -249,6 +249,19 @@
       "fabricated_legacy_html_results_forbidden": true
     }
   },
+  "btdigg_rock64_source_rate_limit_candidate_2026_11_12": {
+    "status": "code_only_not_deployed",
+    "source_429_cooldown_seconds": 300,
+    "source_refusal_scope": "single_rock64_gateway_process",
+    "new_uncached_queries_denied_during_source_refusal": true,
+    "source_429_different_from_local_pacing_429": true,
+    "original_positive_exact_query_cache_preserved": true,
+    "no_negative_results_cached": true,
+    "no_source_auto_retry": true,
+    "retry_after_header_matches_remaining_source_refusal": true,
+    "no_user_request_to_restart_running_browser": true,
+    "cloudflare_worker_production_and_port_8796_unchanged": true
+  },
   "btdigg_worker_rate_limit_candidate_2026_11_12": {
     "status": "code_only_not_deployed",
     "source": "btdigg",
