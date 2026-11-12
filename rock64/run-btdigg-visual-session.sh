@@ -14,7 +14,7 @@ done
 
 TS_IP="$(tailscale ip -4 2>/dev/null | head -n1)"
 [[ -n "$TS_IP" ]] || fail 'Tailscale has no IPv4. Check tailscaled and tailscale status.'
-python3 - "$TS_IP" <<'PY' || fail 'Not a valid 100.64.0.0/10 Tailscale IPv4 address.'
+python3 - "$TS_IP" <<'PY' || fail 'Not a valid Tailscale IPv4 address.'
 import ipaddress, sys
 try:
     octets = ipaddress.IPv4Address(sys.argv[1]).packed
