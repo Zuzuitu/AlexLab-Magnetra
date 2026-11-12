@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createVerifiedSourceCache,FRESH_MS,STALE_MAX_MS} from "../src/verified-source-cache.mjs";
+import {createVerifiedSourceCache,FRESH_MS,STALE_MAX_MS,BTDIGG_DEFAULT_COOLDOWN_MS,BTDIGG_MAX_COOLDOWN_MS} from "../src/verified-source-cache.mjs";
 
 test("same original source and exact query only; no cross-provider substitution",async()=>{
  let now=0,n=0;const cache=createVerifiedSourceCache(()=>now);
@@ -172,4 +172,117 @@ test("TPB 429 cooldown is bounded and never becomes permanent",async()=>{
  now=5*60_000+1;
  assert.deepEqual((await c.search("thepiratebay","new","all",async()=>{calls++;return [];})).items,[]);
  assert.equal(calls,2);
+});
+
+test("BTDigg 429 stops other queries within one isolate; no retry or false empty",async()=>{
+ let now=0,calls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ const source=async()=>{calls++;throw Error("BTDigg gateway/provider HTTP 429 (rate limited).");};
+ await assert.rejects(()=>c.search("btdigg","release-PSA","all",source),/HTTP 429/);
+ now=BTDIGG_DEFAULT_COOLDOWN_MS-1;
+ await assert.rejects(()=>c.search("btdigg","other-release-PSA","movies",source),/HTTP 429/);
+ assert.equal(calls,1,"different BTDigg terms must not reach source during cooldown");
+ const other=await c.search("thepiratebay","other-release","all",
+  async()=>[{id:"tpb:1",name:"independent"}]);
+ assert.equal(other.items[0].id,"tpb:1");
+ now=BTDIGG_DEFAULT_COOLDOWN_MS+1;
+ await assert.rejects(()=>c.search("btdigg","other-release-PSA","movies",source),/HTTP 429/);
+ assert.equal(calls,2,"after TTL, one explicit request can test actual source again");
+});
+
+test("two simultaneous distinct BTDigg terms serialize; a first 429 blocks queued term",async()=>{
+ const c=createVerifiedSourceCache(()=>0);
+ let rejectFirst,calls=0;
+ const first=c.search("btdigg","first","all",async()=>{
+  calls++;
+  return new Promise((_,reject)=>{rejectFirst=reject;});
+ });
+ const second=c.search("btdigg","second","all",async()=>{
+  calls++;
+  return [{id:"unexpected",name:"not fetched"}];
+ });
+ await Promise.resolve();
+ assert.equal(calls,1,"second distinct query is queued within this isolate");
+ rejectFirst(Error("provider HTTP 429"));
+ const outcomes=await Promise.allSettled([first,second]);
+ assert.deepEqual(outcomes.map(x=>x.status),["rejected","rejected"]);
+ assert.match(outcomes[1].reason.message,/429/);
+ assert.equal(calls,1,"queued query must not contact source after refusal");
+});
+
+test("BTDigg exact-query positive stale cache survives source refusal, never borrowed",async()=>{
+ let now=0,calls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ const original=[{id:"btdigg:authentic",provider:"btdigg",name:"exact-PSA"}];
+ await c.search("btdigg","exact-PSA","all",async()=>original);
+ now=FRESH_MS+1;
+ const limited=async()=>{calls++;throw Error("provider HTTP 429");};
+ const stale=await c.search("btdigg","exact-PSA","all",limited);
+ assert.equal(stale.cache.mode,"stale");
+ assert.deepEqual(stale.items,original);
+ stale.items[0].name="malicious-local-mutation";
+ now+=1000;
+ const again=await c.search("btdigg","exact-PSA","all",limited);
+ assert.equal(again.cache.mode,"stale");
+ assert.equal(again.items[0].name,"exact-PSA");
+ assert.equal(calls,1);
+ await assert.rejects(()=>c.search("btdigg","different-PSA","all",limited),/429/);
+ assert.equal(calls,1,"never borrow other release's cached results");
+ now=STALE_MAX_MS+1;
+ await assert.rejects(()=>c.search("btdigg","exact-PSA","all",limited),/429/);
+ assert.equal(calls,1,"expired cached entry does not force source request during cooldown");
+});
+
+test("BTDigg Retry-After metadata has min/max and never creates endless cooldown",async()=>{
+ let now=0,calls=0;
+ const c=createVerifiedSourceCache(()=>now);
+ const limited=async()=>{
+  calls++;
+  const e=Error("provider HTTP 429");
+  e.retryAfterMs=24*60*60_000;
+  throw e;
+ };
+ await assert.rejects(()=>c.search("btdigg","a","all",limited),/429/);
+ now=BTDIGG_MAX_COOLDOWN_MS-1;
+ await assert.rejects(()=>c.search("btdigg","b","all",limited),/429/);
+ assert.equal(calls,1);
+ now=BTDIGG_MAX_COOLDOWN_MS+1;
+ const recovered=await c.search("btdigg","b","all",async()=>{
+  calls++;return [];
+ });
+ assert.deepEqual(recovered.items,[]);
+ assert.equal(calls,2);
+ const short=async()=>{
+  calls++;
+  const e=Error("provider HTTP 429");
+  e.retryAfterMs=1000;throw e;
+ };
+ await assert.rejects(()=>c.search("btdigg","c","all",short),/429/);
+ now+=BTDIGG_DEFAULT_COOLDOWN_MS-1;
+ await assert.rejects(()=>c.search("btdigg","d","all",short),/429/);
+ assert.equal(calls,3,"short retry-after cannot force repeated source requests");
+});
+
+test("BTDigg timeouts and challenges do not establish a mistaken 429 cooldown",async()=>{
+ const c=createVerifiedSourceCache(()=>0);
+ let calls=0;
+ for(const message of ["provider HTTP 503","provider HTTP 504","source challenge"]){
+  await assert.rejects(()=>c.search("btdigg","term-"+calls,"all",
+   async()=>{calls++;throw Error(message);}));
+ }
+ const good=await c.search("btdigg","verified","all",async()=>{
+  calls++;return [{id:"btdigg:good",name:"source-supplied"}];
+ });
+ assert.equal(good.items[0].id,"btdigg:good");
+ assert.equal(calls,4);
+});
+
+test("BTDigg cooldown is not a claim of global coordination across isolates",async()=>{
+ let now=0,calls=0;
+ const one=createVerifiedSourceCache(()=>now);
+ const two=createVerifiedSourceCache(()=>now);
+ const source=async()=>{calls++;throw Error("provider HTTP 429");};
+ await assert.rejects(()=>one.search("btdigg","a","all",source),/429/);
+ await assert.rejects(()=>two.search("btdigg","b","all",source),/429/);
+ assert.equal(calls,2,"a separate Worker isolate has independent in-memory state");
 });
