@@ -27,6 +27,7 @@ class AndroidBuildScopeTests(TestCase):
         self.assertTrue(policy["manual_debug_staging_builds_available"])
         self.assertTrue(policy["uncertain_change_detection_forces_build"])
         self.assertTrue(policy["status_checks_remain_present_on_every_pr"])
+        self.assertEqual(policy["nonrelease_apk_artifact_retention_days"], 3)
 
     def test_non_android_changes_skip_gradle(self):
         for path in ("rock64/btdigg_browser_backend.py",
