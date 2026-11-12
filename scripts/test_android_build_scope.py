@@ -110,9 +110,11 @@ class AndroidBuildScopeTests(TestCase):
                 "Set up JDK 17",
                 "Set up JetBrains Runtime 21",
                 "Grant execute permission for gradlew",
-                "with gradlew",
-                "Rename APK file",
-                "Upload ",
+                "Assemle debug APK with gradlew" if file == "debug_build.yml"
+                    else "Assemble staging APK with gradlew",
+                "Rename APK file to torrentsearch-debug.apk" if file == "debug_build.yml"
+                    else "Rename APK file to torrentsearch-staging.apk",
+                "Upload debug APK" if file == "debug_build.yml" else "Upload staging APK",
             ):
                 from_here = content.index("- name: " + name)
                 next_step = content.find("\n    - name:", from_here + 1)
