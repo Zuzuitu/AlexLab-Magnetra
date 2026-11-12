@@ -21,6 +21,8 @@ TOKEN_FILE = STATE / "gateway.token"
 def main():
     parser = argparse.ArgumentParser()
     tests = parser.add_mutually_exclusive_group()
+    tests.add_argument("--browser-status", action="store_true",
+                       help="Inspect existing Chromium tabs without source requests")
     tests.add_argument("--test-search", action="store_true",
                        help="Fetch original owner-verified search once")
     tests.add_argument("--test-next-search", action="store_true",
@@ -35,7 +37,7 @@ def main():
         token = TOKEN_FILE.read_text().strip()
         if not re.fullmatch(r"[A-Za-z0-9_-]{48,256}", token):
             raise ValueError("invalid token")
-        path = "/healthz"
+        path = "/v1/browser-state" if args.browser_status else "/healthz"
         if search_performed:
             # Real source screenshot confirms 720p rows for this title/year.
             # This is different from Chromium's boot query and proves that
@@ -52,6 +54,26 @@ def main():
             body = r.read(3_000_001)
             status = r.status
         result = {"local_gateway_status": status, "search_performed": search_performed}
+        if args.browser_status:
+            state = json.loads(body)
+            required = {
+                "browser_connected": bool,
+                "open_tabs": int,
+                "verified_tabs": int,
+                "selected_tab_verified": bool,
+                "new_searches_paused": bool,
+            }
+            if not isinstance(state, dict) or any(
+                type(state.get(name)) is not kind for name, kind in required.items()
+            ):
+                raise ValueError("unexpected browser-state response")
+            stop = state.get("last_navigation_status")
+            if stop is not None and stop not in (429, 503, 504):
+                raise ValueError("unexpected browser-state status")
+            result["browser_state"] = {
+                **{name: state[name] for name in required},
+                "last_navigation_status": stop,
+            }
         if search_performed:
             result.update({
                 "source_html_bounded": 0 < len(body) <= 3_000_000,
