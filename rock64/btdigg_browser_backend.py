@@ -339,15 +339,13 @@ def main():
             timeout=12000,
         )
         try:
+            # Never visit BTDigg merely because Chromium started.
+            # A persistent profile can restore old tabs, possibly triggering
+            # browser-owned reloads that Playwright cannot guarantee to prevent.
+            # Do not ADD a second, explicit startup request on top of those.
+            # A brand-new profile opens a blank tab until the owner chooses
+            # a source page manually in noVNC.
             page = context.pages[0] if context.pages else context.new_page()
-            # Single bootstrap navigation to show any CAPTCHA visually.
-            # No automatic verification, polling, or retry loops.
-            if not source_landing(page.url):
-                try:
-                    page.goto(query_url("The Dog Stars 2026"),
-                              wait_until="domcontentloaded", timeout=10000)
-                except Exception:
-                    pass
             browser_fetcher = VisibleBrowserFetcher(page)
             provider = SearchProvider(fetcher=browser_fetcher.fetch)
             # HTTPServer (NOT ThreadingHTTPServer): Playwright sync page remains
