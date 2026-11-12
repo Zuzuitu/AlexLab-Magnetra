@@ -43,7 +43,7 @@ class VisualSessionTests(unittest.TestCase):
         required = [
             "--persistent-backend",
             "MAGNETRA_BTDIGG_BROWSER_OPT_IN=1",
-            "MAGNETRA_BTDIGG_BROWSER_PORT=8798",
+            "MAGNETRA_BTDIGG_BROWSER_PORT=18896",
             "MAGNETRA_BROWSER_PROFILE",
             "MAGNETRA_BROWSER_PYTHON",
             "MAGNETRA_BROWSER_ENTRY",
