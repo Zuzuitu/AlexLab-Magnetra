@@ -1,5 +1,34 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 12 NOV 2026 — OWNER SCREENSHOT: BTDIGG REFUSAL + CHROMIUM UN-CLEAN RESTORE BANNER
+
+Physical iPhone noVNC screenshot after a controlled browser restart shows one BTDigg
+search tab with **"Too Many Requests"** and Chromium **"Restore pages?
+Chromium didn't shut down correctly"**. The authenticated local read-only
+browser-status response was HTTP 200 with `browser_connected=true`,
+`open_tabs=1`, `verified_tabs=0`, `selected_tab_verified=false`,
+`new_searches_paused=false`, and `last_navigation_status=null`. The state
+proves a live Chromium backend without validated source results. The
+`new_searches_paused=false` value **only** meant this process had not recorded
+a navigation failure; it was never proof that the source was accepting traffic.
+"Restore pages" points to some previous unclean Chromium exit, but the
+available evidence does not date that exit or establish it caused the source
+refusal. The owner already proved ordinary Safari noVNC disconnect/reconnect
+keeps the same Chromium page when the process is hosted in tmux.
+
+Source-only correction: detect the exact short `Too Many Requests` text in
+already loaded canonical BTDigg tab DOM, with no new network action, and report
+`visible_source_rate_limited=true` plus `new_searches_paused=true`; a newly
+requested uncached search returns local 429 without source navigation. Preserve
+`last_navigation_status=null` when no actual HTTP response was observed;
+avoid misrepresenting a DOM message as a captured source HTTP status. Reuse
+previously validated manual tabs only for their matching queries. A title
+containing the words "Too Many Requests" must not be a false positive. The
+owner's running session is **not** hot-updated by a GitHub change. Keep the
+current tmux session running and do not click Restore/reload or repeat the
+refused query to test this candidate. No production, Cloudflare or Rock64
+service change is authorized.
+
 ## 12 NOV 2026 — TMUX SESSION PROVEN + AUTHENTICATED READ-ONLY BROWSER DIAGNOSTICS
 
 The Rock64 owner installed tmux, ran the persistent Chromium/noVNC backend inside `magnetra-browser`, detached, and verified `/healthz` returned HTTP 200 in another SSH shell. Real processes `btdigg_browser_backend.py`, `x11vnc`, `websockify`, and Xvfb remained active. Owner then closed and reopened the Safari noVNC page and **observed the same Chromium page**, confirming live GUI continuity for this tmux-managed session. This does **not** establish unrestricted provider search, nor does an HTTP 200 health response confirm the HTML currently displayed.
