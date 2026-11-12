@@ -73,3 +73,4 @@ jobs:
       with:
         path: app/build/outputs/apk/staging/torrentsearch-staging.apk
         archive: false
+        retention-days: 1
