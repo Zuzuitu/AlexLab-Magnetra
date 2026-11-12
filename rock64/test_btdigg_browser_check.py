@@ -66,6 +66,45 @@ class BrowserLocalCheckTests(TestCase):
                 else:
                     self.assertNotIn("source_result_marker", result)
 
+    def test_readonly_browser_status_reports_visible_refusal_without_source_request(self):
+        with TemporaryDirectory() as root:
+            token = Path(root) / "gateway.token"
+            token.write_text("x" * 64)
+            token.chmod(0o600)
+            requests = []
+            class BrowserResponse(Response):
+                def read(self, _limit):
+                    return json.dumps({
+                        "browser_connected": True,
+                        "open_tabs": 1,
+                        "verified_tabs": 0,
+                        "selected_tab_verified": False,
+                        "visible_source_rate_limited": True,
+                        "new_searches_paused": True,
+                        "last_navigation_status": None,
+                    }).encode()
+            def fetch(req, timeout):
+                requests.append(req)
+                return BrowserResponse()
+            out = StringIO()
+            with patch.object(PROBE, "TOKEN_FILE", token), \
+                 patch.object(PROBE.urllib.request, "urlopen", fetch), \
+                 patch.object(PROBE.argparse._sys, "argv",
+                              ["local-probe", "--browser-status"]), \
+                 redirect_stdout(out):
+                PROBE.main()
+            self.assertEqual(len(requests), 1)
+            self.assertEqual(requests[0].full_url,
+                             PROBE.LOCAL + "/v1/browser-state")
+            result = json.loads(out.getvalue())
+            self.assertEqual(result["local_gateway_status"], 200)
+            self.assertFalse(result["search_performed"])
+            self.assertTrue(result["browser_state"]["visible_source_rate_limited"])
+            self.assertTrue(result["browser_state"]["new_searches_paused"])
+            self.assertIsNone(result["browser_state"]["last_navigation_status"])
+            self.assertNotIn("magnet:", out.getvalue())
+            self.assertNotIn("x" * 64, out.getvalue())
+
     def test_local_probe_never_calls_source_without_private_token(self):
         with TemporaryDirectory() as root:
             token = Path(root) / "gateway.token"

@@ -61,6 +61,7 @@ def main():
                 "open_tabs": int,
                 "verified_tabs": int,
                 "selected_tab_verified": bool,
+                "visible_source_rate_limited": bool,
                 "new_searches_paused": bool,
             }
             if not isinstance(state, dict) or any(
