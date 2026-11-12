@@ -1,5 +1,13 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 12 NOV 2026 — ROCK64 PROCESS-WIDE BTDIGG SOURCE 429 PAUSE (CODE ONLY)
+
+Following #257's per-isolate Worker 429 guard, a technical gap remained in the common Rock64 gateway. Its original `SearchProvider` paced uncached requests every five seconds but did not distinguish an actual source `HTTP 429` from a locally generated 429 due to pacing/inflight. After a genuine upstream refusal, a different term could therefore reach source five seconds later, even if a Cloudflare isolate restarted.
+
+Source-only candidate: `rock64/btdigg_gateway.py` now stores a process-wide monotonic `_source_blocked_until` deadline of five minutes **only when the actual injected fetcher returns status 429**. During this time, all new uncached terms return 429 locally without another source request; original positive cached HTML for the exact query is still returned without requery. Local five-second pacing 429, challenge 503, and timeout 504 do not set the long pause. The authenticated handler's `Retry-After` header reflects the remaining source pause (minimum existing local pacing). No timer or automatic recovery probe; the next request is permitted only after expiry, with no claims of restored source access. No cookie, query, magnet, profile, process, PWA, Worker route or provider data is logged/altered.
+
+The actual Rock64 owner-controlled tmux session is still active on Chromium/Xvfb `:102`, while the previously loaded page displays `Too Many Requests`. The existing live process is NOT hot-reloaded by a source pull. Do not stop or restart it for this test. No source HTTP requests were made in development; new offline stdlib tests exercise fake source 429, distinct uncached queries, exact positive cache, 503/504, local 5-second pacing and `Retry-After` on a local ephemeral HTTP port. CI runs those tests under PWA/provider contracts. Source-only candidate does NOT deploy to port 8796 or change Cloudflare, production split, TPB or browser process. Production change requires independent owner-authorized rollout and source permission checks.
+
 ## 12 NOV 2026 — BTDIGG WORKER-ISOLATE 429 COOLDOWN (SOURCE-ONLY CANDIDATE)
 
 Owner verified after safe Xvfb cleanup that Rock64 has only Xvfb `:102`, x11vnc, websockify, persistent browser process and tmux, with authenticated loopback /healthz 200; GUI still shows the previously loaded BTDigg `Too Many Requests` page. This **does not prove that a new BTDigg request would currently receive 429**, because no new source request was made. No unnecessary source probes or Chromium restart are permitted.
