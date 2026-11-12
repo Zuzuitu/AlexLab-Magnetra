@@ -74,3 +74,4 @@ jobs:
       with:
         path: app/build/outputs/apk/debug/torrentsearch-debug.apk
         archive: false
+        retention-days: 3
