@@ -74,7 +74,22 @@ does NOT search BTDigg.
 python3 rock64/check-btdigg-browser-backend.py --test-search
 ```
 
-The probe prints only bounded metadata and booleans. HTTP 200 with both
+The original probe prints only bounded metadata and booleans. For a
+stronger functional test of browser-driven source searches, the owner
+can explicitly run **one distinct follow-up query** using the same
+verified Chromium session:
+
+```bash
+python3 rock64/check-btdigg-browser-backend.py --test-next-search
+```
+
+This intentionally searches `The Dog Stars 2026 720p`, different
+from the bootstrap `The Dog Stars 2026` and grounded in genuine
+720p results shown by the source screenshot. Run **only once** after
+successful original-query verification; do not auto-repeat if the
+source challenges the browser again.
+
+HTTP 200 with both
 `source_result_marker=true` and `source_magnet_marker=true` establishes
 authentic HTML passing the local browser backend. HTTP 503 means that
 verification or genuine source rows are missing, **not** zero matches.
