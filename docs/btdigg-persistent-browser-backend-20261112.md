@@ -98,6 +98,29 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Read-only Xvfb/noVNC process inventory (no Chromium restart)
+
+The owner's `pgrep` showed four Xvfb displays (`:99`–`:102`) with
+one active `x11vnc -display :102`, backend and websockify process. This
+snapshot cannot establish whether the earlier displays belong to other
+applications or were abandoned; nor does it establish the cause of the
+Chromium "Restore pages" banner or the provider's rate limit.
+
+After updating GitHub source, from an ordinary SSH shell:
+
+```bash
+cd "$HOME/magnetra-cffi-live-20261028"
+python3 rock64/check-btdigg-visual-processes.py
+```
+
+The script reads only the local process list and tmux session names. It
+outputs sanitized PIDs, display IDs and booleans, without URLs, VNC auth
+paths, tokens, queries or cookies. It never contacts BTDigg, opens
+Chromium, restarts the gateway, or kills any processes. An Xvfb display
+in `displays_without_observed_vnc` is **not proven orphaned** and must
+not be killed based on this report alone. Preserve the current tmux
+session and request an explicit review before considering a cleanup.
+
 ## Chromium startup and local profile exit markers
 
 The persistent backend no longer has a default `page.goto()` search
