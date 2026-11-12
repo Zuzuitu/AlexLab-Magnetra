@@ -47,7 +47,7 @@ class VisualProcessAuditTests(TestCase):
 
     def test_other_sessions_and_malformed_ps_cannot_be_declared_safe_to_kill(self):
         snapshot = """abc 1 Xvfb Xvfb :12
-999 -1 Xvfb Xvfb :13
+999 1 Xvfb Xvfb :13
 123 1 Xvfb Xvfb :8
 124 1 x11vnc x11vnc -display :8 -localhost
 125 1 python python /tmp/other-script.py
