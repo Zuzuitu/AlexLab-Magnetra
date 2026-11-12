@@ -34,7 +34,8 @@
     "automatic_apk_on_android_changes_only": true,
     "manual_debug_staging_builds_available": true,
     "uncertain_change_detection_forces_build": true,
-    "status_checks_remain_present_on_every_pr": true
+    "status_checks_remain_present_on_every_pr": true,
+    "nonrelease_apk_artifact_retention_days": 3
   },
   "security": {
     "frontend_must_not_contain_secrets": true,
