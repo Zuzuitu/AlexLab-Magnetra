@@ -13,6 +13,8 @@ This backend is intentionally local-only by default and NOT auto-activated.
 from __future__ import annotations
 
 from http.server import HTTPServer
+import hmac
+import json
 import os
 from pathlib import Path
 import re
@@ -118,20 +120,66 @@ class VisibleBrowserFetcher:
         self.reference_page = page
         self._source_stopped = None
 
+    def _verified_existing_query(self, query):
+        """Reuse owner-opened verified tabs without network navigation.
+
+        Never trust a tab solely because its URL contains the query: the
+        source-owned canonical URL and paired result/magnet HTML are required.
+        """
+        pages = [self.page]
+        pages.extend(p for p in self.page.context.pages if p is not self.page)
+        for page in pages:
+            if (not page.is_closed()
+                    and same_search_query(source_query(page.url), query)):
+                html = validated_result_html(page)
+                if html is not None:
+                    return page, html
+        return None, None
+
+    def browser_state(self):
+        """Authenticated, read-only state of existing DOM; no source requests."""
+        try:
+            pages = [p for p in self.page.context.pages if not p.is_closed()]
+            verified = sum(validated_result_html(p) is not None for p in pages)
+            return {
+                "browser_connected": bool(pages),
+                "open_tabs": len(pages),
+                "verified_tabs": verified,
+                "selected_tab_verified": (
+                    not self.page.is_closed()
+                    and validated_result_html(self.page) is not None
+                ),
+                "new_searches_paused": self._source_stopped is not None,
+                "last_navigation_status": self._source_stopped,
+            }
+        except Exception:
+            return {
+                "browser_connected": False,
+                "open_tabs": 0,
+                "verified_tabs": 0,
+                "selected_tab_verified": False,
+                "new_searches_paused": True,
+                "last_navigation_status": None,
+            }
+
     def fetch(self, query):
         try:
             target = query_url(query)
-            current_html = validated_result_html(self.page)
-            if current_html is None:
-                return 503, b""
-
-            # The owner might have searched in lowercase in the visible GUI.
-            if same_search_query(source_query(self.page.url), query):
-                return 200, current_html
+            existing_page, existing_html = self._verified_existing_query(query)
+            if existing_html is not None:
+                # A manual search in another already-open tab is safe to read;
+                # it must not create another network request.
+                self.page = existing_page
+                return 200, existing_html
 
             if self._source_stopped is not None:
                 # A failed query cannot trigger another upstream request.
                 return self._source_stopped, b""
+
+            # No automated navigation while the currently controlled tab is
+            # unverified. Owner can first verify an existing tab manually.
+            if validated_result_html(self.page) is None:
+                return 503, b""
 
             candidate = None
             accepted = False
@@ -181,6 +229,31 @@ class VisibleBrowserFetcher:
             return 400, b""
         except Exception:
             return 504, b""
+
+
+def browser_handler_class(token, provider, fetcher):
+    """Extra authenticated read-only route, experimental loopback only.
+
+    The production BTDigg handler and its /healthz and /v1/search semantics
+    remain unchanged. No query, URL, cookie, magnet or token is returned.
+    """
+    parent = handler_class(token, provider)
+
+    class BrowserHandler(parent):
+        def do_GET(self):
+            if self.path != "/v1/browser-state":
+                return super().do_GET()
+            provided = self.headers.get("authorization", "")
+            if not hmac.compare_digest(provided, "Bearer " + token):
+                self.reply(401, b'{"error":"unauthorized"}')
+                return
+            data = json.dumps(
+                fetcher.browser_state(), separators=(",", ":"), sort_keys=True
+            ).encode("utf-8")
+            self.reply(200, data)
+
+    return BrowserHandler
+
 
 def validate_configuration():
     if os.geteuid() == 0:
@@ -243,10 +316,14 @@ def main():
                               wait_until="domcontentloaded", timeout=10000)
                 except Exception:
                     pass
-            provider = SearchProvider(fetcher=VisibleBrowserFetcher(page).fetch)
+            browser_fetcher = VisibleBrowserFetcher(page)
+            provider = SearchProvider(fetcher=browser_fetcher.fetch)
             # HTTPServer (NOT ThreadingHTTPServer): Playwright sync page remains
             # owned by the same thread for every subsequent search.
-            server = HTTPServer((BIND, port), handler_class(token, provider))
+            server = HTTPServer(
+                (BIND, port),
+                browser_handler_class(token, provider, browser_fetcher),
+            )
             print("BTDigg verified-browser gateway: loopback only; "
                   "waiting for optional manual verification", flush=True)
             try:
