@@ -14,6 +14,7 @@ from collections import OrderedDict
 import hmac
 import http.client
 import json
+import math
 import os
 import re
 import socket
@@ -39,6 +40,9 @@ CACHE_SECONDS = 20 * 60
 CACHE_MAX_ENTRIES = 4
 CACHE_MAX_BYTES = 6_000_000
 MIN_SEARCH_INTERVAL = 5
+# A genuine source HTTP 429 pauses all uncached search terms in this single
+# Rock64 gateway process; the existing 5-second pacing is not sufficient.
+SOURCE_REFUSAL_COOLDOWN_SECONDS = 5 * 60
 INFLIGHT_WAIT_SECONDS = TIMEOUT_SECONDS + 1
 SOURCE_UA = (
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
@@ -53,6 +57,7 @@ class SearchProvider:
         self.clock = clock or time.monotonic
         self._lock = threading.Lock()
         self._last = float("-inf")
+        self._source_blocked_until = float("-inf")
         self._cache = OrderedDict()
         self._cache_bytes = 0
         # At most one upstream request at a time. An identical in-flight query
@@ -212,6 +217,12 @@ class SearchProvider:
             _, (old, _) = self._cache.popitem(last=False)
             self._cache_bytes -= len(old)
 
+    def source_retry_after_seconds(self) -> int:
+        """Sanitized local deadline for HTTP Retry-After, never contacts origin."""
+        with self._lock:
+            remaining = self._source_blocked_until - self.clock()
+            return max(0, math.ceil(remaining))
+
     def search(self, query: str) -> tuple[int, bytes]:
         with self._lock:
             now = self.clock()
@@ -220,6 +231,11 @@ class SearchProvider:
             if cached is not None:
                 self._cache.move_to_end(query)
                 return 200, cached[0]
+            # A source-confirmed refusal is independent of the per-query
+            # five-second pacing. Previously authenticated positive HTML
+            # remains available for the exact query without new navigation.
+            if now < self._source_blocked_until:
+                return 429, b""
             ongoing = self._inflight
             if ongoing is not None:
                 if ongoing["query"] != query:
@@ -255,6 +271,13 @@ class SearchProvider:
                 if status == 200:
                     self._prune(self.clock())
                     self._remember(query, html, self.clock())
+                elif status == 429:
+                    # Only the actual fetcher can establish a source block.
+                    # Local 5-second pacing/inflight 429 exits before here.
+                    self._source_blocked_until = max(
+                        self._source_blocked_until,
+                        self.clock() + SOURCE_REFUSAL_COOLDOWN_SECONDS,
+                    )
                 ongoing["status"] = status
                 ongoing["body"] = html
                 self._inflight = None
@@ -277,7 +300,10 @@ def handler_class(secret: str, provider: SearchProvider):
             self.send_header("x-content-type-options", "nosniff")
             self.send_header("content-length", str(len(body)))
             if status == 429:
-                self.send_header("retry-after", str(MIN_SEARCH_INTERVAL))
+                self.send_header(
+                    "retry-after",
+                    str(max(MIN_SEARCH_INTERVAL, provider.source_retry_after_seconds())),
+                )
             self.end_headers()
             if body:
                 self.wfile.write(body)
