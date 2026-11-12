@@ -13,7 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-LOCAL = "http://127.0.0.1:8798"
+LOCAL = "http://127.0.0.1:18896"
 STATE = Path.home() / ".local" / "state" / "magnetra-btdigg-browser"
 TOKEN_FILE = STATE / "gateway.token"
 
