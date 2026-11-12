@@ -66,6 +66,10 @@ class BrowserBackendTests(TestCase):
                     "https://evil.example/search?q=foo",
                     "https://btdig.com.evil.example/search?q=foo",
                     "https://btdig.com/search?order=0",
+                    "https://btdig.com/search?q=foo",
+                    "https://btdig.com/search?order=1&q=foo",
+                    "https://btdig.com/search?order=0&q=foo&q=bar",
+                    "https://btdig.com/search?order=0&q=foo&redirect=1",
                     "https://btdig.com/other?q=foo",
                     "https://user@btdig.com/search?q=foo"):
             with self.subTest(url=bad):
@@ -80,6 +84,28 @@ class BrowserBackendTests(TestCase):
         verified.valid = True
         verified.url = "https://elsewhere.example/search?q=foo"
         self.assertIsNone(backend.validated_result_html(verified))
+
+    def test_browser_equivalent_plus_query_does_not_navigate(self):
+        page = FakePage(
+            url="https://btdig.com/search?order=0&q=The+Dog+Stars+2026")
+        status, html = backend.VisibleBrowserFetcher(page).fetch(
+            "The Dog Stars 2026")
+        self.assertEqual(status, 200)
+        self.assertEqual(html, HTML.encode())
+        self.assertEqual(page.goto_calls, [])
+
+    def test_redirect_to_wrong_query_refuses_html_even_if_rows_visible(self):
+        page = FakePage()
+        original_goto = page.goto
+        def redirected(_url, **kwargs):
+            original_goto(
+                backend.query_url("Unrelated title"), **kwargs)
+            return type("Response", (), {"status": 200})()
+        page.goto = redirected
+        status, body = backend.VisibleBrowserFetcher(page).fetch(
+            "Different title")
+        self.assertEqual((status, body), (503, b""))
+        self.assertEqual(len(page.goto_calls), 1)
 
     def test_existing_owner_verified_query_does_not_navigate_or_retry(self):
         page = FakePage(url=backend.query_url("The Dog Stars 2026"))
