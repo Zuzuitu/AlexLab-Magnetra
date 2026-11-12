@@ -33,6 +33,33 @@ The new gateway is opt-in only, listens on private loopback port 18896,
 and requires a separate private bearer credential. The existing port
 8796 is blocked by independent source-permission and production gates.
 
+## Prepare the isolated Playwright environment (owner action)
+
+The persistent launcher expects an isolated `~/.venvs/magnetra-browser/bin/python`.
+It is **not** included in the default Debian Chromium installation. Run as the
+unprivileged `runner` from the repository root:
+
+```bash
+bash rock64/setup-btdigg-browser-env.sh --check
+```
+
+If this prints `PLAYWRIGHT_ENV=NOT_READY`, opt in explicitly to prepare the
+isolated venv (one package install from PyPI; no source search or browser launch):
+
+```bash
+bash rock64/setup-btdigg-browser-env.sh --install
+bash rock64/setup-btdigg-browser-env.sh --check
+python3 -B -m unittest rock64/test_btdigg_browser_setup.py -v
+```
+
+The installer pins Playwright 1.65.1, restricts installation to an unprivileged
+Linux ARM64 user, requires 512 MiB free space, refuses symlinked paths and
+existing non-matching environments, and does not install Playwright's browser
+bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
+`/usr/bin/chromium`. Package installation needs normal PyPI connectivity
+and the Debian `python3-venv` package. On failure it stops without attempting
+to repair or delete an existing venv automatically.
+
 ## Test procedure (post-merge)
 
 The old visual session uses a **temporary** browser profile. Stopping
