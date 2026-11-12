@@ -14,6 +14,8 @@ jobs:
         uses: actions/checkout@v7.0.1
       - name: Check project invariants
         run: python3 scripts/check-project-invariants.py
+      - name: Verify Android CI triggers only for relevant inputs
+        run: python3 -m unittest scripts/test_android_ci_path_filters.py -v
       - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
