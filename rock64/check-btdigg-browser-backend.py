@@ -102,7 +102,6 @@ def main():
                 "open_tabs": int,
                 "verified_tabs": int,
                 "selected_tab_verified": bool,
-                "visible_source_rate_limited": bool,
                 "new_searches_paused": bool,
             }
             if not isinstance(state, dict) or any(
@@ -112,10 +111,31 @@ def main():
             stop = state.get("last_navigation_status")
             if stop is not None and stop not in (429, 503, 504):
                 raise ValueError("unexpected browser-state status")
+            # A live GUI started before the visible-429 correction does not
+            # hot-reload with git pull. Its /v1/browser-state response lacks
+            # this field: *unknown* is not the same as source available.
+            legacy = "visible_source_rate_limited" not in state
+            if not legacy and type(state["visible_source_rate_limited"]) is not bool:
+                raise ValueError("unexpected browser-state source flag")
             result["browser_state"] = {
-                **{name: state[name] for name in required},
+                **{name: state[name] for name in required
+                   if name != "new_searches_paused"},
+                "visible_source_rate_limited": (
+                    None if legacy else state["visible_source_rate_limited"]
+                ),
+                "new_searches_paused": (
+                    None if legacy else state["new_searches_paused"]
+                ),
                 "last_navigation_status": stop,
+                "diagnostic_capability": (
+                    "legacy_navigation_latch_only" if legacy
+                    else "visible_source_rate_limit_detection"
+                ),
             }
+            if legacy:
+                result["browser_state"]["in_process_navigation_latch"] = (
+                    state["new_searches_paused"]
+                )
         if search_performed:
             result.update({
                 "source_html_bounded": 0 < len(body) <= 3_000_000,
