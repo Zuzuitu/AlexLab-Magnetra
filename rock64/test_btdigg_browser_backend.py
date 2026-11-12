@@ -47,16 +47,25 @@ class FakePage:
         self.waits = []
         self.redirect_to = None
         self.closed = False
+        self.rate_limited = False
+        self.body_text = ""
         self.context = FakeContext(self)
 
     def locator(self, selector):
-        assert selector == backend.RESULT_PAIR_SELECTOR
+        assert selector in (backend.RESULT_PAIR_SELECTOR, "body")
         class Locator:
-            def __init__(self, value):
+            def __init__(self, value, text):
                 self.value = value
+                self.text = text
             def count(self):
                 return self.value
-        return Locator(1 if self.valid else 0)
+            def inner_text(self, **kwargs):
+                return self.text
+        if selector == "body":
+            return Locator(1, self.body_text or (
+                "Too Many Requests" if self.rate_limited else
+                "Owner source release Magnet"))
+        return Locator(1 if self.valid else 0, "")
 
     def content(self):
         return HTML if self.valid else '<html>One more step reCAPTCHA</html>'
@@ -263,6 +272,7 @@ class BrowserBackendTests(TestCase):
             "verified_tabs": 1,
             "selected_tab_verified": True,
             "new_searches_paused": False,
+            "visible_source_rate_limited": False,
             "last_navigation_status": None,
         })
         extra = first.context.new_page()
@@ -334,6 +344,51 @@ class BrowserBackendTests(TestCase):
         handler.path = "/healthz"
         handler.do_GET()
         self.assertEqual(captured[-1][0], 200)
+
+    def test_visible_too_many_requests_is_readonly_and_pauses_new_navigations(self):
+        first = FakePage(valid=False)
+        first.rate_limited = True
+        gateway = backend.VisibleBrowserFetcher(first)
+        status = gateway.browser_state()
+        self.assertTrue(status["browser_connected"])
+        self.assertEqual(status["verified_tabs"], 0)
+        self.assertTrue(status["visible_source_rate_limited"])
+        self.assertTrue(status["new_searches_paused"])
+        self.assertIsNone(status["last_navigation_status"])
+        self.assertEqual(first.goto_calls, [])
+        self.assertEqual(gateway.fetch("Another query"), (429, b""))
+        self.assertEqual(first.context.opened, [],
+                         "observing a 429 body never opens a new tab")
+
+    def test_source_denial_detected_on_nonselected_tab(self):
+        first = FakePage()
+        second = first.context.new_page()
+        second.url = backend.query_url("Other source query")
+        second.rate_limited = True
+        second.valid = False
+        gateway = backend.VisibleBrowserFetcher(first)
+        status = gateway.browser_state()
+        self.assertEqual(status["verified_tabs"], 1)
+        self.assertTrue(status["visible_source_rate_limited"])
+        self.assertEqual(gateway.fetch("Unseen query"), (429, b""))
+        self.assertEqual(len(first.context.opened), 1)
+        self.assertEqual(gateway.fetch("The Dog Stars 2026")[0], 200,
+                         "already verified result may still be reused")
+
+    def test_deny_marker_requires_exact_body_and_canonical_origin(self):
+        page = FakePage(valid=False)
+        page.body_text = "This release mentions Too Many Requests in title"
+        self.assertFalse(backend.source_rate_limit_visible(page))
+        page.body_text = "  TOO MANY   REQUESTS  "
+        self.assertTrue(backend.source_rate_limit_visible(page))
+        page.url = "https://example.com/search?order=0&q=Example"
+        self.assertFalse(backend.source_rate_limit_visible(page))
+        page.url = backend.query_url("Another source")
+        page.close()
+        self.assertFalse(backend.source_rate_limit_visible(page))
+        page.closed = False
+        page.body_text = "A" * 200
+        self.assertFalse(backend.source_rate_limit_visible(page))
 
     def test_auth_and_private_persistent_profile_are_explicit_opt_in(self):
         with TemporaryDirectory() as root:
