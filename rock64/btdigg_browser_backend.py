@@ -25,7 +25,7 @@ if __package__:
 else:
     from btdigg_gateway import BIND, PORT, SIZE_LIMIT, SearchProvider, handler_class
 
-TEST_PORT = 8798
+TEST_PORT = 18896
 QUERY_LIMIT = 180
 SOURCE = "https://btdig.com"
 RESULT_PAIR_SELECTOR = (
