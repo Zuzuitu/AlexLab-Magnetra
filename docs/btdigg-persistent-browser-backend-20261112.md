@@ -98,6 +98,43 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Read-only browser state after owner-controlled tmux detach
+
+The owner physically confirmed persistent Chromium/noVNC remains available
+after detaching from tmux and reconnecting Safari, and the local gateway
+still returns HTTP 200. This verifies process and GUI continuity, not
+that BTDigg is accepting new queries.
+
+A new authenticated test-only route `/v1/browser-state` reports only
+`browser_connected`, `open_tabs`, `verified_tabs`,
+`selected_tab_verified`, `new_searches_paused`, and
+`last_navigation_status`. It reads the **existing browser DOM** without
+visiting BTDigg or triggering a query; it never exposes titles, query URLs,
+magnet links, cookies or access tokens.
+
+After the owner updates source and explicitly restarts the experimental
+backend, invoke from another SSH shell:
+
+```bash
+cd "$HOME/magnetra-cffi-live-20261028"
+python3 rock64/check-btdigg-browser-backend.py --browser-status
+```
+
+The script never requests BTDigg. A 200 from the ordinary `/healthz`
+only proves that the gateway is alive, not that a browser tab is verified.
+A 200 from `--browser-status` with `verified_tabs >= 1` proves the
+gateway observed a previously loaded result page with paired magnets.
+It does not mean that BTDigg currently accepts new requests.
+The browser can reuse a *manually opened, already verified* tab for the
+same requested query; refusal remains latched for any **new automated**
+navigation. No retry or challenge bypass is introduced.
+
+If an owner-run tmux session is currently healthy, do not interrupt it
+just to exercise the new endpoint. These source changes only take effect
+after an intentional restart with `git pull --ff-only` and the original
+safe launcher; the persistent profile survives, but server verification
+can still expire. No automatic systemd process or production route is set.
+
 ## Test procedure (post-merge)
 
 The old visual session uses a **temporary** browser profile. Stopping

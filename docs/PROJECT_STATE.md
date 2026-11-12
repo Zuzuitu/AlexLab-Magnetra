@@ -1,5 +1,11 @@
 # AlexLab Magnetra — Project State
 
+## 12 NOV 2026 — TMUX SESSION PROVEN + AUTHENTICATED READ-ONLY BROWSER DIAGNOSTICS
+
+The Rock64 owner installed tmux, ran the persistent Chromium/noVNC backend inside `magnetra-browser`, detached, and verified `/healthz` returned HTTP 200 in another SSH shell. Real processes `btdigg_browser_backend.py`, `x11vnc`, `websockify`, and Xvfb remained active. Owner then closed and reopened the Safari noVNC page and **observed the same Chromium page**, confirming live GUI continuity for this tmux-managed session. This does **not** establish unrestricted provider search, nor does an HTTP 200 health response confirm the HTML currently displayed.
+
+New source-only candidate adds authenticated, loopback-only `/v1/browser-state` and `python3 rock64/check-btdigg-browser-backend.py --browser-status`: report connected browser, open tab count, already verified BTDigg result-tab count, selected-tab validity and a source-navigation refusal latch, without URL/query/magnet/cookie/secret disclosure and without source requests. If the owner manually opens a different verified result tab, the existing gateway can read that exact query without requesting it again; all existing canonical source and magnet-pair validation applies. Denial still stops **new automated navigation** for the foreground process. GitHub merge is not an installation on Rock64; an already running process keeps old code until owner explicitly restarts. Production 8796/Cloudflare untouched; provider authorization not verified.
+
 ## 12 NOV 2026 — OWNER HARDWARE PROOF, SECOND QUERY REFUSAL, SOURCE-ONLY TAB ISOLATION
 
 Physical owner result: experimental Rock64 browser gateway 127.0.0.1:18896 passed /healthz (200). After the owner manually loaded a genuine BTDigg result page, `--test-search` returned HTTP 200 with bounded source HTML, results and magnet markers. The distinct `--test-next-search` navigated to the new query but visually showed "Too Many Requests"; local HTTP 503, **not confirmed second-query results**. A restored Chromium page after session restart showed "Restore pages?", evidence of a previous unclean closure, not proof that it caused the provider's limitation.
