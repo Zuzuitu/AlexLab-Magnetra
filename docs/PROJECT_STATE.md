@@ -1,5 +1,15 @@
 # AlexLab Magnetra — Project State
 
+## 12 NOV 2026 — PRIVATE BTDIGG GATEWAY 429 SOURCE VS LOCAL PACING METADATA (SOURCE-ONLY)
+
+**Owner physical checkpoint:** GitHub main `8da0b7d` pulled on Rock64, `python3 -B -m unittest rock64/test_btdigg_gateway.py -v` completed **18/18 PASS** (9.680s). The actual existing tmux Chromium/noVNC process was not restarted, and the page last observed remained BTDigg's `Too Many Requests`. This is offline test evidence, NOT current live source recovery.
+
+**Protocol gap found after #257/#258:** Rock64 gateway generated HTTP 429 for **two different reasons**: five-second local pacing, and actual upstream source refusal with a 300-second process-wide pause. The initial Worker cache from #257 interpreted all BTDigg 429 errors as evidence of upstream refusal, potentially turning a harmless local five-second gap into a new five-minute pause. Conversely the Worker adapter threw generic 429 errors without passing the private gateway's bounded `Retry-After`, so a longer authenticated source delay was not honored.
+
+**New source-only candidate:** On authenticated gateway 429 responses, add fixed `x-magnetra-btdigg-429-scope: source|local-pacing` alongside the existing numeric `Retry-After`. The Worker adapter now detects the local-pacing scope and raises a sanitized pacing error that **does not** trigger the BTDigg 5-minute source cooldown. For source 429 it forwards numeric `Retry-After` as bounded `retryAfterMs` (maximum 30 minutes) to the existing Worker-isolate cache; a missing/invalid value retains the conservative default. The legacy gateway without a scope header continues to fail closed and apply the default BTDigg source 429 pause. The public PWA receives only the standard safe rate-limit category, no raw query, IP, source HTML, secrets or token fields. This protects existing PSA exact-release query semantics and keeps TPB and every other indexer independent.
+
+**Proof approach:** Offline tests use an ephemeral localhost gateway and stubbed Worker transport to assert source vs pacing headers, bounded numerical Retry-After, ten-minute source pause across distinct BTDigg queries, independent five-second pacing and no new source request before the deadline. No BTDigg network requests, retries, Chromium restarts, gateway service restart, Cloudflare deployments, traffic split change, production 8796 switchover, manual magnet import or CAPTCHA automation. Existing GitHub immutable release hash guards are not relaxed. **Only source is changed until owner explicitly authorizes a separate tested staging/production activation.**
+
 ## 12 NOV 2026 — ROCK64 PROCESS-WIDE BTDIGG SOURCE 429 PAUSE (CODE ONLY)
 
 Following #257's per-isolate Worker 429 guard, a technical gap remained in the common Rock64 gateway. Its original `SearchProvider` paced uncached requests every five seconds but did not distinguish an actual source `HTTP 429` from a locally generated 429 due to pacing/inflight. After a genuine upstream refusal, a different term could therefore reach source five seconds later, even if a Cloudflare isolate restarted.
