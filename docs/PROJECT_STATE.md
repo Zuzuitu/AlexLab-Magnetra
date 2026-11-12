@@ -1,5 +1,11 @@
 # AlexLab Magnetra — Project State
 
+## 12 NOV 2026 — BTDIGG COLD-START NO-SEARCH GUARD + LOCAL CHROMIUM EXIT MARKERS
+
+Current repository audit found an explicit startup `page.goto(query_url("The Dog Stars 2026"))` whenever the selected Playwright persistent page did not have a canonical BTDigg search URL. This could independently request the upstream source on a fresh/blank browser launch, even though the owner has observed `Too Many Requests`. Source-only candidate removes that unconditional bootstrap navigation: a new/blank persistent browser starts blank until the owner navigates manually; existing pages are only inspected. **Chromium itself may restore/reload tabs from its persistent profile**, so this does not guarantee a fully network-free process restart. The currently running tmux session must not be restarted just to test this source change.
+
+The isolated checker adds `--profile-exit-state` to read only Chromium `Default/Preferences` markers `profile.exit_type` and `profile.exited_cleanly` without contacting the browser gateway or source. All unrelated Preferences fields, URLs, history, tokens and cookies are omitted. A live Chromium may mark its currently open profile unclean until exit; these fields read **during a run are not proof of a prior crash or of the cause of source rate limiting**. No profile writes, session restore, new BTDigg queries, production 8796, Cloudflare, systemd or PWA changes.
+
 ## 12 NOV 2026 — OWNER SCREENSHOT: BTDIGG REFUSAL + CHROMIUM UN-CLEAN RESTORE BANNER
 
 Physical iPhone noVNC screenshot after a controlled browser restart shows one BTDigg
