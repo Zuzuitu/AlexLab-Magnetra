@@ -42,6 +42,14 @@ This follow-up patch reports bounded raw counts separately:
 blocked by the fixed-origin security policy. None contains page text or
 magnet URLs. `rendered_rows` means verified pairs for BTDigg, not raw blocks.
 
+**Exact URL supplied by owner and shown working in iPhone Safari/Chrome:**
+`https://btdig.com/search?order=0&q=The+Dog+Stars+2026`.
+The original Chromium pilot omitted the `order=0` parameter and therefore
+did not test the exact same URL. Its owner-initiated BTDigg navigation now
+uses this fixed first-page sort parameter, with a regression test for
+the exact encoded URL. This is **not** evidence that adding the
+parameter alone resolves the missing-results discrepancy.
+
 The existing 429 from curl_cffi is still genuine. HTTP 200 from Chromium
 proves the top-level browser navigation worked, **not** that it returned
 torrent results or that this method will remain available.
