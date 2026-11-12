@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline confidence for automatic APK build scope, including fail-open policy."""
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
@@ -17,6 +18,16 @@ ROOT = HERE.parent
 
 
 class AndroidBuildScopeTests(TestCase):
+    def test_approved_repository_policy_guards_manual_and_conditional_builds(self):
+        config = json.loads(
+            (ROOT / "config" / "project-invariants.json").read_text()
+        )
+        policy = config["android_ci_scope"]
+        self.assertTrue(policy["automatic_apk_on_android_changes_only"])
+        self.assertTrue(policy["manual_debug_staging_builds_available"])
+        self.assertTrue(policy["uncertain_change_detection_forces_build"])
+        self.assertTrue(policy["status_checks_remain_present_on_every_pr"])
+
     def test_non_android_changes_skip_gradle(self):
         for path in ("rock64/btdigg_browser_backend.py",
                      "worker/src/index.mjs", "web/app.js",
