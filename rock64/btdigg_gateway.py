@@ -302,9 +302,18 @@ def handler_class(secret: str, provider: SearchProvider):
             self.send_header("x-content-type-options", "nosniff")
             self.send_header("content-length", str(len(body)))
             if status == 429:
+                # The gateway generates short local-pacing 429 responses as
+                # well as genuine upstream refusals. Make the distinction
+                # explicit for the authenticated Worker; never misstate a
+                # five-second local pace as a source-wide refusal.
+                source_remaining = provider.source_retry_after_seconds()
                 self.send_header(
                     "retry-after",
-                    str(max(MIN_SEARCH_INTERVAL, provider.source_retry_after_seconds())),
+                    str(max(MIN_SEARCH_INTERVAL, source_remaining)),
+                )
+                self.send_header(
+                    "x-magnetra-btdigg-429-scope",
+                    "source" if source_remaining else "local-pacing",
                 )
             self.end_headers()
             if body:
