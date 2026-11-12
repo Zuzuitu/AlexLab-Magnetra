@@ -30,6 +30,12 @@
     "ci_gradle_daemon_vendor": "jetbrains",
     "ci_gradle_daemon_java": 21
   },
+  "android_ci_scope": {
+    "automatic_apk_on_android_changes_only": true,
+    "manual_debug_staging_builds_available": true,
+    "uncertain_change_detection_forces_build": true,
+    "status_checks_remain_present_on_every_pr": true
+  },
   "security": {
     "frontend_must_not_contain_secrets": true,
     "forbid_committed_private_keys": true,
