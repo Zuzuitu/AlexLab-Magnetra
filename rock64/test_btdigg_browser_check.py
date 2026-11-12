@@ -101,9 +101,90 @@ class BrowserLocalCheckTests(TestCase):
             self.assertFalse(result["search_performed"])
             self.assertTrue(result["browser_state"]["visible_source_rate_limited"])
             self.assertTrue(result["browser_state"]["new_searches_paused"])
+            self.assertEqual(
+                result["browser_state"]["diagnostic_capability"],
+                "visible_source_rate_limit_detection",
+            )
             self.assertIsNone(result["browser_state"]["last_navigation_status"])
             self.assertNotIn("magnet:", out.getvalue())
             self.assertNotIn("x" * 64, out.getvalue())
+
+    def test_old_running_browser_state_does_not_report_false_source_health(self):
+        """Old Chromium stays alive across git pull and lacks the 429 DOM flag."""
+        with TemporaryDirectory() as root:
+            token = Path(root) / "gateway.token"
+            token.write_text("x" * 64)
+            token.chmod(0o600)
+            requests = []
+
+            class LegacyResponse(Response):
+                def read(self, _limit):
+                    return json.dumps({
+                        "browser_connected": True,
+                        "open_tabs": 1,
+                        "verified_tabs": 0,
+                        "selected_tab_verified": False,
+                        "new_searches_paused": False,
+                        "last_navigation_status": None,
+                    }).encode()
+
+            def fetch(req, timeout):
+                requests.append(req)
+                return LegacyResponse()
+
+            out = StringIO()
+            with patch.object(PROBE, "TOKEN_FILE", token), \
+                 patch.object(PROBE.urllib.request, "urlopen", fetch), \
+                 patch.object(PROBE.argparse._sys, "argv",
+                              ["local-probe", "--browser-status"]), \
+                 redirect_stdout(out):
+                PROBE.main()
+            result = json.loads(out.getvalue())
+            self.assertEqual(result["local_gateway_status"], 200)
+            self.assertFalse(result["search_performed"])
+            state = result["browser_state"]
+            self.assertTrue(state["browser_connected"])
+            self.assertEqual(state["verified_tabs"], 0)
+            self.assertIsNone(state["visible_source_rate_limited"])
+            self.assertIsNone(state["new_searches_paused"])
+            self.assertFalse(state["in_process_navigation_latch"])
+            self.assertEqual(state["diagnostic_capability"],
+                             "legacy_navigation_latch_only")
+            self.assertIsNone(state["last_navigation_status"])
+            self.assertEqual(len(requests), 1)
+            self.assertEqual(requests[0].full_url,
+                             PROBE.LOCAL + "/v1/browser-state")
+            self.assertNotIn("magnet:", out.getvalue())
+            self.assertNotIn("x" * 64, out.getvalue())
+
+    def test_rejects_malformed_explicit_rate_limit_flag(self):
+        with TemporaryDirectory() as root:
+            token = Path(root) / "gateway.token"
+            token.write_text("x" * 64)
+            token.chmod(0o600)
+
+            class InvalidResponse(Response):
+                def read(self, _limit):
+                    return json.dumps({
+                        "browser_connected": True,
+                        "open_tabs": 1,
+                        "verified_tabs": 0,
+                        "selected_tab_verified": False,
+                        "new_searches_paused": False,
+                        "visible_source_rate_limited": "false",
+                    }).encode()
+
+            out = StringIO()
+            with patch.object(PROBE, "TOKEN_FILE", token), \
+                 patch.object(PROBE.urllib.request, "urlopen",
+                              return_value=InvalidResponse()), \
+                 patch.object(PROBE.argparse._sys, "argv",
+                              ["local-probe", "--browser-status"]), \
+                 redirect_stdout(out):
+                PROBE.main()
+            result = json.loads(out.getvalue())
+            self.assertEqual(result["local_gateway_status"], "unavailable")
+            self.assertFalse(result["search_performed"])
 
     def test_profile_exit_state_reads_nonsecret_markers_without_network(self):
         with TemporaryDirectory() as root:
