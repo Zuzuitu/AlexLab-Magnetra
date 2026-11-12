@@ -60,7 +60,7 @@ def search_target(provider, query, category="all"):
     if provider == "btdigg":
         if category not in TPB_CATEGORIES:
             raise PilotStop("invalid_category")
-        return "https://btdig.com/search?" + urlencode({"q": query})
+        return "https://btdig.com/search?" + urlencode({"order": 0, "q": query})
     if category not in TPB_CATEGORIES:
         raise PilotStop("invalid_category")
     return "https://thepiratebay.org/search.php?" + urlencode({
