@@ -8,14 +8,21 @@ const MAX_SERIALIZED_BYTES=160_000;
 const ALLOWED=new Set(["btdigg","thepiratebay"]);
 const TPB_DEFAULT_COOLDOWN_MS=60_000;
 const TPB_MAX_COOLDOWN_MS=5*60_000;
+// Unlike PWA's local UI pacing, this protects direct Worker API traffic too.
+// Per-isolate only: never claim coordination across Cloudflare isolates.
+export const BTDIGG_DEFAULT_COOLDOWN_MS=5*60_000;
+export const BTDIGG_MAX_COOLDOWN_MS=30*60_000;
 
 export function createVerifiedSourceCache(clock=()=>Date.now()){
  const entries=new Map(),inflight=new Map();
- let tpbCooldownUntil=0;
+ let tpbCooldownUntil=0,btdiggCooldownUntil=0;
  // Serialize distinct uncached TPB queries inside this Worker isolate as well.
  // Identical queries already share inflight[k]; this gate prevents two different
  // TPB searches racing the origin before the first 429 sets the cooldown.
  let tpbTail=Promise.resolve();
+ // A separate queue: distinct BTDigg terms must not race before the first
+ // refusal establishes the source cooldown; TPB remains independent.
+ let btdiggTail=Promise.resolve();
  const key=(id,q,category)=>JSON.stringify([id,q,category]);
  function read(k){
   const item=entries.get(k);
@@ -38,23 +45,30 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
    return {items:cached.item.items.map(x=>({...x})),
      cache:{mode:"fresh",ageSeconds:Math.floor(cached.age/1000)}};
   if(inflight.has(k))return inflight.get(k);
-  // Best-effort per-isolate cooldown across every TPB query, not just one term.
-  if(id==="thepiratebay"&&clock()<tpbCooldownUntil){
+  // A confirmed 429 gates distinct queries within the SAME isolate only.
+  // Never convert refusal into an empty result or borrow another query's cache.
+  if((id==="thepiratebay"&&clock()<tpbCooldownUntil)||
+     (id==="btdigg"&&clock()<btdiggCooldownUntil)){
    const old=staleResult(k);
    if(old)return old;
    throw Error("provider HTTP 429");
   }
   const work=(async()=>{
-   let releaseTpb;
+   let releaseTpb,releaseBTDigg;
    if(id==="thepiratebay"){
     const previous=tpbTail;
     tpbTail=new Promise(resolve=>{releaseTpb=resolve;});
     await previous;
+   }else if(id==="btdigg"){
+    const previous=btdiggTail;
+    btdiggTail=new Promise(resolve=>{releaseBTDigg=resolve;});
+    await previous;
    }
    try{
-    // Recheck AFTER waiting: the prior distinct query may just have
-    // established an upstream 429 cooldown. Never retry during that window.
-    if(id==="thepiratebay"&&clock()<tpbCooldownUntil){
+    // Recheck AFTER waiting: a prior distinct term may have hit a 429.
+    // Queueing protects both sources without blocking other indexers.
+    if((id==="thepiratebay"&&clock()<tpbCooldownUntil)||
+       (id==="btdigg"&&clock()<btdiggCooldownUntil)){
      const old=staleResult(k);
      if(old)return old;
      throw Error("provider HTTP 429");
@@ -71,11 +85,18 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
     }
     return {items,cache:null};
    }catch(e){
-    // Negative cache stores only the upstream 429 deadline, not fake results.
+    // Negative cache stores only deadlines, never error responses as items.
     if(id==="thepiratebay"&&/^provider HTTP 429/i.test(String(e?.message||""))){
      const ms=Number.isFinite(e.retryAfterMs)&&e.retryAfterMs>0
       ?Math.min(TPB_MAX_COOLDOWN_MS,e.retryAfterMs):TPB_DEFAULT_COOLDOWN_MS;
      tpbCooldownUntil=Math.max(tpbCooldownUntil,clock()+ms);
+    }
+    if(id==="btdigg"&&/\bHTTP 429\b/i.test(String(e?.message||""))){
+     const ms=Number.isFinite(e.retryAfterMs)&&e.retryAfterMs>0
+      ?Math.min(BTDIGG_MAX_COOLDOWN_MS,
+        Math.max(BTDIGG_DEFAULT_COOLDOWN_MS,e.retryAfterMs))
+      :BTDIGG_DEFAULT_COOLDOWN_MS;
+     btdiggCooldownUntil=Math.max(btdiggCooldownUntil,clock()+ms);
     }
     // Exact-query original results may be returned only visibly marked stale.
     const old=staleResult(k);
@@ -83,6 +104,7 @@ export function createVerifiedSourceCache(clock=()=>Date.now()){
     throw e;
    }finally{
     if(releaseTpb)releaseTpb();
+    if(releaseBTDigg)releaseBTDigg();
     inflight.delete(k);
    }
   })();
