@@ -6,7 +6,6 @@ on:
     paths-ignore:
       - 'README.md'
       - 'CHANGELOG.md'
-      - 'fastlane/*'
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -32,7 +31,6 @@ jobs:
     - name: Skip APK build for non-Android changes
       if: steps.android_scope.outputs.build_required != 'true'
       run: echo "Android sources/toolchain unchanged; skipping JDK, Gradle and APK artifact."
-
 
     - name: Check project invariants
       run: python3 scripts/check-project-invariants.py
