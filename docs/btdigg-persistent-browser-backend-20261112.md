@@ -98,6 +98,21 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Source HTTP 429 pause in gateway (not the live browser)
+
+The new gateway-source candidate adds one source-only five-minute refusal
+deadline shared by all searches handled by a given Rock64 gateway process.
+Only a real `fetcher() -> 429` establishes it; a local 5-second pacing 429
+does not. Original positive cache hits remain eligible for the same query.
+A response during the pause includes a bounded `Retry-After` reflecting
+the remaining deadline. There is no timer, automatic retry or provider
+network probe. Other indexers and other Rock64 services are unchanged.
+
+Tests: `python3 -B -m unittest rock64/test_btdigg_gateway.py -v`
+run locally without BTDigg source calls. Code merge alone does not restart
+the running tmux Chromium process or change production gateway port 8796;
+do not restart a live process solely to observe this new deadline.
+
 ## Read-only Xvfb/noVNC process inventory (no Chromium restart)
 
 The owner's `pgrep` showed four Xvfb displays (`:99`–`:102`) with

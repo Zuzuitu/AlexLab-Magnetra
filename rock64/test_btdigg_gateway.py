@@ -85,6 +85,98 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(code, status)
             self.assertEqual(content, b"")
 
+    def test_source_429_blocks_different_queries_but_preserves_positive_cache(self):
+        calls = []
+        def upstream(query):
+            calls.append(query)
+            if query == "blocked":
+                return 429, b""
+            return 200, b'<div class="one_result">source-owned</div>'
+        provider = gateway.SearchProvider(fetcher=upstream, clock=lambda: self.now[0])
+        self.assertEqual(provider.search("original")[0], 200)
+        self.now[0] += 6
+        self.assertEqual(provider.search("blocked")[0], 429)
+        self.assertEqual(calls, ["original", "blocked"])
+        self.assertEqual(provider.source_retry_after_seconds(),
+                         gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS)
+        self.now[0] += 10
+        self.assertEqual(provider.search("new-PSA-release")[0], 429)
+        self.assertEqual(provider.search("blocked")[0], 429)
+        self.assertEqual(calls, ["original", "blocked"],
+                         "new uncached terms are rejected locally, no source call")
+        self.assertEqual(provider.search("original")[0], 200,
+                         "source-owned cached positive remains available")
+        self.now[0] += gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS - 11
+        self.assertEqual(provider.search("new-PSA-release")[0], 429)
+        self.assertEqual(len(calls), 2)
+        self.now[0] += 2
+        self.assertEqual(provider.source_retry_after_seconds(), 0)
+        self.assertEqual(provider.search("new-PSA-release")[0], 200)
+        self.assertEqual(calls, ["original", "blocked", "new-PSA-release"])
+
+    def test_5_second_local_pacing_not_mistaken_for_source_refusal(self):
+        calls = []
+        provider = gateway.SearchProvider(
+            fetcher=lambda q: (calls.append(q) or (200,b'<div class="one_result">ok</div>')),
+            clock=lambda: self.now[0],
+        )
+        self.assertEqual(provider.search("one")[0], 200)
+        self.assertEqual(provider.search("two")[0], 429,
+                         "local spacing returns 429 without source denial")
+        self.assertEqual(provider.source_retry_after_seconds(), 0)
+        self.now[0] += gateway.MIN_SEARCH_INTERVAL + 1
+        self.assertEqual(provider.search("two")[0], 200)
+        self.assertEqual(calls, ["one", "two"])
+
+    def test_non_429_upstream_errors_do_not_create_false_source_cooldown(self):
+        for upstream_status in (503, 504):
+            with self.subTest(upstream_status=upstream_status):
+                calls = []
+                provider = gateway.SearchProvider(
+                    fetcher=lambda q: (calls.append(q) or
+                                       (upstream_status if len(calls)==1 else 200,
+                                        b'<div class="one_result">good</div>'
+                                        if len(calls)>1 else b"")),
+                    clock=lambda: self.now[0],
+                )
+                self.assertEqual(provider.search("a")[0], upstream_status)
+                self.assertEqual(provider.source_retry_after_seconds(), 0)
+                self.now[0] += gateway.MIN_SEARCH_INTERVAL + 1
+                self.assertEqual(provider.search("b")[0], 200)
+                self.assertEqual(calls, ["a", "b"])
+
+    def test_retry_after_header_distinguishes_source_429_from_local_spacing(self):
+        # Live localhost test only; no internet access or production service.
+        statuses = [429, 200]
+        calls = []
+        def upstream(query):
+            calls.append(query)
+            return statuses.pop(0), b""
+        provider = gateway.SearchProvider(fetcher=upstream, clock=lambda: self.now[0])
+        server = gateway.LimitedHTTPServer(
+            ("127.0.0.1", 0), gateway.handler_class(TOKEN, provider))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        def call(query):
+            conn = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+            try:
+                conn.request("GET", "/v1/search?q=" + quote(query),
+                             headers={"Authorization": "Bearer " + TOKEN})
+                response = conn.getresponse()
+                response.read()
+                return response.status, response.getheader("retry-after")
+            finally:
+                conn.close()
+        try:
+            self.assertEqual(call("first"), (429, str(gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS)))
+            self.now[0] += 6
+            self.assertEqual(call("different"), (429, str(gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS-6)))
+            self.assertEqual(calls, ["first"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_multiple_queries_bounded_lru_and_expiration(self):
         self.assertEqual(self.provider.search("ubuntu")[0], 200)
         self.now[0] += 6
@@ -144,6 +236,9 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(provider.search("ubuntu")[0], 429)
         self.assertEqual(calls, ["ubuntu"], "429 cannot trigger automatic retries")
         self.now[0] += 6
+        self.assertEqual(provider.search("ubuntu")[0], 429)
+        self.assertEqual(calls, ["ubuntu"], "source refusal is not retried after five seconds")
+        self.now[0] += gateway.SOURCE_REFUSAL_COOLDOWN_SECONDS + 1
         self.assertEqual(provider.search("ubuntu")[0], 200)
         self.assertEqual(provider.search("ubuntu")[0], 200)
         self.assertEqual(calls, ["ubuntu", "ubuntu"])
