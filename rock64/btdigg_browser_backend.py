@@ -107,6 +107,25 @@ def validated_result_html(page):
     return body
 
 
+def source_rate_limit_visible(page):
+    """Observe an explicit BTDigg denial in an ALREADY loaded page only.
+
+    A body containing exactly the short source refusal is rate limited.
+    A release title containing these words is NOT a refusal. No navigation,
+    network requests, cookies or page text are logged or returned.
+    """
+    try:
+        if page.is_closed() or not source_landing(page.url):
+            return False
+        text = page.locator("body").inner_text(timeout=1500)
+        if not isinstance(text, str) or len(text) > 160:
+            return False
+        compact = " ".join(text.casefold().split())
+        return compact in ("too many requests", "429 too many requests")
+    except Exception:
+        return False
+
+
 class VisibleBrowserFetcher:
     """One-thread Playwright gateway; preserve verified tabs on source refusal.
 
@@ -141,6 +160,7 @@ class VisibleBrowserFetcher:
         try:
             pages = [p for p in self.page.context.pages if not p.is_closed()]
             verified = sum(validated_result_html(p) is not None for p in pages)
+            visible_denial = any(source_rate_limit_visible(p) for p in pages)
             return {
                 "browser_connected": bool(pages),
                 "open_tabs": len(pages),
@@ -149,7 +169,11 @@ class VisibleBrowserFetcher:
                     not self.page.is_closed()
                     and validated_result_html(self.page) is not None
                 ),
-                "new_searches_paused": self._source_stopped is not None,
+                "visible_source_rate_limited": visible_denial,
+                "new_searches_paused": (
+                    self._source_stopped is not None or visible_denial
+                ),
+                # A visible 429 body is not proof of the network HTTP status.
                 "last_navigation_status": self._source_stopped,
             }
         except Exception:
@@ -158,6 +182,7 @@ class VisibleBrowserFetcher:
                 "open_tabs": 0,
                 "verified_tabs": 0,
                 "selected_tab_verified": False,
+                "visible_source_rate_limited": False,
                 "new_searches_paused": True,
                 "last_navigation_status": None,
             }
@@ -175,6 +200,13 @@ class VisibleBrowserFetcher:
             if self._source_stopped is not None:
                 # A failed query cannot trigger another upstream request.
                 return self._source_stopped, b""
+
+            # A restored browser can display BTDigg's explicit refusal even
+            # when no navigation occurred in this Playwright process. Do not
+            # treat a fresh local latch as permission to hit the source again.
+            if any(source_rate_limit_visible(p) for p in self.page.context.pages
+                   if not p.is_closed()):
+                return 429, b""
 
             # No automated navigation while the currently controlled tab is
             # unverified. Owner can first verify an existing tab manually.
