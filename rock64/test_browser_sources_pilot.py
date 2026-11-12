@@ -32,11 +32,25 @@ class BrowserSourcePilotTests(unittest.TestCase):
                 u = urlsplit(result)
                 self.assertEqual(u.path, path)
                 self.assertEqual(parse_qs(u.query)["q"], ["PSA 1080p x265 10bit"])
+                if provider == "btdigg":
+                    self.assertEqual(u.query, "order=0&q=PSA+1080p+x265+10bit")
+                    self.assertEqual(parse_qs(u.query)["order"], ["0"])
                 self.assertEqual(u.scheme, "https")
                 self.assertTrue(pilot.approved_landing(provider, result))
         self.assertEqual(parse_qs(urlsplit(
             pilot.search_target("thepiratebay", "ubuntu", "movies")
         ).query)["cat"], ["200"])
+
+    def test_exact_owner_verified_bt_digg_url_and_fixed_first_page_sort(self):
+        self.assertEqual(
+            pilot.search_target("btdigg", "The Dog Stars 2026"),
+            "https://btdig.com/search?order=0&q=The+Dog+Stars+2026",
+        )
+        self.assertEqual(
+            pilot.search_target("btdigg", "The.Dog.Stars.2026.1080p.x265-PSA"),
+            "https://btdig.com/search?order=0&q=The.Dog.Stars.2026.1080p.x265-PSA",
+        )
+        self.assertNotIn("order=0", pilot.search_target("thepiratebay", "ubuntu"))
 
     def test_input_validation_never_expands_source_scope(self):
         for text in ["", "X", "\r\n", "example\nsecret", "A"*181,
@@ -96,6 +110,13 @@ class BrowserSourcePilotTests(unittest.TestCase):
         }), "no_rows_unverified")
         self.assertEqual(pilot.classify_page("btdigg", status=200, **common),
                          "rendered_rows")
+        self.assertEqual(pilot.classify_page(
+            "btdigg", status=200, verified_rows=0, **common),
+            "no_rows_unverified",
+            "unpaired name/magnet elements must not certify result records")
+        self.assertEqual(pilot.classify_page(
+            "btdigg", status=200, verified_rows=3, **common),
+            "rendered_rows")
 
     def test_tpb_nested_api_429_visible_even_if_html_navigation_is_200(self):
         site = pilot.search_target("thepiratebay", "ubuntu")
@@ -174,13 +195,41 @@ class BrowserSourcePilotTests(unittest.TestCase):
                 "btdigg", "ubuntu", chromium_path="/usr/bin/chromium",
                 playwright_manager=FakeManager,
             )
+            # A browser page can contain row and magnet elements that do NOT
+            # belong to the same release. Do not mask raw counts when rejected.
+            class FakeUnpairedPage(FakePage):
+                def locator(self, selector):
+                    if ":has(" in selector:
+                        return SimpleNamespace(count=lambda: 0)
+                    return super().locator(selector)
+            with patch.object(FakeContext, "new_page", return_value=FakeUnpairedPage()):
+                unpaired = pilot.owner_probe(
+                    "btdigg", "ubuntu", chromium_path="/usr/bin/chromium",
+                    playwright_manager=FakeManager,
+                )
+        self.assertEqual(unpaired["state"], "no_rows_unverified")
+        self.assertEqual(unpaired["raw_dom_result_blocks"], 2)
+        self.assertEqual(unpaired["magnet_links"], 2)
+        self.assertEqual(unpaired["verified_dom_result_pairs"], 0)
+        self.assertEqual(unpaired["rendered_rows"], 0)
+        self.assertEqual(unpaired["result_structure"], "unpaired_result_elements")
         self.assertEqual(output["state"], "rendered_rows")
         self.assertFalse(output["search_results_extracted"])
         self.assertFalse(output["production_changed"])
         self.assertEqual(output["rendered_rows"], 2)
-        self.assertEqual(len([x for x in calls if isinstance(x, tuple) and x[0]=="goto"]), 1)
-        self.assertEqual(calls.count("allowed"), 1)
-        self.assertEqual(calls.count("blocked"), 1)
+        self.assertEqual(output["raw_dom_result_blocks"], 2)
+        self.assertEqual(output["raw_dom_name_links"], 2)
+        self.assertEqual(output["raw_dom_magnet_candidates"], 2)
+        self.assertEqual(output["magnet_links"], 2)
+        self.assertEqual(output["verified_dom_result_pairs"], 2)
+        self.assertEqual(output["result_structure"], "paired_result_rows")
+        self.assertEqual(output["blocked_external_resources"], 1)
+        self.assertEqual(output["blocked_external_scripts"], 0)
+        self.assertNotIn("ubuntu",str(output),
+            "only numeric DOM diagnostics and fixed labels, no queries in stdout")
+        self.assertEqual(len([x for x in calls if isinstance(x, tuple) and x[0]=="goto"]), 2)
+        self.assertEqual(calls.count("allowed"), 2)
+        self.assertEqual(calls.count("blocked"), 2)
         launches = [x[1] for x in calls if isinstance(x, tuple) and x[0]=="launch"]
         self.assertTrue(launches[0]["chromium_sandbox"])
         self.assertFalse(any("--no-sandbox" in x for x in launches[0]["args"]))
