@@ -23,6 +23,10 @@ class FakeContext:
         self.owner = owner
         self.opened = []
 
+    @property
+    def pages(self):
+        return [self.owner, *self.opened]
+
     def new_page(self):
         page = FakePage(url="about:blank", valid=False)
         page.context = self
@@ -68,6 +72,9 @@ class FakePage:
 
     def close(self):
         self.closed = True
+
+    def is_closed(self):
+        return self.closed
 
 
 class BrowserBackendTests(TestCase):
@@ -241,6 +248,88 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(gateway.fetch("THE DOG STARS 2026")[0], 200)
         self.assertEqual(len(original.context.opened), 1)
 
+    def test_readonly_browser_state_inspects_tabs_without_navigation(self):
+        first = FakePage()
+        gateway = backend.VisibleBrowserFetcher(first)
+        state = gateway.browser_state()
+        self.assertEqual(state, {
+            "browser_connected": True,
+            "open_tabs": 1,
+            "verified_tabs": 1,
+            "selected_tab_verified": True,
+            "new_searches_paused": False,
+            "last_navigation_status": None,
+        })
+        extra = first.context.new_page()
+        self.assertFalse(extra.valid)
+        state = gateway.browser_state()
+        self.assertEqual((state["open_tabs"], state["verified_tabs"]), (2, 1))
+        self.assertEqual(first.goto_calls, [])
+        self.assertEqual(extra.goto_calls, [])
+
+    def test_manual_verified_tab_reused_after_denial_without_new_search(self):
+        first = FakePage()
+        first.next_status = 429
+        gateway = backend.VisibleBrowserFetcher(first)
+        self.assertEqual(gateway.fetch("Different title"), (429, b""))
+        self.assertEqual(len(first.context.opened), 1)
+        manually_opened = first.context.new_page()
+        manually_opened.url = backend.query_url("Manual 2026")
+        manually_opened.valid = True
+        status, html = gateway.fetch("MANUAL 2026")
+        self.assertEqual((status, html), (200, HTML.encode()))
+        self.assertEqual(manually_opened.goto_calls, [])
+        self.assertEqual(len(first.context.opened), 2)
+        self.assertIs(gateway.page, manually_opened)
+        state = gateway.browser_state()
+        self.assertTrue(state["new_searches_paused"])
+        self.assertEqual(state["last_navigation_status"], 429)
+        self.assertEqual(state["verified_tabs"], 2)
+        self.assertEqual(gateway.fetch("Other new query"), (429, b""))
+        self.assertEqual(len(first.context.opened), 2)
+
+    def test_manual_verified_tab_detected_if_initial_tab_closed(self):
+        first = FakePage(valid=False)
+        manually_opened = first.context.new_page()
+        manually_opened.url = backend.query_url("Manual 2026")
+        manually_opened.valid = True
+        first.close()
+        gateway = backend.VisibleBrowserFetcher(first)
+        self.assertEqual(gateway.fetch("Manual 2026"), (200, HTML.encode()))
+        self.assertIs(gateway.page, manually_opened)
+        self.assertEqual(gateway.browser_state()["open_tabs"], 1)
+        self.assertEqual(manually_opened.goto_calls, [])
+
+    def test_authenticated_readonly_browser_route_and_rejects_querystring(self):
+        first = FakePage()
+        gateway = backend.VisibleBrowserFetcher(first)
+        token = "a" * 64
+        handler_type = backend.browser_handler_class(
+            token, backend.SearchProvider(), gateway)
+        handler = object.__new__(handler_type)
+        captured = []
+        handler.reply = lambda code, body=b"", mime="application/json": (
+            captured.append((code, body, mime)))
+        handler.path = "/v1/browser-state"
+        handler.headers = {"authorization": "Bearer wrong"}
+        handler.do_GET()
+        self.assertEqual(captured[-1][0], 401)
+        handler.headers = {"authorization": "Bearer " + token}
+        handler.do_GET()
+        self.assertEqual(captured[-1][0], 200)
+        data = backend.json.loads(captured[-1][1])
+        self.assertTrue(data["selected_tab_verified"])
+        self.assertEqual(data["open_tabs"], 1)
+        self.assertNotIn("The Dog Stars", str(data))
+        self.assertNotIn("magnet:", str(data))
+        self.assertEqual(first.goto_calls, [])
+        handler.path = "/v1/browser-state?q=private"
+        handler.do_GET()
+        self.assertEqual(captured[-1][0], 404)
+        handler.path = "/healthz"
+        handler.do_GET()
+        self.assertEqual(captured[-1][0], 200)
+
     def test_auth_and_private_persistent_profile_are_explicit_opt_in(self):
         with TemporaryDirectory() as root:
             p = Path(root) / "profile"
@@ -275,7 +364,7 @@ class BrowserBackendTests(TestCase):
 
     def test_safety_regression_source_only(self):
         source = Path(backend.__file__).read_text()
-        self.assertIn("HTTPServer((BIND, port)", source)
+        self.assertIn("browser_handler_class(token, provider, browser_fetcher)", source)
         self.assertNotIn("ThreadingHTTPServer((BIND", source)
         self.assertIn("launch_persistent_context", source)
         self.assertIn("chromium_sandbox=True", source)
