@@ -43,6 +43,8 @@ class BrowserSetupTests(unittest.TestCase):
             'VENV="$VENV_BASE/magnetra-browser"', "python3 -m venv",
             "pip --isolated install", "--only-binary=:all:",
             "--index-url https://pypi.org/simple", "read-only check",
+            "assert version('playwright') in ('1.65.0', '1.65.1')",
+            "secure_existing_venv", "INSECURE_PERMISSIONS",
             "aarch64", "$(id -u)", '[[ ! -e "$VENV" ]]',
         ):
             with self.subTest(required=required):
@@ -54,6 +56,43 @@ class BrowserSetupTests(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, s)
+
+    def test_reject_group_writable_existing_venv_without_modification(self):
+        with tempfile.TemporaryDirectory() as root:
+            home = Path(root) / "home"
+            home.mkdir()
+            venv = home / ".venvs" / "magnetra-browser"
+            venv.mkdir(parents=True, mode=0o700)
+            venv.chmod(0o775)
+            config = venv / "pyvenv.cfg"
+            config.write_text("home = /usr/bin\n")
+            config.chmod(0o664)
+            run = subprocess.run(["bash", str(SCRIPT), "--check"],
+                                 env={**os.environ, "HOME": str(home)},
+                                 capture_output=True, text=True)
+            self.assertEqual(run.returncode, 2)
+            self.assertIn("INSECURE_PERMISSIONS", run.stderr)
+            self.assertEqual(venv.stat().st_mode & 0o777, 0o775)
+            self.assertEqual(config.stat().st_mode & 0o777, 0o664)
+
+    def test_readonly_compatible_venv_without_pip_install(self):
+        with tempfile.TemporaryDirectory() as root:
+            home = Path(root) / "home"
+            home.mkdir()
+            venv = home / ".venvs" / "magnetra-browser"
+            (venv / "bin").mkdir(parents=True, mode=0o700)
+            venv.chmod(0o700)
+            cfg = venv / "pyvenv.cfg"
+            cfg.write_text("home = /usr/bin\n")
+            cfg.chmod(0o600)
+            fake_python = venv / "bin" / "python"
+            fake_python.write_text('#!/bin/sh\ncase "$2" in *"print(version("* ) echo 1.65.0 ;; esac\nexit 0\n')
+            fake_python.chmod(0o700)
+            run = subprocess.run(["bash", str(SCRIPT), "--check"],
+                                 env={**os.environ, "HOME": str(home)},
+                                 capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertIn("PLAYWRIGHT_ENV=READY VERSION=1.65.0", run.stdout)
 
 
 if __name__ == "__main__":

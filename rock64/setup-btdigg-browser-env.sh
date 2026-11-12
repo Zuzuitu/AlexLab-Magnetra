@@ -21,15 +21,38 @@ command -v python3 >/dev/null 2>&1 || fail 'python3 is unavailable.'
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' ||
   fail 'Python >= 3.10 required.'
 
+# The existing Rock64 venv is proven to import Playwright 1.65.0.
+# Allow that specific installed minor version; fresh installs stay pinned.
+secure_existing_venv() {
+  python3 - "$VENV" <<'PY'
+import os, stat, sys
+from pathlib import Path
+venv = Path(sys.argv[1])
+for item in (venv, venv / "pyvenv.cfg"):
+    if item.is_symlink() or not item.exists():
+        sys.exit(1)
+    metadata = item.stat()
+    if metadata.st_uid != os.geteuid() or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        sys.exit(1)
+PY
+}
+
 ready() {
   [[ -x "$VENV/bin/python" ]] || return 1
   "$VENV/bin/python" -c \
-    "from importlib.metadata import version; assert version('playwright') == '$PLAYWRIGHT_VERSION'; import playwright.sync_api" \
+    "import sys; from importlib.metadata import version; import playwright.sync_api; assert sys.prefix != sys.base_prefix; assert version('playwright') in ('1.65.0', '1.65.1')" \
     >/dev/null 2>&1
 }
 
+if [[ -d "$VENV" ]] && ! secure_existing_venv; then
+  printf 'PLAYWRIGHT_ENV=INSECURE_PERMISSIONS (read-only; existing venv preserved)\n' >&2
+  printf 'Inspect ownership; then restrict venv directory to 0700 and pyvenv.cfg to 0600.\n' >&2
+  exit 2
+fi
+
 if ready; then
-  printf 'PLAYWRIGHT_ENV=READY VERSION=%s PATH=%s\n' "$PLAYWRIGHT_VERSION" "$VENV"
+  EXISTING_VERSION="$("$VENV/bin/python" -c "from importlib.metadata import version; print(version('playwright'))")"
+  printf 'PLAYWRIGHT_ENV=READY VERSION=%s PATH=%s\n' "$EXISTING_VERSION" "$VENV"
   exit 0
 fi
 
