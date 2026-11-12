@@ -98,6 +98,34 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Source refusal visibly present after restart
+
+The owner provided an actual noVNC screenshot showing `Too Many Requests`
+inside the existing Chromium BTDigg page and Chromium's "Restore pages"
+banner. The local browser-status route had reported 1 tab, 0 verified result
+tabs, no tracked navigation refusal, and `new_searches_paused=false`.
+This last field only represented the in-process navigation latch, **not**
+source availability. The restart-related banner is consistent with an
+unclean browser exit at some point, but does not prove when or whether the
+source refused because of that exit.
+
+The new source-only behavior recognizes the exact `Too Many Requests`
+text of an already open canonical BTDigg page. Its authenticated status
+reports `visible_source_rate_limited=true` and
+`new_searches_paused=true`, while keeping
+`last_navigation_status=null` unless a real browser navigation response
+was observed by this process. This DOM-only observation never visits the
+source. A distinct uncached owner-requested query is locally rejected
+without an upstream attempt while the refusal remains visible. Previously
+verified tabs may still be reused for their exact queries. The
+implementation does not dismiss Chromium's restore banner, reset cookies,
+try different IPs, or suppress provider refusals.
+
+The current owner-controlled tmux browser process does not hot-reload
+GitHub changes. Avoid restarting a live session simply for this diagnostic:
+a restart could reload/reopen a source page even when the browser does not
+deliberately run a new query.
+
 ## Read-only browser state after owner-controlled tmux detach
 
 The owner physically confirmed persistent Chromium/noVNC remains available
