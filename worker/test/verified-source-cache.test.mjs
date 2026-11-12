@@ -215,7 +215,9 @@ test("BTDigg exact-query positive stale cache survives source refusal, never bor
  const c=createVerifiedSourceCache(()=>now);
  const original=[{id:"btdigg:authentic",provider:"btdigg",name:"exact-PSA"}];
  await c.search("btdigg","exact-PSA","all",async()=>original);
- now=FRESH_MS+1;
+ // Start refusal just before the legitimate stale max, so the source
+ // pause continues AFTER the formerly verified result expires.
+ now=STALE_MAX_MS-2000;
  const limited=async()=>{calls++;throw Error("provider HTTP 429");};
  const stale=await c.search("btdigg","exact-PSA","all",limited);
  assert.equal(stale.cache.mode,"stale");
