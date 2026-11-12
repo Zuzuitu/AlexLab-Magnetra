@@ -98,6 +98,34 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Chromium startup and local profile exit markers
+
+The persistent backend no longer has a default `page.goto()` search
+on startup: if Chromium starts on a blank page, it remains blank until
+the owner navigates manually in the visible noVNC session. This avoids
+adding an explicit source request when the source currently refuses
+new searches. **Chromium may still itself restore/reload a persisted
+tab**, so this change cannot guarantee zero upstream requests after a
+process restart; never restart just to exercise the diagnostic.
+
+Before ending the current tmux session, a read-only local marker check
+may be run from another SSH shell (no Playwright API and no internet):
+
+```bash
+cd "$HOME/magnetra-cffi-live-20261028"
+python3 rock64/check-btdigg-browser-backend.py --profile-exit-state
+```
+
+This reports only `profile_marker_available`, `exit_type`,
+`exited_cleanly` and a runtime caveat. Chromium sometimes marks its
+profile `Crashed` / `exited_cleanly=false` **while it is still running**,
+so such live values do NOT prove a bad prior shutdown. Do not modify
+the profile or click Restore based solely on these marker values.
+To determine whether the next intentional shutdown is clean, compare
+markers when the Chromium process is fully stopped, after normal
+Playwright `context.close()`. No background observer or source request
+is introduced.
+
 ## Source refusal visibly present after restart
 
 The owner provided an actual noVNC screenshot showing `Too Many Requests`
