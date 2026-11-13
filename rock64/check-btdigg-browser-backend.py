@@ -138,7 +138,7 @@ def main():
                 )
             # New browser versions disclose only fixed, secret-free reason codes.
             reasons = {
-                "no_navigation_response", "upstream_http_429",
+                "search_input_missing", "no_navigation_response", "upstream_http_429",
                 "upstream_http_non200", "unexpected_final_query",
                 "unverified_result_html", "browser_navigation_exception",
             }
