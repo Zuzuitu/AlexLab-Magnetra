@@ -22,6 +22,11 @@ done
 [[ -d /etc/magnetra-btdigg && ! -L /etc/magnetra-btdigg ]] || fail "Protected configuration directory invalid."
 [[ ! -L "$DROP_DIR" ]] || fail "Unexpected override directory symlink."
 systemctl is-active --quiet "$SERVICE" || fail "Production gateway not active."
+# A later 50-magnetra-cffi.conf ExecStart overrides our 20- bridge
+# drop-in. Never claim Chromium is active while CFFI is still executable.
+ACTIVE_DROPINS="$(systemctl show "$SERVICE" --property=DropInPaths --value)" || fail "Cannot verify active systemd overrides."
+[[ -z "$ACTIVE_DROPINS" ]] || fail "CFFI or another systemd override is active; Chromium requires a separate reviewed transition, not stacked drop-ins."
+[[ ! -e "$DROP_DIR/50-magnetra-cffi.conf" && ! -L "$DROP_DIR/50-magnetra-cffi.conf" ]] || fail "CFFI override present; Chromium bridge cannot be stacked."
 cmp -s "$ROOT/rock64/btdigg_gateway.py" "$GATEWAY" || fail "Installed source is not reviewed Chromium bridge gateway."
 
 # Check current user-owned browser state locally without navigation.

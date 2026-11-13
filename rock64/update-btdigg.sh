@@ -38,6 +38,19 @@ systemctl is-active --quiet "$SERVICE" || {
   echo "STOP: existing Magnetra gateway is not active; diagnose before replacing." >&2
   exit 1
 }
+# The source-only updater is valid ONLY when the unit runs this exact base
+# entrypoint. CFFI 50-magnetra-cffi.conf overrides ExecStart, dynamically
+# imports btdigg_gateway.py, and needs a separate explicitly staged migration.
+# Reject it before any file modification or restart.
+ACTIVE_DROPINS="$(systemctl show "$SERVICE" --property=DropInPaths --value)" || {
+  echo "STOP: cannot verify effective systemd overrides." >&2
+  exit 1
+}
+if [[ -n "$ACTIVE_DROPINS" ]] || [[ -e /etc/systemd/system/magnetra-btdigg.service.d/50-magnetra-cffi.conf ]] || [[ -L /etc/systemd/system/magnetra-btdigg.service.d/50-magnetra-cffi.conf ]]; then
+  echo "STOP: active CFFI or other systemd override detected; this updater only supports the original gateway entrypoint." >&2
+  echo "READ_ONLY_NEXT: python3 rock64/check-btdigg-service-entrypoint.py" >&2
+  exit 2
+fi
 python3 -B -m unittest discover -s "$ROOT/rock64" -p 'test_*.py' -q
 python3 - "$SOURCE" <<'PY'
 import ast, pathlib, sys
