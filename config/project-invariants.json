@@ -249,6 +249,21 @@
       "fabricated_legacy_html_results_forbidden": true
     }
   },
+  "btdigg_offline_chromium_gateway_2026_11_13": {
+    "status": "source_only_owner_opt_in_test",
+    "executable": "rock64/check-btdigg-offline-chromium-path.py",
+    "offline_ci_guard": "rock64/test_btdigg_offline_chromium_path.py",
+    "fresh_temporary_profile_only": true,
+    "uses_real_headless_local_chromium": true,
+    "intercepts_all_page_network_requests": true,
+    "btdigg_requests_fulfilled_with_synthetic_fixtures": true,
+    "other_page_requests_aborted": true,
+    "source_availability_not_claimed": true,
+    "live_tmux_browser_not_touched": true,
+    "production_gateway_not_touched": true,
+    "production_cloudflare_not_touched": true,
+    "manual_owner_execution_only": true
+  },
   "btdigg_rock64_source_rate_limit_candidate_2026_11_12": {
     "status": "code_only_not_deployed",
     "source_429_cooldown_seconds": 300,
