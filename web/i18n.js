@@ -573,6 +573,10 @@ const DICTIONARY={
     "ro": "Prea multe cereri către sursă.",
     "it": "Troppe richieste alla fonte."
   },
+  "BTDigg is spacing local requests; no source rate limit was confirmed.": {
+    "ro": "Gateway-ul BTDigg limitează temporar ritmul local al cererilor; nu este confirmată o nouă limitare a sursei.",
+    "it": "Il gateway BTDigg sta distanziando temporaneamente le richieste locali; non è confermato un nuovo limite della fonte."
+  },
   "Open source search ↗": {
     "ro": "Deschide căutarea sursei ↗",
     "it": "Apri ricerca della fonte ↗"

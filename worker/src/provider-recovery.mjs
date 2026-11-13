@@ -42,7 +42,7 @@ export function classifyProviderError(err){
  if(/BTDigg Rock64 gateway transport failed/i.test(raw))
   return {code:"BTDIGG_TUNNEL_ERROR",message:"Connection to the Rock64 BTDigg tunnel failed.",retryable:false};
  if(/BTDigg Rock64 local pacing/i.test(raw))
-  return {code:"RATE_LIMIT",message:"BTDigg gateway is spacing requests; this does not prove an upstream source block.",retryable:false};
+  return {code:"BTDIGG_LOCAL_PACING",message:"BTDigg gateway is spacing requests; this does not prove an upstream source block.",retryable:false};
  if(/EZTV series title ambiguous/i.test(raw))
   return {code:"AMBIGUOUS_TITLE",message:"Several TV series have this exact title. Search by its IMDb ID.",retryable:false};
  if(/EZTV Rock64 tunnel timed out/i.test(raw))

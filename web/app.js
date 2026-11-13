@@ -30,6 +30,7 @@ function theRarBgDiagnosticSuffix(error){
 const genericError=(failure)=>{
  const code=String(failure?.code||"").toUpperCase();
  const msg=String(failure?.message||failure?.error||"").toLowerCase();
+ if(code==="BTDIGG_LOCAL_PACING")return tr("BTDigg is spacing local requests; no source rate limit was confirmed.");
  if(/TIMEOUT/.test(code)||/timed out|timeout/.test(msg))return tr("Provider timed out");
  if(/RATE_LIMIT|429/.test(code)||/rate.limit|too many requests/.test(msg))return tr("Provider rate limited");
  if(/REDIRECT/.test(code)||/redirect/.test(msg))return tr("Provider redirected");
@@ -702,6 +703,9 @@ async function search(){
      for(const e of data.errors||[])failures.push(e);
      for(const w of data.warnings||[])state.cacheWarnings.push(w);
      if(id==="btdigg"){
+      // Only an actual source refusal enters the persistent 60/120/300-second
+      // client cooldown. BTDIGG_LOCAL_PACING is a 5-second gateway guard;
+      // it must not masquerade as a new source-origin HTTP 429.
       if((data.errors||[]).some(e=>e.provider==="btdigg"&&e.code==="RATE_LIMIT"))
        recordBTDigg429();
       else if((data.stats||[]).some(s=>s.provider==="btdigg"&&s.ok===true&&!s.cacheMode))
