@@ -1,0 +1,29 @@
+# Magnetra — opt-in browser bridge (BTDigg, 13 Nov 2026)
+
+## What this adds
+
+An **opt-in, fail-closed** route from the existing Cloudflare Worker `index.alexlab.media` → existing private Tunnel → Rock64 gateway `127.0.0.1:8796` → human-verified Chromium gateway `127.0.0.1:18896`.
+
+The browser's separate bearer token stays local. The existing Worker secret and Cloudflare Tunnel are unchanged. The gateway defaults to its original direct fixed-origin BTDigg transport unless `MAGNETRA_BTDIGG_CHROMIUM_BRIDGE=1` is supplied together with a secure systemd `LoadCredential=browser_token:...`. There is no fallback to direct BTDigg when browser mode is enabled and the browser fails.
+
+The browser process itself is never restarted, navigated, refreshed, or modified by this bridge installation. The browser backend already enforces fixed BTDigg origin, visible manual verification before new navigation, no CAPTCHA automation, and refusal after source HTTP 429. The bridge requires a **confirmed, already-verified selected tab** and an explicit `visible_source_rate_limited:false` / `new_searches_paused:false` state before every request. Legacy browser processes which cannot report these flags fail closed with HTTP 503. A stale visible `Too Many Requests` page is **not permission to probe again**.
+
+## Owner's observed state at development time
+
+Rock64 `tmux magnetra-browser`, Xvfb `:102`, noVNC and `18896` were up, but the GUI displayed `Too Many Requests`; read-only API gave `verified_tabs:0` and the **legacy** browser diagnostics (rate-limit state unknown). The bridge must not be activated in this state. No actual BTDigg 200 was proven by offline tests. There is no provision to bypass the site's refusal or automatic retries.
+
+## Installation sequence (only after the owner confirms normal legitimate source access)
+
+1. Merge this reviewed source PR and `git pull --ff-only origin main` on Rock64. Do not restart the current tmux Chromium just because source code was updated.
+2. Run `python3 -B rock64/check-btdigg-browser-backend.py --browser-status`. Activation requires the NEW backend process, `verified_tabs>=1`, `selected_tab_verified:true`, `visible_source_rate_limited:false`, and `new_searches_paused:false`. A git pull does not hot-reload the browser process. If old/unknown/429, stop. Never automatically reload to see whether 429 expired.
+3. When the browser is verified and current source access is confirmed, run `sudo bash rock64/update-btdigg.sh` to install the reviewed production gateway implementation (still **direct upstream** and bridge flag OFF). This script restarts **only** `magnetra-btdigg.service` and checks authenticated `/healthz`.
+4. After inspecting preflight output, deliberately opt in with `sudo bash rock64/activate-btdigg-chromium-bridge.sh --enable`. It performs a new **read-only** browser-state preflight and production health check before any change, refuses unverified pages, copies the browser token into a root-owned credential file, creates only a dedicated systemd drop-in, restarts **only** the production BTDigg gateway and verifies `/healthz`. The existing Cloudflare tunnel and Flud remain untouched.
+5. Only then make **one manual user-triggered** PWA BTDigg query. Verify actual source-owned name, magnet hash, provider attribution and upstream status. Never infer live availability from `/healthz` or synthetic fixtures.
+
+## Disable / rollback
+
+If the dedicated drop-in was created by this process, deactivate the bridge by removing only `/etc/systemd/system/magnetra-btdigg.service.d/20-owner-chromium-bridge.conf` and `/etc/magnetra-btdigg/browser-token`, then `sudo systemctl daemon-reload` and `sudo systemctl restart magnetra-btdigg.service`. Verify authenticated `/healthz` again. Do not remove the browser profile or stop the tmux session as part of a bridge rollback. The Cloudflare immutable candidate should separately retain its prior version for rollback.
+
+## Security and evidence boundaries
+
+No web browser API or debug port is exposed to LAN or internet. Local bridge uses separate credentials, strict fixed loopback port, bounded JSON/HTML reads and per-request timeouts (3s state + 11s search), no redirects, no retry loops and no release name/token/URL logging. A local 5s pacing 429 is not promoted to source-wide 429. A source 429 still pauses uncached terms. Existing Worker results remain attributed to BTDigg only if they pass its real HTMLRewriter parser. TPB remains independent; ranking unchanged. This code alone does **not** deploy to Cloudflare or change a running Rock64 process.
