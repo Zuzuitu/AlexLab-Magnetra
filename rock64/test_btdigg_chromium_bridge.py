@@ -102,10 +102,32 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.searches, [])
         self.assertEqual(self.server.visits, ["/v1/browser-state"]*5)
 
-    def test_legacy_browser_state_is_unknown_not_permission_to_navigate(self):
+    def test_legacy_unverified_or_ambiguous_browser_must_not_navigate(self):
+        self.server.state=good_state()
+        self.server.state.pop("visible_source_rate_limited")
+        self.server.state["selected_tab_verified"]=False
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(503,b""))
+        self.server.state=good_state()
+        self.server.state.pop("visible_source_rate_limited")
+        self.server.state["open_tabs"]=2
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(503,b""))
+        self.server.state["open_tabs"]=1
+        self.server.state["last_navigation_status"]=429
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(503,b""))
+        self.assertEqual(self.server.searches, [])
+
+    def test_legacy_single_owner_verified_tab_allows_one_explicit_search(self):
+        self.server.state=good_state()
+        self.server.state.pop("visible_source_rate_limited")
+        self.assertTrue(gw.browser_state_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(200,HTML))
+        self.assertEqual(self.server.searches,["The Dog Stars 2026"])
+
+    def test_absent_legacy_pacing_flag_is_never_approved(self):
         self.server.state=good_state()
         self.server.state.pop("visible_source_rate_limited")
         self.server.state.pop("new_searches_paused")
+        self.assertFalse(gw.browser_state_ready(self.server.state))
         self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(503,b""))
         self.assertEqual(self.server.searches, [])
 

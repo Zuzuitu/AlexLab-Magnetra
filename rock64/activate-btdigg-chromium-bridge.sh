@@ -44,14 +44,26 @@ try:
     state=json.loads(raw)
 except (OSError,ValueError,TypeError):
     raise SystemExit("STOP: browser status unavailable")
-if (not isinstance(state,dict)
-    or state.get("browser_connected") is not True
-    or type(state.get("verified_tabs")) is not int
-    or state["verified_tabs"]<1
-    or state.get("selected_tab_verified") is not True
-    or state.get("visible_source_rate_limited") is not False
-    or state.get("new_searches_paused") is not False):
-    raise SystemExit("STOP: current browser lacks verified source results or still shows refusal")
+# Modern browser: explicit visible denial detection. Legacy: a *single*
+# already verified result tab, with no in-process navigation refusal.
+# No refresh or navigation is performed here.
+modern=(isinstance(state,dict)
+        and state.get("visible_source_rate_limited") is False
+        and state.get("new_searches_paused") is False)
+legacy=(isinstance(state,dict)
+        and "visible_source_rate_limited" not in state
+        and type(state.get("open_tabs")) is int
+        and state["open_tabs"]==1
+        and state.get("verified_tabs")==1
+        and state.get("new_searches_paused") is False
+        and state.get("last_navigation_status") is None)
+verified=(isinstance(state,dict)
+          and state.get("browser_connected") is True
+          and type(state.get("verified_tabs")) is int
+          and state["verified_tabs"]>=1
+          and state.get("selected_tab_verified") is True)
+if not verified or not (modern or legacy):
+    raise SystemExit("STOP: current browser lacks verified results or shows refusal")
 print("CHROMIUM_READY: true; no source navigation")
 PY
 

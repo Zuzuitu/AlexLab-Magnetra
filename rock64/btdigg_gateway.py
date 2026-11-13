@@ -392,6 +392,31 @@ BROWSER_CREDENTIAL_NAME = "browser_token"
 BROWSER_BRIDGE_FLAG = "MAGNETRA_BTDIGG_CHROMIUM_BRIDGE"
 BROWSER_STATE_LIMIT = 4096
 
+def browser_state_ready(state):
+    """Require one safely verified tab. Older single-tab browser is accepted
+    only if no in-process navigation refusal was recorded; never allow legacy
+    multi-tab sessions because their visible 429 detection is unavailable.
+    """
+    if not isinstance(state, dict) or (
+        state.get("browser_connected") is not True
+        or type(state.get("verified_tabs")) is not int
+        or state["verified_tabs"] < 1
+        or state.get("selected_tab_verified") is not True
+    ):
+        return False
+    if (state.get("visible_source_rate_limited") is False
+            and state.get("new_searches_paused") is False):
+        return True
+    return (
+        "visible_source_rate_limited" not in state
+        and type(state.get("open_tabs")) is int
+        and state["open_tabs"] == 1
+        and state["verified_tabs"] == 1
+        and state.get("new_searches_paused") is False
+        and state.get("last_navigation_status") is None
+    )
+
+
 class LocalChromiumBridge:
     """Fixed localhost HTTP transport; independent browser bearer credential."""
 
@@ -432,16 +457,9 @@ class LocalChromiumBridge:
             if status != 200 or "application/json" not in mime:
                 return 503, b""
             state = json.loads(body)
-            if not isinstance(state, dict) or (
-                state.get("browser_connected") is not True
-                or type(state.get("verified_tabs")) is not int
-                or state["verified_tabs"] < 1
-                or state.get("selected_tab_verified") is not True
-                or state.get("visible_source_rate_limited") is not False
-                or state.get("new_searches_paused") is not False
-            ):
-                # Legacy Chromium without visible-429 detection is UNKNOWN,
-                # not an authorization to navigate. No stale 429 probe.
+            if not browser_state_ready(state):
+                # A stale 429 page, unverified tab, refused navigation or
+                # ambiguous legacy multi-tab session cannot reach the source.
                 return 503, b""
             path = "/v1/search?q=" + quote(query, safe="")
             status, html, mime, scope = self._read(
