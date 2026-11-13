@@ -1,3 +1,11 @@
+## 13 NOV 2026 — SOURCE-ONLY FIX: BTDIGG ROCK64 LOCAL PACING ≠ UPSTREAM 429
+
+After physical owner evidence that Chromium still shows an old `Too Many Requests` page (not proof of a *new* 429), repository audit found a distinct UI classification bug: Worker `classifyProviderError` mapped the authenticated gateway's **five-second local pacing** to public code `RATE_LIMIT`; the PWA then called `recordBTDigg429()` and falsely stored 60/120/300-second upstream cooldowns. Corrected to `BTDIGG_LOCAL_PACING` with RO/IT error text. Real source/legacy HTTP 429 remains `RATE_LIMIT`, subject to unchanged bounded Worker/Rock64 source cooldown and client no-auto-retry rules. A browser/user manual repeat still waits at least the existing 5.5-second local pacing. Synthetic API contract proves a simultaneous TPB source result and title-ranked 1080p x264 before 720p x265 while BTDigg returns only local pacing. PWA mock verifies no 429 storage on two separate user searches, whereas existing genuine 429 regressions retain persistent cooldown.
+
+**Source/CI only**: no actual BTDigg or TPB provider request, no Chromium/tmux/Xvfb/noVNC modification, no Rock64 8796/18896 service restart, no Cloudflare deploy or production version/traffic change; existing 46 provider adapters and picker selections unchanged. Fixture source results/hashes are synthetic, not live availability proof.
+
+---
+
 # AlexLab Magnetra — Project State
 
 ## 13 NOV 2026 — OFFLINE CHROMIUM → PRIVATE GATEWAY FIXTURE SMOKE PREPARED

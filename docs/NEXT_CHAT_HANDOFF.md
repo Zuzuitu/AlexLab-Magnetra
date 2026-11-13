@@ -1,5 +1,10 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 13 NOV 2026 — FOLLOW-UP: BTDIGG LOCAL PACING MISCLASSIFICATION (SOURCE/CI ONLY)
+
+Owner's existing Rock64 Chromium is still running in tmux/Xvfb :102. It displays an older BTDigg “Too Many Requests” page and `exit_type:Crashed` profile marker, which is NOT proof of a current HTTP 429 or new crash; it is not to be restarted or refreshed automatically. Identified PWA false-cooldown gap: local 5s Rock64 pacing returned public `RATE_LIMIT` and caused browser-local 60–300s upstream cooldown despite no confirmed source refusal. New Worker class `BTDIGG_LOCAL_PACING`, distinct translated PWA display, no persistent upstream 429 state on local pacing; real source 429 continues unchanged. Offline integrated mock checks TPB independent title-ranked 1080p x264 over 720p x265, no extra source calls; PWA tests check two separately user-triggered requests do not store 429 on local pacing. **Source-only; no live source access, Chromium mutation, production gateway or Cloudflare release.** Existing indexer picker and provider registry unchanged.
+
+
 ## 13 NOV 2026 — OFFLINE CHROMIUM → PRIVATE GATEWAY FIXTURE SMOKE PREPARED
 
 Owner physically verified Rock64 `main@3ba1f1c`: `python3 -B -m unittest rock64/test_btdigg_gateway.py -v` **19/19 PASS** (10.200s); authenticated `python3 rock64/check-btdigg-browser-backend.py --browser-status` returned HTTP 200 with `browser_connected:true`, one open tab, zero verified result tabs, and `diagnostic_capability:legacy_navigation_latch_only` (`visible_source_rate_limited:null`, `new_searches_paused:null`). The user previously observed `Too Many Requests` in the GUI. Thus **no current BTDigg source health conclusion is possible**; no source navigation, search, or browser restart was performed.

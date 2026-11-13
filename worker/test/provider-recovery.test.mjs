@@ -33,7 +33,7 @@ test("provider error categories distinguish timeouts, rate limits, access denial
  assert.equal(classifyProviderError("BTDigg Rock64 source timed out (HTTP 504).").code,"BTDIGG_SOURCE_TIMEOUT");
  assert.equal(classifyProviderError("BTDigg Rock64 tunnel Cloudflare 1042.").code,"BTDIGG_TUNNEL_1042");
  assert.equal(classifyProviderError("BTDigg Rock64 gateway transport failed.").code,"BTDIGG_TUNNEL_ERROR");
- assert.equal(classifyProviderError("BTDigg Rock64 local pacing.").code,"RATE_LIMIT");
+ assert.equal(classifyProviderError("BTDigg Rock64 local pacing.").code,"BTDIGG_LOCAL_PACING");
  assert.match(classifyProviderError("BTDigg Rock64 local pacing.").message,/gateway is spacing requests/);
 });
 test("provider timeouts have explicit recovery metadata, not opaque failure text",async()=>{
@@ -100,6 +100,50 @@ test("public BTDigg API distinguishes upstream HTTP 504 from tunnel fetch timeou
    assert.ok(payload.errors[0].message);
   }
  }finally{globalThis.fetch=original;}
+});
+
+
+test("one local BTDigg pacing response never blocks independent TPB title-ranked alternatives",async()=>{
+ const previous=globalThis.fetch;
+ const exact="The Dog Stars 2026 1080p 10bit WEBRip 6CH x265 HEVC PSA";
+ const calls=[];
+ try{
+  globalThis.fetch=async(url,options)=>{
+   const target=new URL(String(url));calls.push(target.origin);
+   if(target.origin==="https://btdigg-rock64.alexlab.media"){
+    assert.equal(options.headers.authorization,"Bearer "+"p".repeat(64));
+    assert.equal(target.pathname,"/v1/search");
+    return new Response("",{status:429,headers:{
+     "retry-after":"5","x-magnetra-btdigg-429-scope":"local-pacing"
+    }});
+   }
+   assert.equal(target.origin,"https://apibay.org");
+   assert.equal(target.searchParams.get("q"),"The Dog Stars 2026");
+   return new Response(JSON.stringify([
+    {id:"1",name:"The Dog Stars 2026 720p x265 PSA",info_hash:"b".repeat(40),size:"1234",seeders:"5",leechers:"2"},
+    {id:"2",name:"The Dog Stars 2026 1080p x264 PSA",info_hash:"c".repeat(40),size:"2345",seeders:"3",leechers:"1"}
+   ]),{headers:{"content-type":"application/json"}});
+  };
+  const url="https://index.alexlab.media/api/search?q="+encodeURIComponent(exact)+
+    "&category=movies&providers=btdigg,thepiratebay";
+  const response=await worker.fetch(new Request(url),{BTDIGG_GATEWAY_TOKEN:"p".repeat(64)});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.deepEqual(calls.sort(),["https://apibay.org","https://btdigg-rock64.alexlab.media"]);
+  assert.equal(data.errors.length,1);
+  assert.equal(data.errors[0].provider,"btdigg");
+  assert.equal(data.errors[0].code,"BTDIGG_LOCAL_PACING");
+  assert.equal(data.errors[0].retryable,false);
+  assert.equal(data.errors[0].openUrl,null);
+  assert.equal(data.stats.find(x=>x.provider==="btdigg").ok,false);
+  assert.equal(data.stats.find(x=>x.provider==="thepiratebay").alternativeCount,2);
+  assert.equal(data.total,0,"No synthetic exact release on local pacing");
+  assert.equal(data.alternativeTotal,2);
+  assert.deepEqual(data.alternatives.map(x=>x.provider),["thepiratebay","thepiratebay"]);
+  assert.ok(data.alternatives.every(x=>x.releaseMatch==="quality-alternative"));
+  assert.ok(data.alternatives[0].fallbackRank<data.alternatives[1].fallbackRank,
+   "1080p x264 must outrank 720p x265 without another source request");
+ }finally{globalThis.fetch=previous;}
 });
 
 // A provider 429 deliberately latches the shared Worker-isolate cache.

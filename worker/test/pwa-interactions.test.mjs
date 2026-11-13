@@ -317,6 +317,39 @@ test("rapid BTDigg distinct searches wait locally and aborted waits never reach 
  assert.equal(calls,0,"cancelled, not-yet-sent searches do not hit Rock64");
 });
 
+
+test("BTDigg local pacing cannot create a persistent 429; TPB results continue on both manual searches",async()=>{
+ const calls=[];
+ const {api,element,storage}=harness(async(path)=>{
+  const id=new URL(path,"https://index.alexlab.media").searchParams.get("providers");
+  calls.push(id);
+  if(id==="btdigg")return json({results:[],stats:[{provider:id,ok:false,count:0}],
+   errors:[{provider:id,code:"BTDIGG_LOCAL_PACING",retryable:false,
+    message:"BTDigg gateway is spacing requests; this does not prove an upstream source block."}]});
+  assert.equal(id,"thepiratebay");
+  return json({results:[{provider:id,id:id+":verified",name:"Source-owned TPB result"}],
+   stats:[{provider:id,ok:true,count:1}],errors:[]});
+ });
+ element("query").value="The Dog Stars 2026 1080p x265 PSA";
+ element("category").value="movies";
+ api.state.providers=["btdigg","thepiratebay"].map(id=>({id,name:id,ported:true}));
+ api.state.selected=new Set(["btdigg","thepiratebay"]);
+ await api.search();
+ assert.deepEqual(calls.sort(),["btdigg","thepiratebay"]);
+ assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false);
+ assert.equal(api.btdiggCooldownRemainingMs(),0);
+ assert.equal(api.state.selected.has("btdigg"),true);
+ assert.equal(api.state.items.length,1);
+ assert.equal(api.state.items[0].provider,"thepiratebay");
+ assert.equal(api.state.lastFailedSourcesCount,1);
+ // A second explicit user action may reattempt after the existing local
+ // 5.5s pacing. No automatic retries, and no invented source results.
+ await api.search();
+ assert.equal(calls.filter(x=>x==="btdigg").length,2);
+ assert.equal(calls.filter(x=>x==="thepiratebay").length,2);
+ assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false);
+});
+
 test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry",async()=>{
  const requests=[];
  const fetcher=async(path)=>{
