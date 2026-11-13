@@ -67,7 +67,7 @@ class LocalOnlyChromiumPathTests(TestCase):
         # live BTDigg HTML or pretending this replaces HTMLRewriter testing.
         spec = (SCRIPT.parent.parent / "worker/src/html-adapters.mjs"
                 ).read_text(encoding="utf-8")
-        part = spec.split("  btdigg: {", 1)[1].split("\\n  },", 1)[0]
+        part = spec.split("  btdigg: {", 1)[1].split("  },", 1)[0]
         for required in (
             'rows:"div.one_result > div"',
             'name:"div.torrent_name > a"',
