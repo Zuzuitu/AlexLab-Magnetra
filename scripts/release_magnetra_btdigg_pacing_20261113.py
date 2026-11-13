@@ -34,7 +34,7 @@ ALLOWED_DIFF={
  "scripts/release_magnetra_btdigg_pacing_20261113.py",
  "scripts/test_release_magnetra_btdigg_pacing_20261113.py",
  ".github/workflows/magnetra-btdigg-pacing-20261113.yml",
- "config/project-invariants.json",EVENT,
+ EVENT,
 }
 REQUIRED_DIFF=ALLOWED_DIFF
 FROZEN={
