@@ -50,6 +50,45 @@ class EffectiveEntryPointTests(unittest.TestCase):
         self.assertFalse(state["chromium_bridge_enabled"])
         self.assertFalse(state["base_updater_eligible"])
 
+    def test_cffi_to_chromium_migration_is_active_with_60_override(self):
+        raw=(
+            "ExecStart={ path=/usr/bin/python3 ; argv[]=/usr/bin/python3 -I "
+            "/opt/magnetra-btdigg/btdigg_gateway.py ; ignore_errors=no }\n"
+            "DropInPaths=/etc/systemd/system/magnetra-btdigg.service.d/50-magnetra-cffi.conf "
+            "/etc/systemd/system/magnetra-btdigg.service.d/60-magnetra-chromium.conf\n"
+            "ActiveState=active\n"
+        )
+        state=checker.classify(raw)
+        self.assertEqual(state["effective_entrypoint"],"base_gateway")
+        self.assertEqual(state["override_types"],["cffi","chromium"])
+        self.assertEqual(state["override_count"],2)
+        self.assertTrue(state["chromium_bridge_enabled"])
+        self.assertFalse(state["base_updater_eligible"])
+        self.assertTrue(state["service_active"])
+        self.assertEqual(state["source_requests"],0)
+
+    def test_unknown_stacked_override_cannot_be_reported_enabled(self):
+        raw=(
+            "ExecStart=/opt/magnetra-btdigg/btdigg_gateway.py\n"
+            "DropInPaths=/etc/systemd/system/magnetra-btdigg.service.d/50-magnetra-cffi.conf "
+            "/etc/systemd/system/magnetra-btdigg.service.d/60-magnetra-chromium.conf "
+            "/etc/systemd/system/magnetra-btdigg.service.d/99-unknown.conf\n"
+            "ActiveState=active\n"
+        )
+        state=checker.classify(raw)
+        self.assertEqual(state["override_types"],["cffi","chromium","other"])
+        self.assertFalse(state["chromium_bridge_enabled"])
+
+    def test_inactive_chromium_service_is_not_reported_enabled(self):
+        raw=(
+            "ExecStart=/opt/magnetra-btdigg/btdigg_gateway.py\n"
+            "DropInPaths=/etc/systemd/system/magnetra-btdigg.service.d/50-magnetra-cffi.conf "
+            "/etc/systemd/system/magnetra-btdigg.service.d/60-magnetra-chromium.conf\n"
+            "ActiveState=failed\n"
+        )
+        state=checker.classify(raw)
+        self.assertFalse(state["chromium_bridge_enabled"])
+
     def test_unknown_override_fails_closed_and_no_paths_echoed(self):
         state=checker.classify(
             "ExecStart=/opt/unverified/script.py\n"
