@@ -1,0 +1,88 @@
+# Reviewable source only. No deploy on a normal push or a PR.
+name: Magnetra BTDigg Pacing Immutable Release (GUARDED)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/magnetra-btdigg-pacing-20261113.yml
+      - scripts/release_magnetra_btdigg_pacing_20261113.py
+      - scripts/test_release_magnetra_btdigg_pacing_20261113.py
+      - docs/release-events/magnetra-btdigg-pacing-20261113.md
+      - config/project-invariants.json
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact reviewed code
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check project safety invariants
+        run: python3 scripts/check-project-invariants.py
+      - name: Test release gates offline
+        run: |
+          python3 -m py_compile scripts/release_magnetra_btdigg_pacing_20261113.py
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_btdigg_pacing_20261113.py' -v
+
+  readonly-baseline:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: offline-safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout immutable main
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: GET-only Cloudflare baseline inspection
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_BTDIGG_PACING_READONLY_INSPECT: '1'
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          python3 scripts/release_magnetra_btdigg_pacing_20261113.py
+
+  release:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, '[magnetra-btdigg-pacing-20261113] ')
+    needs: [offline-safety, readonly-baseline]
+    concurrency:
+      group: magnetra-production-traffic-change
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact approved activation
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate project and release safety gates
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_btdigg_pacing_20261113.py' -v
+      - name: Prepare Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test all provider and PWA contracts
+        run: node --test worker/test/*.test.mjs
+      - name: Cloudflare bundle dry run only
+        run: npx --yes wrangler@4.102.0 deploy --config worker/wrangler.jsonc --dry-run
+      - name: Owner-approved immutable zero / five / full release and safe rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAGNETRA_BTDIGG_PACING_RELEASE_ACTION: CONFIRM_MAGNETRA_BTDIGG_PACING_20261113_RELEASE
+        run: python3 scripts/release_magnetra_btdigg_pacing_20261113.py
