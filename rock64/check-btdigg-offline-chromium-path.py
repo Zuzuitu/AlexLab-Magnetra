@@ -18,13 +18,22 @@ from pathlib import Path
 import tempfile
 from urllib.parse import quote
 
-from rock64.btdigg_browser_backend import (
-    VisibleBrowserFetcher, browser_handler_class, query_url,
-    validated_result_html,
-)
-from rock64.btdigg_gateway import (
-    MIN_SEARCH_INTERVAL, SOURCE_REFUSAL_COOLDOWN_SECONDS, SearchProvider,
-)
+if __package__:
+    from .btdigg_browser_backend import (
+        VisibleBrowserFetcher, browser_handler_class, query_url,
+        validated_result_html,
+    )
+    from .btdigg_gateway import (
+        MIN_SEARCH_INTERVAL, SOURCE_REFUSAL_COOLDOWN_SECONDS, SearchProvider,
+    )
+else:
+    from btdigg_browser_backend import (
+        VisibleBrowserFetcher, browser_handler_class, query_url,
+        validated_result_html,
+    )
+    from btdigg_gateway import (
+        MIN_SEARCH_INTERVAL, SOURCE_REFUSAL_COOLDOWN_SECONDS, SearchProvider,
+    )
 
 CHROMIUM = Path("/usr/bin/chromium")
 EXACT = "The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA"
@@ -129,7 +138,12 @@ def verify():
                 assert page.locator(
                     'div.one_result > div div.torrent_magnet > div.fa-magnet > a'
                 ).get_attribute("href") == "magnet:?xt=urn:btih:" + FAKE_HASH
-                assert validated_result_html(page) == FIXTURE_HTML.encode()
+                # Chromium normalizes HTML serialization; compare against
+                # its actual DOM, not byte-identical fixture source.
+                original_dom = validated_result_html(page)
+                assert original_dom is not None
+                assert EXACT.encode() in original_dom
+                assert ("magnet:?xt=urn:btih:" + FAKE_HASH).encode() in original_dom
 
                 browser = VisibleBrowserFetcher(page)
                 provider = SearchProvider(fetcher=browser.fetch,
@@ -157,7 +171,7 @@ def verify():
                     exact_path = "/v1/search?q=" + quote(EXACT, safe="")
                     success = one_local_http_request(server, exact_path)
                     assert success[0] == 200
-                    assert success[1] == FIXTURE_HTML.encode()
+                    assert success[1] == original_dom
                     assert len(fulfilled) == 1
                     cached = one_local_http_request(server, exact_path)
                     assert cached[0] == 200 and cached[1] == success[1]
