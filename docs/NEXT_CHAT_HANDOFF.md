@@ -1,5 +1,22 @@
 # AlexLab Magnetra — New-chat engineering handoff
 
+## 13 NOV 2026 — OFFLINE CHROMIUM → PRIVATE GATEWAY FIXTURE SMOKE PREPARED
+
+Owner physically verified Rock64 `main@3ba1f1c`: `python3 -B -m unittest rock64/test_btdigg_gateway.py -v` **19/19 PASS** (10.200s); authenticated `python3 rock64/check-btdigg-browser-backend.py --browser-status` returned HTTP 200 with `browser_connected:true`, one open tab, zero verified result tabs, and `diagnostic_capability:legacy_navigation_latch_only` (`visible_source_rate_limited:null`, `new_searches_paused:null`). The user previously observed `Too Many Requests` in the GUI. Thus **no current BTDigg source health conclusion is possible**; no source navigation, search, or browser restart was performed.
+
+Added owner-opt-in offline integration harness `rock64/check-btdigg-offline-chromium-path.py`. It opens **a separate** real headless Debian Chromium with a newly created temporary private profile (never the running tmux profile), intercepts all page requests with Playwright `context.route("**/*")`, locally fulfills one synthetic BTDigg-shaped PSA HTML result and one synthetic HTTP 429, and aborts every other page request. It checks real Chromium DOM CSS against the Worker BTDigg selector contract, same-origin verified row+magnet shape, authenticated loopback `HTTPServer` on a random local port with synchronous Playwright on its owning thread, positive same-query reuse without navigation, source refusal `Retry-After` scope, no new navigation after 429, and original cached HTML survival. The sample title and hash are **test fixtures, not authentic BTDigg matches**, and no actual BTDigg request is made. It prints sanitized PASS/FAIL metadata only; no magnet or query string.
+
+CI-only tests `rock64/test_btdigg_offline_chromium_path.py` check fixture/handler safety, source selectors, and local HTTP semantics without launching Chromium. The isolated real-browser smoke runs only with owner action, from the checked-out repository root using the pre-existing private Python Playwright venv:
+
+```bash
+cd "$HOME/magnetra-cffi-live-20261028"
+git pull --ff-only
+python3 -B -m unittest rock64/test_btdigg_offline_chromium_path.py -v
+"$HOME/.venvs/magnetra-browser/bin/python" rock64/check-btdigg-offline-chromium-path.py
+```
+
+The final command **starts one separate temporary headless Chromium**, but never touches/restores/restarts the existing `tmux magnetra-browser` session, live Xvfb :102, noVNC 6088, private gateway 18896, production gateway 8796 or Cloudflare Worker. The fixture route intercept is intentionally not an authorization to bypass BTDigg limitations; it cannot prove current source availability or full Cloudflare HTMLRewriter runtime behavior. Production switchover remains gated on independently verified source access/permission and owner approval.
+
 ## 12 NOV 2026 — PRIVATE BTDIGG GATEWAY 429 SOURCE VS LOCAL PACING METADATA (SOURCE-ONLY)
 
 **Owner physical checkpoint:** GitHub main `8da0b7d` pulled on Rock64, `python3 -B -m unittest rock64/test_btdigg_gateway.py -v` completed **18/18 PASS** (9.680s). The actual existing tmux Chromium/noVNC process was not restarted, and the page last observed remained BTDigg's `Too Many Requests`. This is offline test evidence, NOT current live source recovery.
