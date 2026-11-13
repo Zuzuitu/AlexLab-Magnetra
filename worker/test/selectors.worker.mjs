@@ -1,6 +1,8 @@
 import {LEGACY_SPECS} from "../src/legacy-specs.mjs";
 import {HTML_PROVIDER_SPECS,runHtmlAdapter} from "../src/html-adapters.mjs";
 import {resolveLegacy} from "../src/legacy-adapters.mjs";
+import {rock64BTDiggFetcher,BTDIGG_GATEWAY_ORIGIN} from "../src/btdigg-rock64.mjs";
+import {createVerifiedSourceCache,FRESH_MS} from "../src/verified-source-cache.mjs";
 
 /** CI-only workerd endpoint: validates actual Cloudflare HTMLRewriter syntax. */
 export default {
@@ -42,6 +44,80 @@ export default {
       rows[0].seeders!==null||rows[0].peers!==null)
     invalid.push({id:"btdigg-fixture",error:"HTMLRewriter extracted incorrect BTDigg fields",extractedMagnet:rows[0]?.magnet||null});
   }catch(e){invalid.push({id:"btdigg-fixture",error:String(e).slice(0,250)});}
+  // Fixture-only Rock64 adapter -> real Cloudflare HTMLRewriter -> Worker
+  // positive cache / refusal gate. This transport has no real network path,
+  // does not inspect or mutate the owner's persistent Chromium session, and
+  // must never be interpreted as evidence of BTDigg availability.
+  try{
+   const token="f".repeat(64);
+   const exact="The.Dog.Stars.2026.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA";
+   const locallyPaced="Local pacing fixture 2026";
+   const refused="The Dog Stars 2026 720p";
+   const unseen="Different release 2026";
+   const hash="a".repeat(40);
+   const fakeMagnet="magnet:?xt=urn:btih:"+hash;
+   const fixture='<div class="one_result"><div>'+
+     '<div class="torrent_name"><a href="/torrent/local-fixture">'+exact+'</a></div>'+
+     '<div class="torrent_magnet"><div class="fa-magnet"><a href="'+
+       fakeMagnet+'">Fixture magnet</a></div></div>'+
+     '<span class="torrent_size">1.4 GB</span></div></div>';
+   const requests=[];
+   let now=1_000;
+   const fetcher=rock64BTDiggFetcher({BTDIGG_GATEWAY_TOKEN:token},
+    async(target,opts)=>{
+     const url=new URL(target);
+     if(url.origin!==BTDIGG_GATEWAY_ORIGIN||url.pathname!=="/v1/search"||
+        [...url.searchParams.keys()].join()!=="q"||
+        opts.redirect!=="manual"||
+        opts.headers.authorization!=="Bearer "+token)
+      throw Error("private fixture transport mismatch");
+     const q=url.searchParams.get("q");
+     requests.push(q);
+     if(q===exact)
+      return new Response(fixture,{status:200,
+       headers:{"content-type":"text/html; charset=utf-8"}});
+     if(q===locallyPaced)
+      return new Response("",{status:429,headers:{
+       "retry-after":"5","x-magnetra-btdigg-429-scope":"local-pacing"}});
+     if(q===refused)
+      return new Response("",{status:429,headers:{
+       "retry-after":"601","x-magnetra-btdigg-429-scope":"source"}});
+     throw Error("unexpected fixture request (external fetch forbidden)");
+    });
+   const cache=createVerifiedSourceCache(()=>now);
+   const search=q=>cache.search("btdigg",q,"movies",
+    ()=>runHtmlAdapter("btdigg",q,"movies",fetcher));
+   const good=await search(exact);
+   if(good.items.length!==1||good.items[0].name!==exact||
+      good.items[0].magnet!==fakeMagnet||
+      good.items[0].details!=="https://btdig.com/torrent/local-fixture"||
+      good.cache!==null)
+    throw Error("original fake source row was not parsed by workerd");
+
+   // Local five-second pacing must NOT become a source cooldown.
+   const pace=await search(locallyPaced).then(()=>false,
+    e=>String(e?.message)==="BTDigg Rock64 local pacing.");
+   if(!pace)throw Error("local pace was classified as origin 429");
+
+   // A real *simulated* source 429 sets the Worker isolate cooldown;
+   // a never-seen term must not generate a fourth transport request.
+   const denied=await search(refused).then(()=>false,
+    e=>/\bHTTP 429\b/.test(String(e?.message||"")));
+   if(!denied)throw Error("fixture source 429 was not propagated");
+   now+=FRESH_MS+1;
+   const stale=await search(exact);
+   const blocked=await search(unseen).then(()=>false,
+    e=>/\bHTTP 429\b/.test(String(e?.message||"")));
+   if(stale.cache?.mode!=="stale"||stale.items.length!==1||
+      stale.items[0].magnet!==fakeMagnet||!blocked||
+      JSON.stringify(requests)!==JSON.stringify([exact,locallyPaced,refused]))
+    throw Error("fixture source gate, cache, or no-retry contract failed");
+   verified.push("btdigg-rock64-worker-fixture");
+  }catch{
+   // Do not serialize raw source, URLs, bearer token, or fake magnet into CI.
+   invalid.push({id:"btdigg-rock64-worker-fixture",
+    error:"offline Rock64 -> workerd HTMLRewriter/cache fixture failed"});
+  }
   // Real Cloudflare workerd contract: href="...&amp;dn=..." must become
   // a usable magnet "&dn=..." for an original TheRarBg detail. This catches
   // the concrete fake-HTMLRewriter blind spot; no external fetch is made.

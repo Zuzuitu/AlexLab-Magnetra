@@ -1076,8 +1076,17 @@ def check_web_parity_and_companion(config: dict) -> None:
         config_text = selector_config.read_text(encoding="utf-8")
         if '"main": "./selectors.worker.mjs"' not in config_text:
             fail("CI selector validation must use dedicated workerd entrypoint, not PWA assets")
-        if 'x.checked!==35' not in web_ci.read_text(encoding="utf-8"):
-            fail("CI must validate the actual JSON result for all 35 HTML selector adapters")
+        selector_ci = web_ci.read_text(encoding="utf-8")
+        selector_runtime = selector_worker.read_text(encoding="utf-8")
+        if (
+            'x.checked!==36' not in selector_ci
+            or 'x.verified?.includes("btdigg-rock64-worker-fixture")' not in selector_ci
+            or 'verified.push("btdigg-rock64-worker-fixture")' not in selector_runtime
+        ):
+            fail(
+                "CI must validate all 35 original selector checks plus the "
+                "offline Rock64 workerd gateway/cache fixture (36 total)"
+            )
 
     recovery = nested(config, "provider_recovery")
     if recovery and recovery.get("eztv_api"):
