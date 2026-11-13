@@ -93,7 +93,7 @@ jobs:
           trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 35); do
             if curl --max-time 4 -fsS http://127.0.0.1:8789/ > "$RUNNER_TEMP/magnetra-selector-results.json"; then
-              if node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(x.ok!==true||x.checked!==35||x.invalid?.length)process.exit(1)' "$RUNNER_TEMP/magnetra-selector-results.json"; then
+              if node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(x.ok!==true||x.checked!==36||!x.verified?.includes("btdigg-rock64-worker-fixture")||x.invalid?.length)process.exit(1)' "$RUNNER_TEMP/magnetra-selector-results.json"; then
                 cat "$RUNNER_TEMP/magnetra-selector-results.json"
                 exit 0
               fi
