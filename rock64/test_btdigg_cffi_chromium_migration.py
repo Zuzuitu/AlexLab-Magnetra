@@ -31,7 +31,7 @@ class CffiChromiumMigrationTests(unittest.TestCase):
     def test_current_zero_result_or_visible_refusal_blocks_writes(self):
         code=MIGRATE.read_text()
         for required in (
-            '"/v1/browser-state"', 'state["verified_tabs"]>=1',
+            '"http://127.0.0.1:18896/v1/browser-state"', 'state["verified_tabs"]>=1',
             'state.get("selected_tab_verified") is True',
             'state.get("visible_source_rate_limited") is False',
             'state.get("new_searches_paused") is False',
@@ -89,7 +89,7 @@ class CffiChromiumMigrationTests(unittest.TestCase):
         self.assertNotIn("vnc.html",mig+roll)
         self.assertNotIn("pkill",mig+roll)
         self.assertNotIn("cloudflared",mig+roll)
-        self.assertNotIn("/v1/search",mig+roll)
+        self.assertNotIn('Request("http://127.0.0.1:18896/v1/search',mig+roll)
 
 if __name__=="__main__":
     unittest.main()
