@@ -16,6 +16,7 @@ import http.client
 import json
 import math
 import os
+from pathlib import Path
 import re
 import socket
 import ssl
@@ -383,12 +384,118 @@ class LimitedHTTPServer(ThreadingHTTPServer):
             self._slots.release()
 
 
+# Optional owner-authorized hop from the EXISTING production loopback gateway
+# to the separate, human-verified persistent Chromium session. OFF by default.
+# The browser is not launched, refreshed, restarted, verified, or modified here.
+BROWSER_PRIVATE_PORT = 18896
+BROWSER_CREDENTIAL_NAME = "browser_token"
+BROWSER_BRIDGE_FLAG = "MAGNETRA_BTDIGG_CHROMIUM_BRIDGE"
+BROWSER_STATE_LIMIT = 4096
+
+class LocalChromiumBridge:
+    """Fixed localhost HTTP transport; independent browser bearer credential."""
+
+    def __init__(self, browser_token):
+        if not re.fullmatch(r"[A-Za-z0-9_-]{48,256}", browser_token or ""):
+            raise ValueError("invalid isolated browser credential")
+        self._token = browser_token
+
+    def _read(self, path, accept, limit, timeout):
+        conn = http.client.HTTPConnection("127.0.0.1", BROWSER_PRIVATE_PORT, timeout=timeout)
+        try:
+            conn.request("GET", path, headers={
+                "authorization": "Bearer " + self._token,
+                "accept": accept,
+                "connection": "close",
+            })
+            response = conn.getresponse()
+            status = response.status
+            mime = response.getheader("content-type") or ""
+            scope = response.getheader("x-magnetra-btdigg-429-scope") or ""
+            size = response.getheader("content-length")
+            if size is not None and (not size.isdecimal() or int(size) > limit):
+                return 502, b"", mime, scope
+            body = response.read(limit + 1)
+            if len(body) > limit:
+                return 502, b"", mime, scope
+            return status, body, mime, scope
+        finally:
+            conn.close()
+
+    def fetch(self, query):
+        # Each actual PWA search requires an already verified BTDigg tab.
+        # This first call is local and read-only; never creates source traffic.
+        try:
+            status, body, mime, _ = self._read(
+                "/v1/browser-state", "application/json", BROWSER_STATE_LIMIT, 3
+            )
+            if status != 200 or "application/json" not in mime:
+                return 503, b""
+            state = json.loads(body)
+            if not isinstance(state, dict) or (
+                state.get("browser_connected") is not True
+                or type(state.get("verified_tabs")) is not int
+                or state["verified_tabs"] < 1
+                or state.get("selected_tab_verified") is not True
+                or state.get("visible_source_rate_limited") is not False
+                or state.get("new_searches_paused") is not False
+            ):
+                # Legacy Chromium without visible-429 detection is UNKNOWN,
+                # not an authorization to navigate. No stale 429 probe.
+                return 503, b""
+            path = "/v1/search?q=" + quote(query, safe="")
+            status, html, mime, scope = self._read(
+                path, "text/html", SIZE_LIMIT, 11
+            )
+            if status == 429:
+                # A 5-second *local* denial by the browser process must not
+                # create the production gateway's five-minute source lock.
+                return (503 if scope == "local-pacing" else 429), b""
+            if status != 200:
+                return (504 if status == 504 else 503), b""
+            if "text/html" not in mime.lower():
+                return 502, b""
+            if b"one_result" not in html.lower() or (
+                b"magnet:?xt=urn:btih:" not in html.lower()
+            ):
+                return 502, b""
+            return 200, html
+        except (OSError, ValueError, TypeError, http.client.HTTPException,
+                UnicodeError):
+            # Never expose local credentials or source URLs in logs/errors.
+            return 504, b""
+
+
+def chromium_bridge_from_environment():
+    mode = os.environ.get(BROWSER_BRIDGE_FLAG, "")
+    if mode in ("", "0"):
+        return None
+    if mode != "1":
+        raise SystemExit("STOP: invalid explicit Chromium bridge flag")
+    credentials_directory = os.environ.get("CREDENTIALS_DIRECTORY", "")
+    if not credentials_directory or not os.path.isabs(credentials_directory):
+        raise SystemExit("STOP: missing private systemd credential directory")
+    base = Path(credentials_directory)
+    token_path = base / BROWSER_CREDENTIAL_NAME
+    try:
+        if base.is_symlink() or token_path.is_symlink():
+            raise ValueError("credential symlink")
+        if not token_path.is_file() or token_path.stat().st_size > 300:
+            raise ValueError("invalid credential size")
+        token = token_path.read_text(encoding="ascii").strip()
+        return LocalChromiumBridge(token)
+    except (OSError, ValueError, UnicodeError):
+        raise SystemExit("STOP: private browser credential unavailable") from None
+
+
 def main():
     token = os.environ.get("MAGNETRA_BTDIGG_TOKEN", "")
     if len(token) < 48 or len(token) > 256 or not re.fullmatch(r"[A-Za-z0-9_-]+", token):
         raise SystemExit("Set a strong MAGNETRA_BTDIGG_TOKEN (48-256 URL-safe characters).")
     # Explicit no-port-forward and no LAN listener. Use Cloudflare Tunnel -> localhost.
-    server = LimitedHTTPServer((BIND, PORT), handler_class(token, SearchProvider()))
+    browser_bridge = chromium_bridge_from_environment()
+    provider = SearchProvider(fetcher=browser_bridge.fetch) if browser_bridge else SearchProvider()
+    server = LimitedHTTPServer((BIND, PORT), handler_class(token, provider))
     print("Magnetra BTDigg gateway bound to 127.0.0.1:%d (private); no public listener." % PORT, flush=True)
     try:
         server.serve_forever(poll_interval=0.5)
