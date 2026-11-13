@@ -29,8 +29,19 @@ def classify(show_output: str) -> dict:
         mode="base_gateway"
     else:
         mode="unknown"
-    known={"50-magnetra-cffi.conf":"cffi", "20-owner-chromium-bridge.conf":"chromium"}
+    known={
+        "50-magnetra-cffi.conf":"cffi",
+        "20-owner-chromium-bridge.conf":"chromium_legacy",
+        "60-magnetra-chromium.conf":"chromium",
+    }
     names=[known.get(PurePath(x).name, "other") for x in overrides]
+    # The 60- migration deliberately preserves the 50- CFFI backup override.
+    # systemd applies the later Chromium ExecStart reset, so the effective
+    # entrypoint is the base gateway. A stacked 20-/50- service still runs CFFI.
+    configured_chromium=(
+        (names == ["cffi","chromium"]) or
+        (names == ["chromium_legacy"])
+    )
     return {
         "service_active": fields.get("ActiveState")=="active",
         "effective_entrypoint":mode,
@@ -38,7 +49,8 @@ def classify(show_output: str) -> dict:
         "override_types":names,
         "base_updater_eligible":mode=="base_gateway" and not overrides,
         "chromium_bridge_enabled":(
-            mode=="base_gateway" and "chromium" in names and "cffi" not in names
+            fields.get("ActiveState")=="active" and mode=="base_gateway"
+            and configured_chromium
         ),
         "source_requests":0,
         "note":"No systemd, browser, network or source state was modified.",
