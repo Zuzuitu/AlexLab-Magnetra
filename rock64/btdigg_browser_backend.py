@@ -55,13 +55,21 @@ def source_query(url):
     try:
         u = urlsplit(url)
         params = parse_qs(u.query, keep_blank_values=True)
-        if not (u.scheme == "https" and u.hostname == "btdig.com"
+        # BTDigg's homepage form submits q to www.btdig.com/search.
+        # Manual searches may omit order=0, while our own canonical URL
+        # supplies it. Both forms still require real source result+magnet rows.
+        allowed_params = (
+            set(params) == {"q"} or
+            (set(params) == {"order", "q"} and params["order"] == ["0"])
+        )
+        if not (u.scheme == "https"
+                and u.hostname in ("btdig.com", "www.btdig.com")
                 and u.username is None and u.password is None
                 and u.port in (None, 443) and u.path == "/search"
-                and not u.fragment and set(params) == {"order", "q"}
-                and params["order"] == ["0"]
+                and not u.fragment and allowed_params
                 and len(params["q"]) == 1
-                and 2 <= len(params["q"][0]) <= QUERY_LIMIT):
+                and 2 <= len(params["q"][0]) <= QUERY_LIMIT
+                and not QUERY_RE.search(params["q"][0])):
             return None
         return params["q"][0]
     except (ValueError, TypeError, KeyError):

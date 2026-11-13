@@ -103,7 +103,6 @@ class BrowserBackendTests(TestCase):
                     "https://evil.example/search?q=foo",
                     "https://btdig.com.evil.example/search?q=foo",
                     "https://btdig.com/search?order=0",
-                    "https://btdig.com/search?q=foo",
                     "https://btdig.com/search?order=1&q=foo",
                     "https://btdig.com/search?order=0&q=foo&q=bar",
                     "https://btdig.com/search?order=0&q=foo&redirect=1",
@@ -111,6 +110,50 @@ class BrowserBackendTests(TestCase):
                     "https://user@btdig.com/search?q=foo"):
             with self.subTest(url=bad):
                 self.assertFalse(backend.source_landing(bad))
+
+    def test_home_form_search_variants_are_real_manual_source_pages(self):
+        for url in (
+            "https://www.btdig.com/search?q=The+Dog+Stars+2026",
+            "https://btdig.com/search?q=The+Dog+Stars+2026",
+            "https://www.btdig.com/search?order=0&q=The+Dog+Stars+2026",
+            "https://www.btdig.com/search?q=The+Dog+Stars+2026&order=0",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(backend.source_query(url), "The Dog Stars 2026")
+                page = FakePage(url=url)
+                self.assertEqual(backend.validated_result_html(page), HTML.encode())
+                state = backend.VisibleBrowserFetcher(page).browser_state()
+                self.assertEqual(state["verified_tabs"], 1)
+                self.assertTrue(state["selected_tab_verified"])
+                status, html = backend.VisibleBrowserFetcher(page).fetch(
+                    "The Dog Stars 2026")
+                self.assertEqual((status, html), (200, HTML.encode()))
+                self.assertEqual(page.goto_calls, [])
+
+    def test_home_form_variant_still_requires_genuine_results_magnets(self):
+        for url in (
+            "https://www.btdig.com/search?q=The+Dog+Stars+2026",
+            "https://btdig.com/search?q=The+Dog+Stars+2026",
+        ):
+            page = FakePage(url=url, valid=False)
+            self.assertIsNone(backend.validated_result_html(page))
+            self.assertEqual(
+                backend.VisibleBrowserFetcher(page).browser_state()["verified_tabs"], 0)
+        for bad in (
+            "http://www.btdig.com/search?q=two",
+            "https://www.btdig.com.evil.example/search?q=two",
+            "https://evil.example/search?q=two",
+            "https://www.btdig.com/search?order=1&q=two",
+            "https://www.btdig.com/search?q=two&q=three",
+            "https://www.btdig.com/search?q=two&extra=other",
+            "https://www.btdig.com/search?order=0&q=two&p=1",
+            "https://u@www.btdig.com/search?q=two",
+            "https://www.btdig.com/search?q=two#frag",
+            "https://www.btdig.com/search?q=two%0Abar",
+            "https://www.btdig.com/search?q=x",
+        ):
+            with self.subTest(bad=bad):
+                self.assertIsNone(backend.source_query(bad))
 
     def test_verified_same_row_magnet_required_for_html(self):
         verified = FakePage()
