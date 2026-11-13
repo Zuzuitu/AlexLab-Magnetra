@@ -98,6 +98,41 @@ bundle, change system Python, Cloudflare, systemd or port 8796. It reuses
 and the Debian `python3-venv` package. On failure it stops without attempting
 to repair or delete an existing venv automatically.
 
+## Opt-in offline Chromium-to-gateway fixture test (13 Nov)
+
+The physical owner confirmed `19/19 PASS` for the Rock64 gateway
+and a still-running legacy browser with `verified_tabs:0`. The current
+BTDigg source must NOT be probed just to test this architecture.
+
+A standalone smoke harness is now available in
+`rock64/check-btdigg-offline-chromium-path.py`. Unlike the live GUI, it
+creates a separate **temporary headless Chromium profile**. Every page
+request is intercepted locally; one fake BTDigg-shaped PSA result and one
+fake HTTP 429 are served in memory and all other requests are aborted.
+It verifies real Chromium selectors, original HTML and magnet pairing,
+the authenticated loopback gateway, caching the exact query, and source
+429 pause without following new searches. It does not prove that BTDigg
+has this release or that access to the actual site has recovered.
+
+```bash
+cd "$HOME/magnetra-cffi-live-20261028"
+git pull --ff-only
+python3 -B -m unittest rock64/test_btdigg_offline_chromium_path.py -v
+"$HOME/.venvs/magnetra-browser/bin/python" rock64/check-btdigg-offline-chromium-path.py
+```
+
+The first two commands are source/test-only. The final command launches
+one isolated temporary Chromium for the test but **does not reuse,
+restart or send messages to** the live tmux browser or ports 18896, 8796
+and 6088. Its output should contain `"result":"PASS"`,
+`"requests_to_btdigg_origin":0` and
+`"proof":"synthetic_fixture_not_source_availability"`.
+A failure returns `"result":"FAIL"` with a generic exception class,
+without raw queries, source HTML, tokens, IP addresses or magnets.
+The CI suite checks static and localhost-only contracts without
+launching Chromium. It does not replace a real Cloudflare HTMLRewriter
+runtime validation; a separate guarded stage is still required.
+
 ## Private BTDigg rate-limit scope header (Worker ↔ Rock64 source only)
 
 When the Rock64 gateway responds with HTTP 429, it now labels its *own*
