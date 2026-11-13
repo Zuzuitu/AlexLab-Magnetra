@@ -129,9 +129,9 @@ def source_rate_limit_visible(page):
 class VisibleBrowserFetcher:
     """One-thread Playwright gateway; preserve verified tabs on source refusal.
 
-    A different query opens one tab in the SAME browser context, with the same
-    network identity. This does not circumvent challenges or rate limiting.
-    One source refusal stops new navigations for this foreground process.
+    A different query enters text in the BTDigg search form of the currently
+    verified tab and presses Enter, like the owner. No new tab or direct goto.
+    Any source denial or unexpected response pauses further submissions.
     """
 
     def __init__(self, page):
@@ -229,46 +229,36 @@ class VisibleBrowserFetcher:
             if validated_result_html(self.page) is None:
                 return 503, b""
 
-            candidate = None
-            accepted = False
             try:
-                # Exactly one owner-triggered navigation in the original context.
-                candidate = self.page.context.new_page()
-                response = candidate.goto(
-                    target, wait_until="domcontentloaded", timeout=10000)
+                # Interact with the ALREADY VERIFIED source tab, not an empty
+                # programmatically opened tab. Exactly one form submission.
+                box = self.page.locator('input[name="q"]')
+                if box.count() != 1:
+                    return self._stop_navigation(503, "search_input_missing")
+                box.fill(query, timeout=2000)
+                with self.page.expect_navigation(
+                    wait_until="domcontentloaded", timeout=8000
+                ) as navigation:
+                    box.press("Enter", timeout=1500)
+                response = navigation.value
                 if response is None:
                     return self._stop_navigation(503, "no_navigation_response")
                 if response.status == 429:
-                    return self._stop_navigation(429, "upstream_http_429", response.status)
+                    return self._stop_navigation(
+                        429, "upstream_http_429", response.status)
                 if response.status != 200:
-                    return self._stop_navigation(503, "upstream_http_non200", response.status)
-
-                candidate.wait_for_timeout(900)
-                html = validated_result_html(candidate)
-                if not same_search_query(source_query(candidate.url), query):
+                    return self._stop_navigation(
+                        503, "upstream_http_non200", response.status)
+                self.page.wait_for_timeout(500)
+                if not same_search_query(source_query(self.page.url), query):
                     return self._stop_navigation(503, "unexpected_final_query", 200)
+                html = validated_result_html(self.page)
                 if html is None:
                     return self._stop_navigation(503, "unverified_result_html", 200)
-
-                old = self.page
-                self.page = candidate
-                accepted = True
-                # Keep the initial owner-verified tab plus one latest success.
-                if old is not self.reference_page:
-                    try:
-                        old.close()
-                    except Exception:
-                        pass
                 return 200, html
             except Exception:
-                # Do not emit query, URLs, source HTML or Playwright exceptions.
+                # No query, URL, HTML, browser cookies or exception details.
                 return self._stop_navigation(504, "browser_navigation_exception")
-            finally:
-                if candidate is not None and not accepted:
-                    try:
-                        candidate.close()
-                    except Exception:
-                        pass
         except (ValueError, TypeError):
             return 400, b""
         except Exception:

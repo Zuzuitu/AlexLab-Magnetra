@@ -20,67 +20,88 @@ HTML = (
 
 class FakeContext:
     def __init__(self, owner):
-        self.owner = owner
-        self.opened = []
-
+        self.owner=owner
+        self.opened=[]
     @property
     def pages(self):
-        return [self.owner, *self.opened]
-
+        return [self.owner,*self.opened]
     def new_page(self):
-        page = FakePage(url="about:blank", valid=False)
-        page.context = self
-        page.next_status = self.owner.next_status
-        page.after_navigation_valid = self.owner.after_navigation_valid
-        page.redirect_to = self.owner.redirect_to
+        # Only used to model HUMAN-opened tabs; the backend must never call.
+        page=FakePage(url="about:blank",valid=False)
+        page.context=self
         self.opened.append(page)
         return page
 
 
 class FakePage:
     def __init__(self, url=None, valid=True):
-        self.url = url or backend.query_url("The Dog Stars 2026")
-        self.valid = valid
-        self.next_status = 200
-        self.after_navigation_valid = True
-        self.goto_calls = []
-        self.waits = []
-        self.redirect_to = None
-        self.closed = False
-        self.rate_limited = False
-        self.body_text = ""
-        self.context = FakeContext(self)
+        self.url=url or backend.query_url("The Dog Stars 2026")
+        self.valid=valid
+        self.next_status=200
+        self.after_navigation_valid=True
+        self.goto_calls=[]
+        self.waits=[]
+        self.redirect_to=None
+        self.closed=False
+        self.rate_limited=False
+        self.body_text=""
+        self.context=FakeContext(self)
+        self.submit_calls=0
+        self.search_fills=[]
+        self.pending_query=None
+        self.has_search_input=True
+        self.raise_on_press=False
+        self.no_navigation_response=False
+        self.navigation_options=[]
+        self._response=None
 
     def locator(self, selector):
-        assert selector in (backend.RESULT_PAIR_SELECTOR, "body")
+        assert selector in (backend.RESULT_PAIR_SELECTOR,"body",'input[name="q"]')
+        page=self
         class Locator:
-            def __init__(self, value, text):
-                self.value = value
-                self.text = text
             def count(self):
-                return self.value
+                if selector=='input[name="q"]':
+                    return 1 if page.has_search_input else 0
+                if selector=="body": return 1
+                return 1 if page.valid else 0
             def inner_text(self, **kwargs):
-                return self.text
-        if selector == "body":
-            return Locator(1, self.body_text or (
-                "Too Many Requests" if self.rate_limited else
-                "Owner source release Magnet"))
-        return Locator(1 if self.valid else 0, "")
+                return page.body_text or (
+                    "Too Many Requests" if page.rate_limited else
+                    "Owner source release Magnet")
+            def fill(self, value, **kwargs):
+                assert selector=='input[name="q"]'
+                assert page.has_search_input
+                page.pending_query=value
+                page.search_fills.append(value)
+            def press(self, key, **kwargs):
+                assert selector=='input[name="q"]' and key=="Enter"
+                page.submit_calls+=1
+                if page.raise_on_press:
+                    raise RuntimeError("simulated Playwright form error")
+                page.url=page.redirect_to or backend.query_url(page.pending_query)
+                page.valid=page.after_navigation_valid and page.next_status==200
+                page._response=(None if page.no_navigation_response else
+                                type("Response",(),{"status":page.next_status})())
+        return Locator()
 
     def content(self):
         return HTML if self.valid else '<html>One more step reCAPTCHA</html>'
 
-    def goto(self, url, **kwargs):
-        self.goto_calls.append((url, kwargs))
-        self.url = self.redirect_to or url
-        self.valid = self.after_navigation_valid
-        return type("Response", (), {"status": self.next_status})()
+    def expect_navigation(self, **kwargs):
+        self.navigation_options.append(kwargs)
+        page=self
+        class Navigation:
+            def __enter__(self): return self
+            def __exit__(self,*_args): return False
+            @property
+            def value(self): return page._response
+        return Navigation()
 
     def wait_for_timeout(self, millis):
         self.waits.append(millis)
 
     def close(self):
-        self.closed = True
+        self.closed=True
 
     def is_closed(self):
         return self.closed
@@ -151,14 +172,14 @@ class BrowserBackendTests(TestCase):
             "the dog stars 2026 720p", "The Dog Stars 2026"))
 
     def test_redirect_to_wrong_query_refuses_html_even_if_rows_visible(self):
-        page = FakePage()
-        page.redirect_to = backend.query_url("Unrelated title")
-        gateway = backend.VisibleBrowserFetcher(page)
-        self.assertEqual(gateway.fetch("Different title"), (503, b""))
-        self.assertEqual(len(page.context.opened), 1)
-        self.assertTrue(page.context.opened[0].closed)
-        self.assertFalse(page.closed)
-        self.assertIs(gateway.page, page)
+        page=FakePage()
+        page.redirect_to=backend.query_url("Unrelated title")
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Different title"),(503,b""))
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(page.context.opened,[])
+        self.assertEqual(gateway.browser_state()["last_failure_reason"],
+                         "unexpected_final_query")
 
     def test_existing_owner_verified_query_does_not_navigate_or_retry(self):
         page = FakePage(url=backend.query_url("The Dog Stars 2026"))
@@ -175,92 +196,95 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(page.context.opened, [],
                          "never navigate while a challenge is displayed")
 
+    def test_form_missing_never_navigates_and_latches(self):
+        page=FakePage()
+        page.has_search_input=False
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Another 2026"),(503,b""))
+        self.assertEqual(page.submit_calls,0)
+        self.assertEqual(page.context.opened,[])
+        self.assertEqual(gateway.browser_state()["last_failure_reason"],
+                         "search_input_missing")
+
+    def test_no_navigation_response_after_form_press_latches(self):
+        page=FakePage()
+        page.no_navigation_response=True
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Another 2026"),(503,b""))
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(gateway.browser_state()["last_failure_reason"],
+                         "no_navigation_response")
+
     def test_owner_verified_context_allows_one_subsequent_browser_search(self):
-        page = FakePage(valid=True)
-        gateway = backend.VisibleBrowserFetcher(page)
-        status, html = gateway.fetch("Another 2026")
-        self.assertEqual((status, html), (200, HTML.encode()))
-        self.assertEqual(len(page.context.opened), 1)
-        second = page.context.opened[0]
-        self.assertEqual(len(second.goto_calls), 1)
-        self.assertEqual(second.goto_calls[0][0], backend.query_url("Another 2026"))
-        self.assertEqual(second.goto_calls[0][1]["wait_until"], "domcontentloaded")
-        self.assertEqual(second.waits, [900])
-        self.assertIs(gateway.page, second)
-        self.assertFalse(page.closed, "initial verified tab is preserved")
+        page=FakePage(valid=True)
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Another 2026"),(200,HTML.encode()))
+        self.assertEqual(page.search_fills,["Another 2026"])
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(page.context.opened,[])
+        self.assertEqual(page.waits,[500])
+        self.assertEqual(page.navigation_options,
+                         [{"wait_until":"domcontentloaded","timeout":8000}])
+        self.assertIs(gateway.page,page)
+        self.assertEqual(backend.source_query(page.url),"Another 2026")
 
     def test_challenge_reappearing_after_one_navigation_fails_closed(self):
-        page = FakePage(valid=True)
-        page.after_navigation_valid = False
-        gateway = backend.VisibleBrowserFetcher(page)
-        self.assertEqual(gateway.fetch("Another 2026"), (503, b""))
-        self.assertEqual(gateway.fetch("Another 2026"), (503, b""))
-        self.assertEqual(len(page.context.opened), 1,
-                         "no repeat source request following a challenge")
-        failed = page.context.opened[0]
-        self.assertTrue(failed.closed)
-        self.assertEqual(failed.waits, [900])
-        self.assertFalse(page.closed)
-        self.assertIs(gateway.page, page)
+        page=FakePage(valid=True)
+        page.after_navigation_valid=False
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Another 2026"),(503,b""))
+        self.assertEqual(gateway.fetch("Another 2026"),(503,b""))
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(page.context.opened,[])
+        self.assertEqual(page.waits,[500])
+        self.assertEqual(gateway.browser_state()["last_failure_reason"],
+                         "unverified_result_html")
 
     def test_actual_429_or_non_200_preserved_without_fake_results(self):
-        for upstream, expected in ((429, 429), (403, 503), (500, 503)):
-            with self.subTest(upstream=upstream):
-                original = FakePage()
-                original.next_status = upstream
-                gateway = backend.VisibleBrowserFetcher(original)
-                self.assertEqual(gateway.fetch("New query"), (expected, b""))
-                self.assertEqual(len(original.context.opened), 1)
-                failed = original.context.opened[0]
-                self.assertTrue(failed.closed)
-                self.assertFalse(original.closed)
-                self.assertEqual(gateway.fetch("New query"), (expected, b""))
-                self.assertEqual(len(original.context.opened), 1)
-                self.assertEqual(gateway.fetch("The Dog Stars 2026"),
-                                 (200, HTML.encode()),
-                                 "previously verified source results remain readable")
+        for upstream,expected in ((429,429),(403,503),(500,503)):
+            page=FakePage()
+            page.next_status=upstream
+            gateway=backend.VisibleBrowserFetcher(page)
+            self.assertEqual(gateway.fetch("New query"),(expected,b""))
+            self.assertEqual(gateway.fetch("New query"),(expected,b""))
+            self.assertEqual(page.submit_calls,1)
+            self.assertEqual(page.context.opened,[])
+            self.assertEqual(gateway.browser_state()["last_upstream_http_status"],
+                             upstream)
+            # Manual owner restoration, no automated bypass.
+            page.url=backend.query_url("The Dog Stars 2026")
+            page.valid=True
+            self.assertEqual(gateway.fetch("The Dog Stars 2026")[0],200)
 
     def test_second_success_replaces_previous_secondary_tab_not_original(self):
-        original = FakePage()
-        gateway = backend.VisibleBrowserFetcher(original)
-        self.assertEqual(gateway.fetch("Second query")[0], 200)
-        second = gateway.page
-        self.assertFalse(second.closed)
-        self.assertEqual(gateway.fetch("Third query")[0], 200)
-        self.assertTrue(second.closed)
-        self.assertFalse(original.closed)
-        self.assertFalse(gateway.page.closed)
-        self.assertEqual(len(original.context.opened), 2)
+        page=FakePage()
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Second query")[0],200)
+        self.assertEqual(gateway.fetch("Third query")[0],200)
+        self.assertEqual(page.submit_calls,2)
+        self.assertEqual(page.context.opened,[])
+        self.assertIs(gateway.page,page)
+        self.assertFalse(page.closed)
 
     def test_new_tab_exception_is_bounded_and_never_retried(self):
-        original = FakePage()
-        class BrokenContext:
-            def __init__(self):
-                self.calls = 0
-            @property
-            def pages(self):
-                # Real Playwright contexts always expose their open tabs.
-                # The simulated failure must occur at new_page(), not before.
-                return [original]
-            def new_page(self):
-                self.calls += 1
-                raise RuntimeError("simulated local Playwright error")
-        broken = BrokenContext()
-        original.context = broken
-        gateway = backend.VisibleBrowserFetcher(original)
-        self.assertEqual(gateway.fetch("New query"), (504, b""))
-        self.assertEqual(gateway.fetch("New query"), (504, b""))
-        self.assertEqual(broken.calls, 1)
-        self.assertFalse(original.closed)
-        self.assertEqual(gateway.fetch("The Dog Stars 2026")[0], 200)
+        page=FakePage()
+        page.raise_on_press=True
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("New query"),(504,b""))
+        self.assertEqual(gateway.fetch("New query"),(504,b""))
+        self.assertEqual(page.submit_calls,1)
+        self.assertFalse(page.closed)
+        self.assertEqual(gateway.fetch("The Dog Stars 2026")[0],200)
 
     def test_error_then_reused_original_tab_does_not_generate_request(self):
-        original = FakePage()
-        original.next_status = 429
-        gateway = backend.VisibleBrowserFetcher(original)
-        self.assertEqual(gateway.fetch("Other title"), (429, b""))
-        self.assertEqual(gateway.fetch("THE DOG STARS 2026")[0], 200)
-        self.assertEqual(len(original.context.opened), 1)
+        page=FakePage()
+        page.next_status=429
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Other title"),(429,b""))
+        page.url=backend.query_url("The Dog Stars 2026")
+        page.valid=True
+        self.assertEqual(gateway.fetch("THE DOG STARS 2026")[0],200)
+        self.assertEqual(page.submit_calls,1)
 
     def test_readonly_browser_state_inspects_tabs_without_navigation(self):
         first = FakePage()
@@ -301,14 +325,15 @@ class BrowserBackendTests(TestCase):
         state = gateway.browser_state()
         self.assertTrue(state["new_searches_paused"])
         self.assertEqual(state["last_navigation_status"], 429)
-        self.assertEqual(state["verified_tabs"], 2)
+        self.assertEqual(state["verified_tabs"], 1,
+                         "failed same-tab navigation invalidates its prior rows")
         self.assertEqual(gateway.fetch("Other new query"), (429, b""))
         self.assertEqual(len(first.context.opened), 2)
 
     def test_failure_reason_for_upstream_http_or_invalid_html(self):
-        for status, reason in ((429,"upstream_http_429"),
-                               (503,"upstream_http_non200"),
-                               (403,"upstream_http_non200")):
+        for status,reason in ((429,"upstream_http_429"),
+                              (503,"upstream_http_non200"),
+                              (403,"upstream_http_non200")):
             page=FakePage()
             page.next_status=status
             fetcher=backend.VisibleBrowserFetcher(page)
@@ -318,10 +343,10 @@ class BrowserBackendTests(TestCase):
             self.assertEqual(state["last_failure_reason"],reason)
             self.assertEqual(state["last_upstream_http_status"],status)
             self.assertEqual(state["last_navigation_status"],expected)
-            self.assertEqual(len(page.context.opened),1)
-            self.assertTrue(page.context.opened[0].closed)
+            self.assertEqual(page.submit_calls,1)
+            self.assertEqual(page.context.opened,[])
             self.assertEqual(fetcher.fetch("New Title 2026"),(expected,b""))
-            self.assertEqual(len(page.context.opened),1)
+            self.assertEqual(page.submit_calls,1)
         page=FakePage()
         page.after_navigation_valid=False
         fetcher=backend.VisibleBrowserFetcher(page)
@@ -329,7 +354,6 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(fetcher.browser_state()["last_failure_reason"],
                          "unverified_result_html")
         self.assertEqual(fetcher.browser_state()["last_upstream_http_status"],200)
-        self.assertTrue(fetcher.browser_state()["selected_tab_verified"])
 
     def test_redirect_failure_remains_sanitized(self):
         page=FakePage()
