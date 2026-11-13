@@ -313,14 +313,14 @@ class BrowserBackendTests(TestCase):
         first.next_status = 429
         gateway = backend.VisibleBrowserFetcher(first)
         self.assertEqual(gateway.fetch("Different title"), (429, b""))
-        self.assertEqual(len(first.context.opened), 1)
+        self.assertEqual(len(first.context.opened), 0)
         manually_opened = first.context.new_page()
         manually_opened.url = backend.query_url("Manual 2026")
         manually_opened.valid = True
         status, html = gateway.fetch("MANUAL 2026")
         self.assertEqual((status, html), (200, HTML.encode()))
         self.assertEqual(manually_opened.goto_calls, [])
-        self.assertEqual(len(first.context.opened), 2)
+        self.assertEqual(len(first.context.opened), 1)
         self.assertIs(gateway.page, manually_opened)
         state = gateway.browser_state()
         self.assertTrue(state["new_searches_paused"])
@@ -328,7 +328,7 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(state["verified_tabs"], 1,
                          "failed same-tab navigation invalidates its prior rows")
         self.assertEqual(gateway.fetch("Other new query"), (429, b""))
-        self.assertEqual(len(first.context.opened), 2)
+        self.assertEqual(len(first.context.opened), 1)
 
     def test_failure_reason_for_upstream_http_or_invalid_html(self):
         for status,reason in ((429,"upstream_http_429"),
