@@ -61,6 +61,24 @@ class LocalOnlyChromiumPathTests(TestCase):
         self.assertIn('"requests_to_btdigg_origin": 0', source)
         self.assertNotIn("I'm not a robot", source)
 
+    def test_fixture_css_contract_matches_current_worker_btdigg_parser(self):
+        # Source-only compatibility check across Python Playwright and the
+        # real Cloudflare Worker selector declarations, without parsing any
+        # live BTDigg HTML or pretending this replaces HTMLRewriter testing.
+        spec = (SCRIPT.parent.parent / "worker/src/html-adapters.mjs"
+                ).read_text(encoding="utf-8")
+        part = spec.split("  btdigg: {", 1)[1].split("\\n  },", 1)[0]
+        for required in (
+            'rows:"div.one_result > div"',
+            'name:"div.torrent_name > a"',
+            'magnet:"div.torrent_magnet > div.fa-magnet > a"',
+            'size:"span.torrent_size"',
+        ):
+            self.assertIn(required, part)
+        self.assertIn("div.one_result > div", SCRIPT.read_text())
+        self.assertIn("div.torrent_magnet > div.fa-magnet > a",
+                      SCRIPT.read_text())
+
     def test_local_client_and_httpserver_are_same_thread_as_browser(self):
         class LocalHandler(BaseHTTPRequestHandler):
             def log_message(self, *_):
