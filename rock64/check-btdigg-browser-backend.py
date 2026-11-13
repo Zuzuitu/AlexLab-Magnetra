@@ -136,6 +136,24 @@ def main():
                 result["browser_state"]["in_process_navigation_latch"] = (
                     state["new_searches_paused"]
                 )
+            # New browser versions disclose only fixed, secret-free reason codes.
+            reasons = {
+                "no_navigation_response", "upstream_http_429",
+                "upstream_http_non200", "unexpected_final_query",
+                "unverified_result_html", "browser_navigation_exception",
+            }
+            if "last_failure_reason" in state:
+                reason = state["last_failure_reason"]
+                if reason is not None and reason not in reasons:
+                    raise ValueError("unexpected failure reason")
+                http_status = state.get("last_upstream_http_status")
+                if http_status is not None and (
+                    type(http_status) is not int
+                    or not 100 <= http_status <= 599
+                ):
+                    raise ValueError("unexpected HTTP status")
+                result["browser_state"]["last_failure_reason"] = reason
+                result["browser_state"]["last_upstream_http_status"] = http_status
         if search_performed:
             result.update({
                 "source_html_bounded": 0 < len(body) <= 3_000_000,

@@ -138,6 +138,18 @@ class VisibleBrowserFetcher:
         self.page = page
         self.reference_page = page
         self._source_stopped = None
+        self._last_failure_reason = None
+        self._last_upstream_http_status = None
+
+    def _stop_navigation(self, code, reason, http_status=None):
+        """Sanitized, fixed-category reason. Never retain source HTML or URL."""
+        self._source_stopped = code
+        self._last_failure_reason = reason
+        self._last_upstream_http_status = (
+            http_status if type(http_status) is int
+            and 100 <= http_status <= 599 else None
+        )
+        return code, b""
 
     def _verified_existing_query(self, query):
         """Reuse owner-opened verified tabs without network navigation.
@@ -175,6 +187,8 @@ class VisibleBrowserFetcher:
                 ),
                 # A visible 429 body is not proof of the network HTTP status.
                 "last_navigation_status": self._source_stopped,
+                "last_failure_reason": self._last_failure_reason,
+                "last_upstream_http_status": self._last_upstream_http_status,
             }
         except Exception:
             return {
@@ -185,6 +199,8 @@ class VisibleBrowserFetcher:
                 "visible_source_rate_limited": False,
                 "new_searches_paused": True,
                 "last_navigation_status": None,
+                "last_failure_reason": None,
+                "last_upstream_http_status": None,
             }
 
     def fetch(self, query):
@@ -221,21 +237,18 @@ class VisibleBrowserFetcher:
                 response = candidate.goto(
                     target, wait_until="domcontentloaded", timeout=10000)
                 if response is None:
-                    self._source_stopped = 503
-                    return 503, b""
+                    return self._stop_navigation(503, "no_navigation_response")
                 if response.status == 429:
-                    self._source_stopped = 429
-                    return 429, b""
+                    return self._stop_navigation(429, "upstream_http_429", response.status)
                 if response.status != 200:
-                    self._source_stopped = 503
-                    return 503, b""
+                    return self._stop_navigation(503, "upstream_http_non200", response.status)
 
                 candidate.wait_for_timeout(900)
                 html = validated_result_html(candidate)
-                if (not same_search_query(source_query(candidate.url), query)
-                        or html is None):
-                    self._source_stopped = 503
-                    return 503, b""
+                if not same_search_query(source_query(candidate.url), query):
+                    return self._stop_navigation(503, "unexpected_final_query", 200)
+                if html is None:
+                    return self._stop_navigation(503, "unverified_result_html", 200)
 
                 old = self.page
                 self.page = candidate
@@ -249,8 +262,7 @@ class VisibleBrowserFetcher:
                 return 200, html
             except Exception:
                 # Do not emit query, URLs, source HTML or Playwright exceptions.
-                self._source_stopped = 504
-                return 504, b""
+                return self._stop_navigation(504, "browser_navigation_exception")
             finally:
                 if candidate is not None and not accepted:
                     try:
