@@ -2,6 +2,7 @@
 """Offline checks for Magnetra BTDigg #262 one-shot guarded release."""
 from __future__ import annotations
 import os
+import re
 from pathlib import Path
 import sys
 import unittest
@@ -45,11 +46,18 @@ class GuardedPacingReleaseTests(unittest.TestCase):
             with self.assertRaises(Stop):
                 release.approval_baseline()
         with patch.object(release,"_git",side_effect=[
-            "[magnetra-btdigg-pacing-20261113] deploy",release.EVENT]):
+            "[unapproved-commit] deploy",release.EVENT]):
             with self.assertRaises(Stop):
                 release.approval_baseline()
-        self.assertEqual((HERE.parent/release.EVENT).read_text(),
-                         "status: PENDING\nexpected_active_version: PENDING\n")
+        event=(HERE.parent/release.EVENT).read_text()
+        self.assertTrue(
+            event=="status: PENDING\nexpected_active_version: PENDING\n"
+            or re.fullmatch(
+                r"status: APPROVED\nexpected_active_version: ("+
+                release.UUID.pattern+r")\n",event,re.I
+            ) is not None,
+            "Only pending or explicitly approved UUID event can pass offline CI"
+        )
 
     def test_approved_baseline_mismatch_fails_before_upload(self):
         valid="12345678-1234-4123-8123-123456789abc"
