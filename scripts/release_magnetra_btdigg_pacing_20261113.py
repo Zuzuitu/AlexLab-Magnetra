@@ -99,8 +99,6 @@ def readonly_baseline():
     # GET-only Cloudflare version metadata, no source searches and no writes.
     _deployment,shares=snapshot()
     old=candidate_baseline(shares)
-    if old!=approval_baseline():
-        raise Stop("APPROVED_CLOUDFLARE_BASELINE_CHANGED")
     critical_binding_guard(old)
     print("BTDIGG_PACING_READONLY_BASELINE:"+old+"@100")
     return 0
@@ -133,6 +131,8 @@ def publish():
     config=source_guard()
     before,shares=snapshot()
     old=candidate_baseline(shares)
+    if old!=approval_baseline():
+        raise Stop("APPROVED_CLOUDFLARE_BASELINE_CHANGED")
     critical_binding_guard(old)
     catalog_guard(None)
     stable(before,shares)
