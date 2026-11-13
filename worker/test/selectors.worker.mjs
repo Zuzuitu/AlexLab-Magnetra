@@ -102,12 +102,12 @@ export default {
    // A real *simulated* source 429 sets the Worker isolate cooldown;
    // a never-seen term must not generate a fourth transport request.
    const denied=await search(refused).then(()=>false,
-    e=>/\\bHTTP 429\\b/.test(String(e?.message||"")));
+    e=>/\bHTTP 429\b/.test(String(e?.message||"")));
    if(!denied)throw Error("fixture source 429 was not propagated");
    now+=FRESH_MS+1;
    const stale=await search(exact);
    const blocked=await search(unseen).then(()=>false,
-    e=>/\\bHTTP 429\\b/.test(String(e?.message||"")));
+    e=>/\bHTTP 429\b/.test(String(e?.message||"")));
    if(stale.cache?.mode!=="stale"||stale.items.length!==1||
       stale.items[0].magnet!==fakeMagnet||!blocked||
       JSON.stringify(requests)!==JSON.stringify([exact,locallyPaced,refused]))
