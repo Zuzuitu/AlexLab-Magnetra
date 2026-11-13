@@ -274,6 +274,8 @@ class BrowserBackendTests(TestCase):
             "new_searches_paused": False,
             "visible_source_rate_limited": False,
             "last_navigation_status": None,
+            "last_failure_reason": None,
+            "last_upstream_http_status": None,
         })
         extra = first.context.new_page()
         self.assertFalse(extra.valid)
@@ -302,6 +304,42 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(state["verified_tabs"], 2)
         self.assertEqual(gateway.fetch("Other new query"), (429, b""))
         self.assertEqual(len(first.context.opened), 2)
+
+    def test_failure_reason_for_upstream_http_or_invalid_html(self):
+        for status, reason in ((429,"upstream_http_429"),
+                               (503,"upstream_http_non200"),
+                               (403,"upstream_http_non200")):
+            page=FakePage()
+            page.next_status=status
+            fetcher=backend.VisibleBrowserFetcher(page)
+            expected=429 if status==429 else 503
+            self.assertEqual(fetcher.fetch("New Title 2026"),(expected,b""))
+            state=fetcher.browser_state()
+            self.assertEqual(state["last_failure_reason"],reason)
+            self.assertEqual(state["last_upstream_http_status"],status)
+            self.assertEqual(state["last_navigation_status"],expected)
+            self.assertEqual(len(page.context.opened),1)
+            self.assertTrue(page.context.opened[0].closed)
+            self.assertEqual(fetcher.fetch("New Title 2026"),(expected,b""))
+            self.assertEqual(len(page.context.opened),1)
+        page=FakePage()
+        page.after_navigation_valid=False
+        fetcher=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(fetcher.fetch("New Title 2026"),(503,b""))
+        self.assertEqual(fetcher.browser_state()["last_failure_reason"],
+                         "unverified_result_html")
+        self.assertEqual(fetcher.browser_state()["last_upstream_http_status"],200)
+        self.assertTrue(fetcher.browser_state()["selected_tab_verified"])
+
+    def test_redirect_failure_remains_sanitized(self):
+        page=FakePage()
+        page.redirect_to=backend.query_url("Unrelated title")
+        fetcher=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(fetcher.fetch("New Title 2026"),(503,b""))
+        state=fetcher.browser_state()
+        self.assertEqual(state["last_failure_reason"],"unexpected_final_query")
+        self.assertEqual(state["last_upstream_http_status"],200)
+        self.assertNotIn("Unrelated",str(state))
 
     def test_manual_verified_tab_detected_if_initial_tab_closed(self):
         first = FakePage(valid=False)
