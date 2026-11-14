@@ -39,12 +39,33 @@ function harness(fetcher,initialStorage={},query=""){
  toast=()=>{};
  globalThis.testing={state,search,sendMagnet,ensureMagnet,magnetIdentity,
   chooseProviders,orderedProviders,renderProviders,btdiggWaitMs,btdiggPacing,waitForBTDigg,
-  selectedSearchItems,magnetFailureText,noResultsText,btdiggCooldownRemainingMs,recordBTDigg429,clearBTDigg429};
+  selectedSearchItems,magnetFailureText,noResultsText,btdiggCooldownRemainingMs,recordBTDigg429,clearBTDigg429,resultDisplaySize,resultDisplayDate};
  `,sandbox,{filename:"web/app.js"});
  return {api:sandbox.testing,element,storage};
 }
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
 
+test("BTDigg source metadata is localized for display without mutating original fields",()=>{
+ const {api}=harness(async()=>json({results:[]}));
+ const source={
+  provider:"btdigg",
+  size:"844.22&nbsp;MB",
+  date:"2주 전 발견",
+ };
+ assert.equal(api.resultDisplaySize(source),"844.22 MB");
+ assert.match(api.resultDisplayDate(source),/2/);
+ assert.match(api.resultDisplayDate(source),/săptămâni|săptămîni/);
+ assert.deepEqual(source,{provider:"btdigg",size:"844.22&nbsp;MB",date:"2주 전 발견"});
+ assert.equal(api.resultDisplaySize({provider:"btdigg",size:"1.24&#160;GB"}),"1.24 GB");
+ assert.equal(api.resultDisplaySize({provider:"btdigg",size:"1.24&#xA0;GB"}),"1.24 GB");
+ assert.equal(api.resultDisplaySize({provider:"btdigg",size:"1.24\u00a0GB"}),"1.24 GB");
+ assert.equal(api.resultDisplayDate({provider:"btdigg",date:"2026-11-14"}),"2026-11-14");
+ assert.equal(api.resultDisplayDate({provider:"elsewhere",date:"2주 전 발견"}),"2주 전 발견".slice(0,10));
+ assert.equal(api.resultDisplaySize({provider:"elsewhere",size:"844.22&nbsp;MB"}),"844.22&nbsp;MB");
+ assert.equal(api.resultDisplayDate({provider:"btdigg",date:"unknown relative date"}),"unknown re");
+ assert.equal(api.resultDisplaySize({provider:"btdigg",size:"not a link &amp;"}),"not a link &amp;");
+ assert.equal(api.resultDisplayDate({provider:"btdigg",date:null}),null);
+});
 test("sliding search pool starts the next provider without waiting for an unrelated timeout",async()=>{
  let releaseSlow;
  const slow=new Promise(resolve=>{releaseSlow=resolve;});
