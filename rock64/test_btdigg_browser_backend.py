@@ -108,6 +108,12 @@ class FakePage:
             def value(self): return page._response
         return Navigation()
 
+    def goto(self, url, **kwargs):
+        self.goto_calls.append(url)
+        self.url=url
+        self.valid=self.after_navigation_valid and self.next_status==200
+        return type("Response",(),{"status":self.next_status})()
+
     def wait_for_timeout(self, millis):
         self.waits.append(millis)
 
@@ -191,6 +197,82 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(page.context.opened,[])
         self.assertEqual(gateway.browser_state()["last_failure_reason"],
                          "unexpected_final_query")
+
+    def test_owner_optin_cold_boot_uses_saved_verified_query_once(self):
+        class State:
+            def __init__(self):
+                self.attempts = 0
+            def last_query(self):
+                return "The Dog Stars 2026 720p"
+            def claim_boot_attempt(self):
+                self.attempts += 1
+                return self.attempts == 1
+            def remember_verified(self, query):
+                pass
+        page = FakePage(url="about:blank", valid=False)
+        state = State()
+        result = backend.restore_boot_page_once(page.context, page, state)
+        self.assertEqual(result, "verified")
+        self.assertEqual(page.goto_calls,
+                         [backend.query_url("The Dog Stars 2026 720p")])
+        self.assertEqual(backend.restore_boot_page_once(page.context, page, state),
+                         "existing_tab")
+        self.assertEqual(state.attempts, 1)
+        self.assertEqual(backend.validated_result_html(page), HTML.encode())
+
+    def test_boot_never_navigates_if_existing_source_or_missing_consent(self):
+        class State:
+            def last_query(self):
+                return "Source query"
+            def claim_boot_attempt(self):
+                raise AssertionError("must not claim when page is occupied")
+        page = FakePage()
+        self.assertEqual(backend.restore_boot_page_once(page.context, page, None),
+                         "skipped")
+        self.assertEqual(backend.restore_boot_page_once(page.context, page, State()),
+                         "existing_tab")
+        self.assertEqual(page.goto_calls, [])
+        page.context.new_page()
+        self.assertEqual(backend.restore_boot_page_once(page.context, page, State()),
+                         "skipped")
+        self.assertEqual(page.goto_calls, [])
+
+    def test_boot_upstream_denial_never_retries(self):
+        class State:
+            attempts=0
+            def last_query(self):
+                return "Source query"
+            def claim_boot_attempt(self):
+                self.attempts += 1
+                return self.attempts == 1
+        page = FakePage(url="about:blank",valid=False)
+        page.next_status = 429
+        state=State()
+        self.assertEqual(backend.restore_boot_page_once(page.context,page,state),
+                         "upstream_non200")
+        self.assertEqual(len(page.goto_calls),1)
+        self.assertEqual(backend.restore_boot_page_once(page.context,page,state),
+                         "existing_tab")
+        self.assertEqual(len(page.goto_calls),1)
+        self.assertEqual(state.attempts,1)
+
+    def test_verified_browser_snapshot_remembers_only_real_html(self):
+        class State:
+            seen=[]
+            def remember_verified(self, query):
+                self.seen.append(query)
+        state=State()
+        page=FakePage(url=backend.query_url("The Dog Stars 2026"))
+        gateway=backend.VisibleBrowserFetcher(page,state)
+        gateway.browser_state()
+        self.assertEqual(state.seen,["The Dog Stars 2026"])
+        page.valid=False
+        gateway.browser_state()
+        self.assertEqual(state.seen,["The Dog Stars 2026"])
+        page.valid=True
+        page.url="https://example.invalid/not-btdigg"
+        gateway.browser_state()
+        self.assertEqual(state.seen,["The Dog Stars 2026"])
 
     def test_manual_navigation_refreshes_stale_playwright_page_metadata(self):
         # Browser UI is already on BTDigg, but sync API cached page.url
@@ -559,15 +641,18 @@ class BrowserBackendTests(TestCase):
         page.body_text = "A" * 200
         self.assertFalse(backend.source_rate_limit_visible(page))
 
-    def test_persistent_chromium_does_not_auto_visit_on_startup(self):
+    def test_persistent_chromium_only_restores_on_explicit_optin(self):
         source = Path(backend.__file__).read_text()
         startup = source.split("def main():", 1)[1]
         self.assertIn("launch_persistent_context(", startup)
         self.assertIn("context.pages[0] if context.pages else context.new_page()", startup)
         self.assertNotIn(".goto(", startup,
-                         "cold start must never issue an explicit source request")
+                         "default startup must never navigate unconditionally")
         self.assertNotIn("page.reload(", startup)
-        self.assertIn("browser_fetcher = VisibleBrowserFetcher(page)", startup)
+        self.assertIn('if os.environ.get("MAGNETRA_BTDIGG_RESTORE_ON_BOOT") == "1":',
+                      startup)
+        self.assertIn("restore_boot_page_once(context, page, resume)", startup)
+        self.assertIn("browser_fetcher = VisibleBrowserFetcher(page, resume)",startup)
 
     def test_auth_and_private_persistent_profile_are_explicit_opt_in(self):
         with TemporaryDirectory() as root:

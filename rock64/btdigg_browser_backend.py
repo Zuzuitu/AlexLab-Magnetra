@@ -24,8 +24,10 @@ from urllib.parse import quote, parse_qs, urlsplit
 
 if __package__:
     from .btdigg_gateway import BIND, PORT, SIZE_LIMIT, SearchProvider, handler_class
+    from .btdigg_bootstrap_state import BootstrapState
 else:
     from btdigg_gateway import BIND, PORT, SIZE_LIMIT, SearchProvider, handler_class
+    from btdigg_bootstrap_state import BootstrapState
 
 TEST_PORT = 18896
 QUERY_LIMIT = 180
@@ -213,7 +215,8 @@ class VisibleBrowserFetcher:
     Any source denial or unexpected response pauses further submissions.
     """
 
-    def __init__(self, page):
+    def __init__(self, page, bootstrap_state=None):
+        self._bootstrap_state = bootstrap_state
         self.page = page
         self.reference_page = page
         self._source_stopped = None
@@ -229,6 +232,18 @@ class VisibleBrowserFetcher:
             and 100 <= http_status <= 599 else None
         )
         return code, b""
+
+    def _remember_verified(self, url, markup):
+        if self._bootstrap_state is None or markup is None:
+            return
+        query = source_query(url)
+        if query is None:
+            return
+        try:
+            self._bootstrap_state.remember_verified(query)
+        except (OSError, ValueError):
+            # Readiness must not depend on optional on-disk resume state.
+            pass
 
     def _verified_existing_query(self, query):
         """Reuse owner-opened verified tabs without network navigation.
@@ -246,6 +261,7 @@ class VisibleBrowserFetcher:
                     and same_search_query(source_query(url), query)):
                 html = validated_result_html(page, url)
                 if html is not None:
+                    self._remember_verified(url, html)
                     return page, html
         return None, None
 
@@ -262,9 +278,13 @@ class VisibleBrowserFetcher:
                 p: (first_url if p is self.page else live_document_url(p))
                 for p in checked_pages
             }
-            verified = sum(
-                validated_result_html(p, urls[p]) is not None for p in checked_pages
-            )
+            verified_by_page = {
+                p: validated_result_html(p, urls[p]) for p in checked_pages
+            }
+            verified = sum(v is not None for v in verified_by_page.values())
+            if self.page in verified_by_page:
+                self._remember_verified(urls[self.page],
+                                        verified_by_page[self.page])
             visible_denial = any(
                 source_rate_limit_visible(p, urls[p]) for p in checked_pages
             )
@@ -281,7 +301,7 @@ class VisibleBrowserFetcher:
                 "selected_tab_verified": (
                     not self.page.is_closed()
                     and self.page in urls
-                    and validated_result_html(self.page, urls[self.page]) is not None
+                    and verified_by_page[self.page] is not None
                 ),
                 "visible_source_rate_limited": visible_denial,
                 "new_searches_paused": (
@@ -364,6 +384,7 @@ class VisibleBrowserFetcher:
                 html = validated_result_html(self.page)
                 if html is None:
                     return self._stop_navigation(503, "unverified_result_html", 200)
+                self._remember_verified(live_document_url(self.page), html)
                 return 200, html
             except Exception:
                 # No query, URL, HTML, browser cookies or exception details.
@@ -372,6 +393,39 @@ class VisibleBrowserFetcher:
             return 400, b""
         except Exception:
             return 504, b""
+
+
+def restore_boot_page_once(context, page, state):
+    """Opt-in cold-boot restore: at most ONE source navigation per OS boot.
+
+    No action for a still-visible tab, absent saved query, failed state guard
+    or different Chromium context. A 429/challenge is never retried.
+    """
+    try:
+        if state is None or len(context.pages) != 1 or context.pages[0] is not page:
+            return "skipped"
+        if live_document_url(page) != "about:blank":
+            return "existing_tab"
+        query = state.last_query()
+        if query is None:
+            return "no_saved_query"
+        url = query_url(query)  # Fixed HTTPS origin and canonical search path.
+        if not state.claim_boot_attempt():
+            return "already_attempted_this_boot"
+        try:
+            response = page.goto(
+                url, wait_until="domcontentloaded", timeout=8000
+            )
+            if response is None or response.status != 200:
+                return "upstream_non200"
+            html = validated_result_html(page)
+            if html is None:
+                return "unverified_source"
+            return "verified"
+        except Exception:
+            return "navigation_exception"
+    except (OSError, UnicodeError, ValueError):
+        return "state_unavailable"
 
 
 def browser_handler_class(token, provider, fetcher):
@@ -450,14 +504,22 @@ def main():
             timeout=12000,
         )
         try:
-            # Never visit BTDigg merely because Chromium started.
-            # A persistent profile can restore old tabs, possibly triggering
-            # browser-owned reloads that Playwright cannot guarantee to prevent.
-            # Do not ADD a second, explicit startup request on top of those.
-            # A brand-new profile opens a blank tab until the owner chooses
-            # a source page manually in noVNC.
+            # Default: never visit BTDigg merely because Chromium started.
+            # The explicit opt-in below can restore one previously verified
+            # search only if Chromium has a blank sole tab, at most once per
+            # OS boot. An existing tab will never receive an extra request.
+            # A brand-new profile opens a blank tab until the owner verifies
+            # a source page or saves an explicit seed.
             page = context.pages[0] if context.pages else context.new_page()
-            browser_fetcher = VisibleBrowserFetcher(page)
+            # No startup request unless the owner explicitly enabled the boot
+            # service, previously saved a verified query and opened a blank tab.
+            # Mark this OS boot before the only possible source navigation.
+            resume = None
+            if os.environ.get("MAGNETRA_BTDIGG_RESTORE_ON_BOOT") == "1":
+                resume = BootstrapState(profile.parent)
+                boot_result = restore_boot_page_once(context, page, resume)
+                print("BTDigg cold boot: " + boot_result, flush=True)
+            browser_fetcher = VisibleBrowserFetcher(page, resume)
             provider = SearchProvider(fetcher=browser_fetcher.fetch)
             # HTTPServer (NOT ThreadingHTTPServer): Playwright sync page remains
             # owned by the same thread for every subsequent search.
