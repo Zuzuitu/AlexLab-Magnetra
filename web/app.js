@@ -494,6 +494,29 @@ function noResultsText(){
   ?tr("Search incomplete: {n} source(s) failed. No matching releases were found among responding sources.",{n:state.lastFailedSourcesCount})
   :tr("No matching titles. Try another title, fewer keywords or different indexers.");
 }
+// BTDigg sometimes supplies literal &nbsp; in its source size, and Korean
+// relative discovery ages. Keep original metadata; normalize display only.
+// A localized relative age is not an invented absolute publication date.
+function resultDisplaySize(item){
+ const raw=item?.size;
+ if(item?.provider!=="btdigg"||typeof raw!=="string")return raw;
+ return raw.replace(/&(?:nbsp|#0*160|#x0*a0);/gi," ")
+  .replace(/\u00a0/g," ").replace(/\s+/g," ").trim();
+}
+function resultDisplayDate(item){
+ const raw=item?.date;
+ if(!raw)return null;
+ const value=String(raw);
+ if(item?.provider==="btdigg"){
+  const match=/^(\d{1,3})\s*(분|시간|일|주|개월|달|년)\s*전\s*발견$/.exec(value);
+  if(match){
+   const units={"분":"minute","시간":"hour","일":"day","주":"week","개월":"month","달":"month","년":"year"};
+   return new Intl.RelativeTimeFormat(currentLanguage(),{numeric:"always"})
+    .format(-Number(match[1]),units[match[2]]);
+  }
+ }
+ return value.slice(0,10);
+}
 function renderResults(){
  const root=$("results");root.replaceChildren();
  const {items,showAlternatives}=selectedSearchItems();
@@ -527,7 +550,7 @@ function renderResults(){
      el("span","tag alternative-release",tr("Alternative release")+(detail?" · "+tr("Different: {terms}",{terms:detail}):"")));
     if(specs)info.append(el("span","meta-dot","·"),el("span","",specs));
    }
-   for(const field of [item.size, item.seeders!==null&&item.seeders!==undefined?tr("{n} seeders",{n:item.seeders}):null,item.peers!==null&&item.peers!==undefined?tr("{n} peers",{n:item.peers}):null,item.date?String(item.date).slice(0,10):null]){
+   for(const field of [resultDisplaySize(item), item.seeders!==null&&item.seeders!==undefined?tr("{n} seeders",{n:item.seeders}):null,item.peers!==null&&item.peers!==undefined?tr("{n} peers",{n:item.peers}):null,resultDisplayDate(item)]){
      if(!field)continue;info.append(el("span","meta-dot","·"),el("span","",field));
    }
    if(Number.isFinite(item.cachedAgeSeconds)){
