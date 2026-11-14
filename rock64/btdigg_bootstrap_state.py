@@ -89,7 +89,10 @@ class BootstrapState:
 
     def remember_verified(self, query):
         """Only caller-verified canonical HTML may authorize saving a query."""
-        _write_file(self.directory, LAST_QUERY, _query(query))
+        normalized = _query(query)
+        if self.last_query() == normalized:
+            return  # Avoid repeated writes on the Rock64 SD/SSD.
+        _write_file(self.directory, LAST_QUERY, normalized)
 
     def claim_boot_attempt(self, boot_id=None):
         """Never initiate a second automatic source visit in one OS boot."""
