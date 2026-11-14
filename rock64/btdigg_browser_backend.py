@@ -504,12 +504,12 @@ def main():
             timeout=12000,
         )
         try:
-            # Never visit BTDigg merely because Chromium started.
-            # A persistent profile can restore old tabs, possibly triggering
-            # browser-owned reloads that Playwright cannot guarantee to prevent.
-            # Do not ADD a second, explicit startup request on top of those.
-            # A brand-new profile opens a blank tab until the owner chooses
-            # a source page manually in noVNC.
+            # Default: never visit BTDigg merely because Chromium started.
+            # The explicit opt-in below can restore one previously verified
+            # search only if Chromium has a blank sole tab, at most once per
+            # OS boot. An existing tab will never receive an extra request.
+            # A brand-new profile opens a blank tab until the owner verifies
+            # a source page or saves an explicit seed.
             page = context.pages[0] if context.pages else context.new_page()
             # No startup request unless the owner explicitly enabled the boot
             # service, previously saved a verified query and opened a blank tab.
