@@ -126,6 +126,62 @@ def source_rate_limit_visible(page):
         return False
 
 
+def sanitized_tab_diagnostic(page):
+    """Read DOM from one Playwright-owned tab; return counts, never content/URLs.
+
+    The GUI noVNC may show a tab different from the page attached to the
+    browser gateway. This snapshot distinguishes a wrong tab from a selector,
+    HTML size, or marker failure without generating source/network requests.
+    """
+    out = {
+        "page_kind": "other",
+        "paired_rows": 0,
+        "title_rows": 0,
+        "magnet_rows": 0,
+        "html_bytes": None,
+        "validation": "not_source",
+    }
+    try:
+        if page.is_closed():
+            out["page_kind"] = "closed"
+            out["validation"] = "closed"
+            return out
+        url = page.url
+        if not source_landing(url):
+            if url == "about:blank":
+                out["page_kind"] = "blank"
+            elif urlsplit(url).hostname == "btdig.com":
+                out["page_kind"] = "btdigg_noncanonical"
+            return out
+        out["page_kind"] = "canonical_search"
+        # Numbers describe DOM structure only, not any release or magnet.
+        out["paired_rows"] = min(page.locator(RESULT_PAIR_SELECTOR).count(), 100000)
+        out["title_rows"] = min(
+            page.locator("div.one_result div.torrent_name a").count(), 100000)
+        out["magnet_rows"] = min(
+            page.locator('div.one_result a[href^="magnet:"]').count(), 100000)
+        if out["paired_rows"] == 0:
+            out["validation"] = "no_paired_rows"
+            return out
+        markup = page.content()
+        if not isinstance(markup, str):
+            out["validation"] = "nontext_html"
+            return out
+        body = markup.encode("utf-8")
+        out["html_bytes"] = len(body)
+        if len(body) > SIZE_LIMIT:
+            out["validation"] = "oversize_html"
+        elif b"one_result" not in body.lower():
+            out["validation"] = "missing_marker"
+        else:
+            out["validation"] = "valid"
+        return out
+    except Exception:
+        # Never expose browser exception, page URL or private DOM.
+        out["validation"] = "inspection_error"
+        return out
+
+
 class VisibleBrowserFetcher:
     """One-thread Playwright gateway; preserve verified tabs on source refusal.
 
@@ -173,6 +229,12 @@ class VisibleBrowserFetcher:
             pages = [p for p in self.page.context.pages if not p.is_closed()]
             verified = sum(validated_result_html(p) is not None for p in pages)
             visible_denial = any(source_rate_limit_visible(p) for p in pages)
+            # Bounded, local-only diagnostics; never return source URL or HTML.
+            checked_pages = pages[:8]
+            tab_diagnostics = [sanitized_tab_diagnostic(p) for p in checked_pages]
+            selected_index = next(
+                (i for i, p in enumerate(checked_pages) if p is self.page), -1
+            )
             return {
                 "browser_connected": bool(pages),
                 "open_tabs": len(pages),
@@ -189,6 +251,8 @@ class VisibleBrowserFetcher:
                 "last_navigation_status": self._source_stopped,
                 "last_failure_reason": self._last_failure_reason,
                 "last_upstream_http_status": self._last_upstream_http_status,
+                "selected_tab_index": selected_index,
+                "tab_diagnostics": tab_diagnostics,
             }
         except Exception:
             return {
@@ -201,6 +265,8 @@ class VisibleBrowserFetcher:
                 "last_navigation_status": None,
                 "last_failure_reason": None,
                 "last_upstream_http_status": None,
+                "selected_tab_index": -1,
+                "tab_diagnostics": [],
             }
 
     def fetch(self, query):
