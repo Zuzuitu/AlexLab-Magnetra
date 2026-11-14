@@ -641,15 +641,18 @@ class BrowserBackendTests(TestCase):
         page.body_text = "A" * 200
         self.assertFalse(backend.source_rate_limit_visible(page))
 
-    def test_persistent_chromium_does_not_auto_visit_on_startup(self):
+    def test_persistent_chromium_only_restores_on_explicit_optin(self):
         source = Path(backend.__file__).read_text()
         startup = source.split("def main():", 1)[1]
         self.assertIn("launch_persistent_context(", startup)
         self.assertIn("context.pages[0] if context.pages else context.new_page()", startup)
         self.assertNotIn(".goto(", startup,
-                         "cold start must never issue an explicit source request")
+                         "default startup must never navigate unconditionally")
         self.assertNotIn("page.reload(", startup)
-        self.assertIn("browser_fetcher = VisibleBrowserFetcher(page)", startup)
+        self.assertIn('if os.environ.get("MAGNETRA_BTDIGG_RESTORE_ON_BOOT") == "1":',
+                      startup)
+        self.assertIn("restore_boot_page_once(context, page, resume)", startup)
+        self.assertIn("browser_fetcher = VisibleBrowserFetcher(page, resume)",startup)
 
     def test_auth_and_private_persistent_profile_are_explicit_opt_in(self):
         with TemporaryDirectory() as root:
