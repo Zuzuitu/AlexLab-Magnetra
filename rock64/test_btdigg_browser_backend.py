@@ -54,6 +54,13 @@ class FakePage:
         self.no_navigation_response=False
         self.navigation_options=[]
         self._response=None
+        self.live_url_override=None
+        self.evaluate_count=0
+
+    def evaluate(self, script):
+        assert script == "() => window.location.href"
+        self.evaluate_count += 1
+        return self.live_url_override if self.live_url_override is not None else self.url
 
     def locator(self, selector):
         assert selector in (
@@ -184,6 +191,48 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(page.context.opened,[])
         self.assertEqual(gateway.browser_state()["last_failure_reason"],
                          "unexpected_final_query")
+
+    def test_manual_navigation_refreshes_stale_playwright_page_metadata(self):
+        # Browser UI is already on BTDigg, but sync API cached page.url
+        # remains about:blank until a browser roundtrip pumps its events.
+        page = FakePage(url="about:blank", valid=True)
+        page.live_url_override = backend.query_url("The Dog Stars 2026")
+        gateway = backend.VisibleBrowserFetcher(page)
+        state = gateway.browser_state()
+        self.assertEqual(state["open_tabs"], 1)
+        self.assertTrue(state["selected_tab_verified"])
+        self.assertEqual(state["verified_tabs"], 1)
+        self.assertEqual(state["tab_diagnostics"][0]["validation"], "valid")
+        self.assertEqual(state["tab_diagnostics"][0]["page_kind"],
+                         "canonical_search")
+        self.assertGreater(page.evaluate_count, 0)
+        before = page.evaluate_count
+        status, data = gateway.fetch("The Dog Stars 2026")
+        self.assertEqual((status, data), (200, HTML.encode()))
+        self.assertGreater(page.evaluate_count, before)
+        self.assertEqual(page.submit_calls, 0)
+        self.assertEqual(page.context.opened, [])
+
+    def test_bad_live_url_fail_closed_without_fabricated_results(self):
+        page = FakePage(valid=True)
+        page.live_url_override = "https://example.invalid/elsewhere"
+        gateway = backend.VisibleBrowserFetcher(page)
+        state = gateway.browser_state()
+        self.assertEqual(state["verified_tabs"], 0)
+        self.assertFalse(state["selected_tab_verified"])
+        self.assertEqual(state["tab_diagnostics"][0]["validation"], "not_source")
+        self.assertEqual(gateway.fetch("Unseen search"), (503, b""))
+        self.assertEqual(page.submit_calls, 0)
+
+    def test_live_location_evaluation_failure_keeps_fail_closed(self):
+        page = FakePage(valid=True)
+        def fail(_script):
+            raise RuntimeError("private browser exception")
+        page.evaluate = fail
+        state = backend.VisibleBrowserFetcher(page).browser_state()
+        self.assertEqual(state["verified_tabs"], 0)
+        self.assertEqual(state["tab_diagnostics"][0]["validation"], "not_source")
+        self.assertNotIn("private", str(state))
 
     def test_existing_owner_verified_query_does_not_navigate_or_retry(self):
         page = FakePage(url=backend.query_url("The Dog Stars 2026"))

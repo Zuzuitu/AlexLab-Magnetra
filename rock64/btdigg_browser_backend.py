@@ -86,13 +86,32 @@ def same_search_query(source_value, requested_value):
     )
 
 
-def validated_result_html(page):
+def live_document_url(page):
+    """One read-only Playwright round trip to the current document.
+
+    The HTTPServer normally blocks the sync Playwright dispatcher while the
+    owner navigates manually in Chromium. page.url and context.pages can then
+    refer to old event-backed state. JS execution pumps the dispatcher AND
+    returns the real document location without any source navigation.
+    """
+    try:
+        url = page.evaluate("() => window.location.href")
+        if isinstance(url, str) and len(url) <= 2600:
+            return url
+    except Exception:
+        pass
+    return None
+
+
+def validated_result_html(page, live_url=None):
     """Return only genuine source-owned result HTML; otherwise no bytes.
 
     No cookies, challenge tokens, JS globals, or scraped results are logged.
     A missing row is NOT a confirmed zero-match search.
     """
-    if not source_landing(page.url):
+    if live_url is None:
+        live_url = live_document_url(page)
+    if not source_landing(live_url):
         return None
     pairs = page.locator(RESULT_PAIR_SELECTOR).count()
     if pairs < 1:
@@ -107,7 +126,7 @@ def validated_result_html(page):
     return body
 
 
-def source_rate_limit_visible(page):
+def source_rate_limit_visible(page, live_url=None):
     """Observe an explicit BTDigg denial in an ALREADY loaded page only.
 
     A body containing exactly the short source refusal is rate limited.
@@ -115,7 +134,11 @@ def source_rate_limit_visible(page):
     network requests, cookies or page text are logged or returned.
     """
     try:
-        if page.is_closed() or not source_landing(page.url):
+        if page.is_closed():
+            return False
+        if live_url is None:
+            live_url = live_document_url(page)
+        if not source_landing(live_url):
             return False
         text = page.locator("body").inner_text(timeout=1500)
         if not isinstance(text, str) or len(text) > 160:
@@ -126,7 +149,7 @@ def source_rate_limit_visible(page):
         return False
 
 
-def sanitized_tab_diagnostic(page):
+def sanitized_tab_diagnostic(page, live_url=None):
     """Read DOM from one Playwright-owned tab; return counts, never content/URLs.
 
     The GUI noVNC may show a tab different from the page attached to the
@@ -146,11 +169,11 @@ def sanitized_tab_diagnostic(page):
             out["page_kind"] = "closed"
             out["validation"] = "closed"
             return out
-        url = page.url
+        url = live_url if live_url is not None else live_document_url(page)
         if not source_landing(url):
             if url == "about:blank":
                 out["page_kind"] = "blank"
-            elif urlsplit(url).hostname == "btdig.com":
+            elif isinstance(url, str) and urlsplit(url).hostname == "btdig.com":
                 out["page_kind"] = "btdigg_noncanonical"
             return out
         out["page_kind"] = "canonical_search"
@@ -213,12 +236,15 @@ class VisibleBrowserFetcher:
         Never trust a tab solely because its URL contains the query: the
         source-owned canonical URL and paired result/magnet HTML are required.
         """
+        # A read-only browser call pumps queued GUI navigation/tab events.
+        first_url = live_document_url(self.page)
         pages = [self.page]
         pages.extend(p for p in self.page.context.pages if p is not self.page)
         for page in pages:
+            url = first_url if page is self.page else live_document_url(page)
             if (not page.is_closed()
-                    and same_search_query(source_query(page.url), query)):
-                html = validated_result_html(page)
+                    and same_search_query(source_query(url), query)):
+                html = validated_result_html(page, url)
                 if html is not None:
                     return page, html
         return None, None
@@ -226,12 +252,25 @@ class VisibleBrowserFetcher:
     def browser_state(self):
         """Authenticated, read-only state of existing DOM; no source requests."""
         try:
+            # Pump pending Playwright events from owner GUI navigation first;
+            # context.pages and page.url may otherwise be stale.
+            first_url = live_document_url(self.page)
             pages = [p for p in self.page.context.pages if not p.is_closed()]
-            verified = sum(validated_result_html(p) is not None for p in pages)
-            visible_denial = any(source_rate_limit_visible(p) for p in pages)
-            # Bounded, local-only diagnostics; never return source URL or HTML.
+            # Bound inspection to eight pages, with fail-closed overflow.
             checked_pages = pages[:8]
-            tab_diagnostics = [sanitized_tab_diagnostic(p) for p in checked_pages]
+            urls = {
+                p: (first_url if p is self.page else live_document_url(p))
+                for p in checked_pages
+            }
+            verified = sum(
+                validated_result_html(p, urls[p]) is not None for p in checked_pages
+            )
+            visible_denial = any(
+                source_rate_limit_visible(p, urls[p]) for p in checked_pages
+            )
+            tab_diagnostics = [
+                sanitized_tab_diagnostic(p, urls[p]) for p in checked_pages
+            ]
             selected_index = next(
                 (i for i, p in enumerate(checked_pages) if p is self.page), -1
             )
@@ -241,11 +280,13 @@ class VisibleBrowserFetcher:
                 "verified_tabs": verified,
                 "selected_tab_verified": (
                     not self.page.is_closed()
-                    and validated_result_html(self.page) is not None
+                    and self.page in urls
+                    and validated_result_html(self.page, urls[self.page]) is not None
                 ),
                 "visible_source_rate_limited": visible_denial,
                 "new_searches_paused": (
                     self._source_stopped is not None or visible_denial
+                    or len(pages) > len(checked_pages)
                 ),
                 # A visible 429 body is not proof of the network HTTP status.
                 "last_navigation_status": self._source_stopped,
@@ -271,7 +312,7 @@ class VisibleBrowserFetcher:
 
     def fetch(self, query):
         try:
-            target = query_url(query)
+            query_url(query)  # Validate without initiating any source request.
             existing_page, existing_html = self._verified_existing_query(query)
             if existing_html is not None:
                 # A manual search in another already-open tab is safe to read;
@@ -316,7 +357,9 @@ class VisibleBrowserFetcher:
                     return self._stop_navigation(
                         503, "upstream_http_non200", response.status)
                 self.page.wait_for_timeout(500)
-                if not same_search_query(source_query(self.page.url), query):
+                if not same_search_query(
+                    source_query(live_document_url(self.page)), query
+                ):
                     return self._stop_navigation(503, "unexpected_final_query", 200)
                 html = validated_result_html(self.page)
                 if html is None:
