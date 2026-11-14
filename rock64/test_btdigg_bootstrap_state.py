@@ -18,6 +18,9 @@ class BootstrapStateTests(unittest.TestCase):
             state.remember_verified("  The Dog Stars 2026 720p  ")
             self.assertEqual(state.last_query(), "The Dog Stars 2026 720p")
             self.assertEqual((d / LAST_QUERY).stat().st_mode & 0o777, 0o600)
+            first_stat=(d / LAST_QUERY).stat().st_mtime_ns
+            state.remember_verified("The Dog Stars 2026 720p")
+            self.assertEqual((d / LAST_QUERY).stat().st_mtime_ns,first_stat)
             first = "2e0b2420-e8a8-4984-8b4a-84f049a4935b"
             second = "eafee280-0f42-497c-a29b-297f908ab026"
             self.assertTrue(state.claim_boot_attempt(first))
