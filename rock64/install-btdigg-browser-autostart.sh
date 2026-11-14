@@ -56,6 +56,7 @@ fi
   fail 'Existing private BTDigg state directory missing.'
 [[ -d "$STATE_DIR/profile" && ! -L "$STATE_DIR/profile" ]] ||
   fail 'Existing private Chromium profile missing.'
+cd "$ROOT"
 python3 -B -m unittest rock64.test_btdigg_bootstrap_state -q ||
   fail 'Offline state tests failed.'
 
