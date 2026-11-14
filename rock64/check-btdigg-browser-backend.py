@@ -136,6 +136,47 @@ def main():
                 result["browser_state"]["in_process_navigation_latch"] = (
                     state["new_searches_paused"]
                 )
+            # Sanitized DOM/page diagnostics are optional and supported only
+            # by a running browser started AFTER this source version.
+            if "tab_diagnostics" in state:
+                kinds = {"blank", "closed", "other",
+                         "btdigg_noncanonical", "canonical_search"}
+                validations = {
+                    "not_source", "closed", "no_paired_rows",
+                    "nontext_html", "oversize_html", "missing_marker",
+                    "valid", "inspection_error",
+                }
+                entries = state["tab_diagnostics"]
+                selected = state.get("selected_tab_index")
+                if (not isinstance(entries, list) or len(entries) > 8
+                        or type(selected) is not int
+                        or selected < -1 or selected >= len(entries)):
+                    raise ValueError("invalid tab diagnostic envelope")
+                filtered = []
+                for entry in entries:
+                    if not isinstance(entry, dict):
+                        raise ValueError("invalid tab diagnostic")
+                    if (entry.get("page_kind") not in kinds
+                            or entry.get("validation") not in validations):
+                        raise ValueError("invalid tab category")
+                    for field in ("paired_rows", "title_rows", "magnet_rows"):
+                        value = entry.get(field)
+                        if type(value) is not int or not 0 <= value <= 100000:
+                            raise ValueError("invalid tab count")
+                    size = entry.get("html_bytes")
+                    if size is not None and (type(size) is not int
+                                              or not 0 <= size <= 100000000):
+                        raise ValueError("invalid HTML byte count")
+                    filtered.append({
+                        "page_kind": entry["page_kind"],
+                        "validation": entry["validation"],
+                        "paired_rows": entry["paired_rows"],
+                        "title_rows": entry["title_rows"],
+                        "magnet_rows": entry["magnet_rows"],
+                        "html_bytes": size,
+                    })
+                result["browser_state"]["selected_tab_index"] = selected
+                result["browser_state"]["tab_diagnostics"] = filtered
             # New browser versions disclose only fixed, secret-free reason codes.
             reasons = {
                 "search_input_missing", "no_navigation_response", "upstream_http_429",

@@ -56,7 +56,11 @@ class FakePage:
         self._response=None
 
     def locator(self, selector):
-        assert selector in (backend.RESULT_PAIR_SELECTOR,"body",'input[name="q"]')
+        assert selector in (
+            backend.RESULT_PAIR_SELECTOR, "body", 'input[name="q"]',
+            "div.one_result div.torrent_name a",
+            'div.one_result a[href^="magnet:"]',
+        )
         page=self
         class Locator:
             def count(self):
@@ -300,6 +304,15 @@ class BrowserBackendTests(TestCase):
             "last_navigation_status": None,
             "last_failure_reason": None,
             "last_upstream_http_status": None,
+            "selected_tab_index": 0,
+            "tab_diagnostics": [{
+                "page_kind": "canonical_search",
+                "paired_rows": 1,
+                "title_rows": 1,
+                "magnet_rows": 1,
+                "html_bytes": len(HTML.encode("utf-8")),
+                "validation": "valid",
+            }],
         })
         extra = first.context.new_page()
         self.assertFalse(extra.valid)
@@ -376,6 +389,51 @@ class BrowserBackendTests(TestCase):
         self.assertIs(gateway.page, manually_opened)
         self.assertEqual(gateway.browser_state()["open_tabs"], 1)
         self.assertEqual(manually_opened.goto_calls, [])
+
+    def test_sanitized_tab_diagnostic_identifies_nonselected_visible_page(self):
+        original = FakePage(url="about:blank", valid=False)
+        second = original.context.new_page()
+        second.url = backend.query_url("Visible title")
+        second.valid = True
+        gateway = backend.VisibleBrowserFetcher(original)
+        state = gateway.browser_state()
+        self.assertEqual(state["open_tabs"], 2)
+        self.assertEqual(state["verified_tabs"], 1)
+        self.assertFalse(state["selected_tab_verified"])
+        self.assertEqual(state["selected_tab_index"], 0)
+        tabs = state["tab_diagnostics"]
+        self.assertEqual([x["page_kind"] for x in tabs],
+                         ["blank", "canonical_search"])
+        self.assertEqual(tabs[0]["validation"], "not_source")
+        self.assertEqual(tabs[1]["validation"], "valid")
+        self.assertEqual(tabs[1]["paired_rows"], 1)
+        self.assertEqual(tabs[1]["magnet_rows"], 1)
+        self.assertNotIn("Visible title", str(tabs))
+        self.assertNotIn("magnet:?xt=", str(tabs))
+        self.assertEqual(original.goto_calls, [])
+        self.assertEqual(second.goto_calls, [])
+
+    def test_diagnostic_distinguishes_invalid_dom_oversize_and_noncanonical(self):
+        page = FakePage(url=backend.query_url("Source query"))
+        baseline = backend.sanitized_tab_diagnostic(page)
+        self.assertEqual(baseline["validation"], "valid")
+        self.assertEqual(baseline["html_bytes"], len(HTML.encode("utf-8")))
+        with patch.object(backend, "SIZE_LIMIT", 10):
+            self.assertEqual(backend.sanitized_tab_diagnostic(page)["validation"],
+                             "oversize_html")
+        page.valid = False
+        self.assertEqual(backend.sanitized_tab_diagnostic(page)["validation"],
+                         "no_paired_rows")
+        page.url = "https://btdig.com/search?q=Source+query"
+        self.assertEqual(backend.sanitized_tab_diagnostic(page)["page_kind"],
+                         "btdigg_noncanonical")
+        page.url = "https://elsewhere.invalid/path/private?secret=1"
+        entry = backend.sanitized_tab_diagnostic(page)
+        self.assertEqual(entry["page_kind"], "other")
+        self.assertNotIn("secret", str(entry))
+        page.close()
+        self.assertEqual(backend.sanitized_tab_diagnostic(page)["validation"],
+                         "closed")
 
     def test_authenticated_readonly_browser_route_and_rejects_querystring(self):
         first = FakePage()
