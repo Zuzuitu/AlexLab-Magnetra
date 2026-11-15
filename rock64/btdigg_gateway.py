@@ -436,6 +436,8 @@ def browser_state_tab_recovery_ready(state):
             or type(state.get("pwa_tab_recovery_wait_seconds")) is not int
             or state["pwa_tab_recovery_wait_seconds"] != 0):
         return False
+    if state.get("visible_captcha_required") is not False:
+        return False
     reason = state.get("pwa_tab_recovery_reason")
     if reason == "visible_refusal":
         return state.get("visible_source_rate_limited") is True
