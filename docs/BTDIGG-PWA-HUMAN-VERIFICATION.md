@@ -73,3 +73,28 @@ No automatic reCAPTCHA solver, challenge bypass, token sharing, proxy
 identity rotation, CAPTCHA farming, background source retry, or new paid
 service. Explicit source Retry-After remains authoritative. HTTPS iframe
 support must be verified on iPhone; Safari private-link fallback is provided.
+
+## 15 Nov 2026 — first owner HTTPS adapter activation stopped at startup
+
+The owner successfully activated the private CAPTCHA signal on 8796:
+BTDIGG_8796=HUMAN_VERIFICATION_428_READY; Chromium 18896 untouched.
+The 6089 adapter's offline 3 synthetic tests passed and systemd created
+its user-service symlink, but the installer immediately curled port 6089
+after systemctl --user enable --now and received ConnectionRefused.
+The script exited BEFORE running any Tailscale Serve :8444 command.
+This alone is consistent with a Type=simple readiness race, but does not
+prove the Python process remained running. First do read-only:
+
+    systemctl --user show magnetra-btdigg-novnc-private.service -p ActiveState -p SubState -p Result -p ExecMainStatus -p MainPID -p NRestarts
+    ss -H -ltnp '( sport = :6088 or sport = :6089 )'
+    curl --noproxy '*' -sS -o /dev/null -w 'HTTP_6089=%{http_code}\n' --max-time 8 http://127.0.0.1:6089/vnc.html
+    journalctl --user -u magnetra-btdigg-novnc-private.service -b -n 25 --no-pager -o cat
+
+The safe follow-up fix makes --check and --apply resumable if an exact
+reviewed user-systemd unit controls the local 6089 listener, as shown by
+its MainPID. Unknown listeners still STOP. Fresh/recovering Python processes
+receive bounded socket + HTTP 200 readiness checks before private Serve
+:8444 is configured, with sanitized systemd diagnostics upon failure.
+A failed health check NEVER restarts Chromium, gateway, Tailscale :443 or
+other services. If the adapter is inactive, inspect journal first; do not
+force a second browser or reset Tailscale Serve.
