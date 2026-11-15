@@ -72,3 +72,28 @@ After a failed or undesired restart, \`systemctl --user disable --now
 magnetra-btdigg-browser.service\` disables future autostart; it does NOT
 erase the saved profile or token. Do not remove the existing CFFI /
 Chromium 8796 service override or Cloudflare integration.
+
+## Observed first live OS reboot — 15 November 2026
+
+Owner rebooted the Rock64 and performed the new read-only postboot audit
+from `main@67e7b71`. Linger enabled, user-systemd enabled/active,
+Chromium 18896 and the 8796 production gateway on loopback, noVNC on
+Tailnet 6088, and no duplicate tmux all passed. The user service reported
+`NRestarts=2`; the precise cause was not established by the filtered logs.
+
+The one-shot bootstrap returned `BTDigg cold boot: unverified_source`,
+and its durable OS-boot marker matched. An authenticated, read-only
+browser-state showed `visible_source_rate_limited=true`,
+`selected_tab_verified=false`, `paired_rows=0`, and
+`new_searches_paused=true`: a source-owned visible "Too Many Requests"
+refusal, even though navigation may have succeeded at the HTTP layer.
+
+Owner then ran one PWA query selecting only BTDigg. The PWA showed
+"Provider unavailable" because the 8796 bridge mapped the known visible
+source denial to generic HTTP 503. The reviewed source-only correction
+maps **only an explicitly visible source refusal** to 429; other
+unverified tabs still return 503. The existing source-429 cooldown and
+local cache remain unchanged. This is a status/reporting correction and
+**does not recover access, bypass the source refusal, or prove a fresh
+successful production PWA query**. Applying new source code to an
+installed running gateway requires a separately authorized deployment.
