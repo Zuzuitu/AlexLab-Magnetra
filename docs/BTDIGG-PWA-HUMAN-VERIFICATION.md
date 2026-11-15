@@ -1,3 +1,26 @@
+## Owner-requested correction: visible refusal versus CAPTCHA (15 November 2026)
+
+Previous workflow required the owner to tap a second search after
+seeing "Too Many Requests"; the current decision permits ONE (not
+recursive) delayed BTDigg-only PWA follow-up **inside the original
+owner-triggered search**, only for the specific
+BTDIGG_VISIBLE_REFUSAL code. The PWA waits 30 seconds from that refusal
+and sends ONE further request, allowing the already-implemented private
+backend to open exactly one new tab if its own independent safety
+guards permit. This DOES NOT apply to real upstream HTTP 429,
+CAPTCHA, provider errors, timeouts or user cancellation. Hidden pages
+do not send deferred requests. Repeated visible refusals stop. No
+unattended background monitor or open-ended retry loop exists.
+
+A visible refusal has an **inspect-only** noVNC dialog; there is no
+"Verified / retry" button. The manual CAPTCHA dialog retains the
+button only for genuine human challenges. The owner must confirm
+the behavior in the deployed iPhone PWA after separate Cloudflare
+release. Existing local 8796, 18896, 6089, private Tailscale 8444,
+Plex and NexaCore do not need to be changed or restarted.
+
+---
+
 # Magnetra PWA — verificare BTDigg în Chromium privat
 
 Status: source + CI candidate; production is NOT activated just because a PR merges.
