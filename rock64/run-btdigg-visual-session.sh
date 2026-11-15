@@ -39,9 +39,11 @@ if [[ "$VISUAL_MODE" == persistent ]]; then
   exec 9>>"$GUARD_FILE"
   chmod 600 "$GUARD_FILE"
   flock -n 9 || fail 'Persistent browser already starting or running; no second session.'
-  if ss -H -ltn '( sport = :18896 )' | grep -q '[^[:space:]]'; then
+  LISTENING="$(ss -H -ltn '( sport = :18896 )')" ||
+    fail 'Private browser listener preflight failed; refusing second session.'
+  [[ -z "$LISTENING" ]] ||
     fail 'Private browser gateway already listening; leave existing session alone.'
-  fi
+  unset LISTENING
 fi
 
 TS_IP="$(tailscale ip -4 2>/dev/null | head -n1)"
