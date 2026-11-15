@@ -1,0 +1,16 @@
+[Unit]
+Description=Magnetra BTDigg private noVNC loopback adapter (no browser restart)
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -B %h/magnetra-cffi-live-20261028/rock64/btdigg_novnc_private_relay.py
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=yes
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
