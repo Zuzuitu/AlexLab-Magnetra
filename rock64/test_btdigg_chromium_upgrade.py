@@ -31,6 +31,24 @@ class ChromiumBridgeUpgradeContract(unittest.TestCase):
         self.assertNotIn("cloudflared tunnel",text)
         self.assertNotIn("systemctl restart magnetra-btdigg-browser",text)
 
+    def test_health_wait_and_preserved_rollback_from_failed_first_attempt(self):
+        text=SCRIPT.read_text(encoding="utf8")
+        # systemd Type=simple may report 'active' before 8796 accepts HTTP.
+        # Both upgrade and rollback must poll private health, never BTDigg.
+        self.assertIn('local_health 30 || fail',text)
+        self.assertIn('&& local_health 30; then',text)
+        self.assertIn('tries=int(sys.argv[2])',text)
+        self.assertIn('if not 1 <= tries <= 30:',text)
+        self.assertIn('time.sleep(0.5)',text)
+        self.assertIn('http://127.0.0.1:8796/healthz',text)
+        self.assertIn('BACKUP_REUSED=0',text)
+        self.assertIn('BACKUP_REUSED=1',text)
+        self.assertIn('if (( BACKUP_REUSED == 0 )); then',text)
+        self.assertIn("Existing rollback backup does not match",text)
+        self.assertIn('git hash-object -- "$BACKUP"',text)
+        self.assertNotIn('rm -f -- "$BACKUP"',text)
+        self.assertNotIn('systemctl restart "$SERVICE" || true\n  fi\n  rm -f -- "$BACKUP"',text)
+
     def test_unapproved_invocation_fails_before_any_preflight(self):
         result=subprocess.run(["bash",str(SCRIPT),"--apply"],capture_output=True,text=True)
         self.assertEqual(result.returncode,2)
