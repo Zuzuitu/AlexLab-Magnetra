@@ -77,14 +77,14 @@ const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx",
 const RESULTS_PER_PAGE=50;
 const BTDIGG_MIN_GAP_MS=30_000;
 // Preserve the primary indexer after a genuine 429 without automatic retries.
-const BTDIGG_429_DELAYS_MS=[30_000,30_000,30_000];
+const BTDIGG_429_DELAYS_MS=[60_000,120_000,300_000];
 const BTDIGG_429_RESET_MS=30*60_000;
 function btdiggCooldown(at=Date.now()){
  const v=load(STORAGE.btdiggCooldown,null);
  if(!v||!Number.isSafeInteger(v.until)||!Number.isSafeInteger(v.failedAt)||
     !Number.isInteger(v.strikes)||v.strikes<1||v.strikes>BTDIGG_429_DELAYS_MS.length||
     v.failedAt>at+1000||v.until<v.failedAt||
-    v.until-v.failedAt>30_000||at-v.failedAt>BTDIGG_429_RESET_MS)
+    v.until-v.failedAt>300_000||at-v.failedAt>BTDIGG_429_RESET_MS)
    return {until:0,failedAt:0,strikes:0};
  return v;
 }
