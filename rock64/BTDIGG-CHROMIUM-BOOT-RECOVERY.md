@@ -326,3 +326,52 @@ and separately activated by the owner through the existing user-systemd
 browser service; a GitHub merge does not hot-reload Chromium. It does
 not require modifying the active 8796 gateway or deploying PWA/Worker,
 which already support the private result/status contract.
+
+## Owner verified 10 manual magnet rows: adopt without restarting Chromium
+
+At the owner's 14:38–14:39 CET manual noVNC check, they opened a second tab,
+completed the CAPTCHA themselves, and searched `The dog stars 720p`.
+Authenticated read-only state then reported two tabs: selected #0 displayed
+visible Too Many Requests and had zero rows; the owner-created #1 had 10
+paired titles and magnets but was not selected. The existing 8796 bridge
+rejects this whole session before invoking 18896 `/v1/search`.
+
+The source fix adds a strictly authenticated and fail-closed 8796 preflight
+exception for exactly two tab diagnostics with one selected old refusal and
+one other genuine verified BTDigg result page. The browser code can adopt
+and close the old tab on a future explicit PWA search. No background status
+poll adopts tabs and no CAPTCHA automation is added.
+
+CRITICAL: protect the owner-verified session NOW. Start with the 8796-only
+gateway deployment script; DO NOT restart 18896 while the CAPTCHA session
+works. From the owner's runner shell:
+
+```bash
+cd ~/magnetra-cffi-live-20261028
+git pull --ff-only origin main
+bash rock64/activate-btdigg-manual-tab-gateway.sh --check
+# ONLY when READY:
+bash rock64/activate-btdigg-manual-tab-gateway.sh --apply --owner-approved
+python3 -B rock64/check-btdigg-browser-backend.py --browser-status
+```
+
+The preflight only reads status and exact fingerprints. Apply runs offline
+tests, upgrades/restarts ONLY 8796, checks private authenticated health,
+and restores the reviewed previous gateway if the new health check fails.
+Neither mode restarts the Chromium GUI, and no BTDigg source query is sent.
+
+After the 8796-only install, from PWA search EXACTLY `The dog stars 720p`
+once, with only BTDigg selected. The existing running 18896 browser code
+already supports `_verified_existing_query` across manually opened tabs.
+An exact case-insensitive query reuses already validated HTML and magnets
+without navigating BTDigg; it will select the manually verified tab but
+does NOT automatically close the obsolete one until the new browser code
+is reloaded. If the read-only status then reports selected_tab_verified=true
+and verified_tabs=1, the owner can close the OLD error tab manually without
+discarding the verified one. Future new searches then use the verified form.
+
+Only at a separate owner-approved later time may 18896 be restarted to load
+the automatic old-tab-closing implementation. This restart can discard the
+existing authenticated CAPTCHA session and require another manual check;
+source PR merge does not activate that behavior. Never claim live results
+until the owner actually confirms them in PWA.
