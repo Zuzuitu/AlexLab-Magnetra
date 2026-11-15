@@ -69,6 +69,7 @@
 .btdigg-viewer-container[hidden]{display:none}
 #btdiggViewerFrame{display:block;width:100%;height:min(64dvh,700px);min-height:340px;border:1px solid #3a5947;border-radius:12px;background:#172127;color-scheme:light}
 #btdiggViewerFallback{display:inline-flex;min-height:44px;align-items:center;margin-top:7px}
+.btdigg-verification-sheet #btdiggVerificationRetry[hidden]{display:none!important}
 .btdigg-verification-sheet .sheet-actions{position:sticky;bottom:0;background:#101b24;padding:8px 0 0;z-index:1}
 @media(max-width:760px){
  .btdigg-verification-sheet{width:100%;max-width:none;max-height:97dvh;padding:16px 13px;border-radius:18px 18px 0 0}
