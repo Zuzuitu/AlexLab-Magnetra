@@ -30,7 +30,8 @@ def tailnet_ipv4(run=subprocess.run):
     )
     value = completed.stdout.strip()
     address = ipaddress.IPv4Address(value)
-    if address not in ipaddress.IPv4Network("100.64.0.0/10"):
+    octets = address.packed
+    if octets[0] != 100 or not 64 <= octets[1] < 128:
         raise ValueError("not a private tailnet IPv4")
     return str(address)
 
