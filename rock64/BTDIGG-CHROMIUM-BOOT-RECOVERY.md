@@ -143,3 +143,45 @@ one-shot read-only and tests remain offline. No automatic replay or
 new BTDigg source query is performed. An owner invocation and a new
 post-update health/status inspection remain required. If the service is
 not already healthy, investigate before running the updater again.
+
+## PWA-triggered new-tab recovery — owner-requested 30-second ceiling (candidate)
+
+**Supersedes the earlier proposed 30-minute / 60-minute recovery delays.**
+Owner explicitly chose **30 seconds** between an observed BTDigg refusal
+and the next eligible *manual PWA search* that creates a new Chromium tab.
+No service timer, automatic poller, periodic search or loop creates tabs.
+
+- Rock64 18896: only one controlled tab, an explicitly visible
+  "Too Many Requests" refusal or a previously claimed blank boot restore,
+  and no visible CAPTCHA may enable a fresh tab. First read-only state
+  observation starts 30 seconds; later user-requested queries can initiate
+  at most one new-tab navigation. A repeated refusal waits another 30
+  seconds and requires another PWA action. A human challenge stops recovery.
+- If genuine BTDigg HTML with paired title/BTIH magnet anchors is validated
+  on the new tab, the browser switches ownership and closes the old tab.
+  On failure the newly created tab closes and the old tab is preserved.
+- Rock64 8796: its self-imposed source-refusal lock is 30 seconds
+  (instead of 300). The lock protects all uncached different terms and
+  preserves the genuine 20-minute positive in-memory source cache.
+- Cloudflare Worker: BTDigg's default 429 suppression is 30 seconds
+  per isolate; a *real* longer numeric source `Retry-After` continues to
+  be respected up to its existing bounded maximum. No provider substitution
+  and no cross-isolate coordination claim.
+- iPhone PWA: locally persisted BTDigg rate-refusal cooldown is 30 seconds
+  regardless of consecutive user errors; no automatic re-query. The
+  existing faster pacing for ordinary verified searches is unaffected.
+- No source/IP identity rotation, CAPTCHA solving, automated challenges,
+  direct HTTP fallback, hidden background retries, or new paid services.
+
+The 30-second deadline is **local scheduling policy, NOT a promise that
+BTDigg will lift a real server-side rate limit in 30 seconds**. If the
+source continues refusing requests, the PWA must still report refusal
+rather than fabricate matches. Explicit server Retry-After or a visible
+human challenge remains authoritative.
+
+**Implementation status:** repository source/CI candidate only, no
+production Chromium 18896 restart, gateway 8796 install, Cloudflare
+production deploy, PWA asset publication or live BTDigg search performed
+in creating this change. Each requires a separate guarded operator
+action and validation. Do not confuse a successful unit test with
+production recovery.
