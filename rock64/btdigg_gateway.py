@@ -43,7 +43,7 @@ CACHE_MAX_BYTES = 6_000_000
 MIN_SEARCH_INTERVAL = 5
 # A genuine source HTTP 429 pauses all uncached search terms in this single
 # Rock64 gateway process; the existing 5-second pacing is not sufficient.
-SOURCE_REFUSAL_COOLDOWN_SECONDS = 5 * 60
+SOURCE_REFUSAL_COOLDOWN_SECONDS = 30
 INFLIGHT_WAIT_SECONDS = TIMEOUT_SECONDS + 1
 SOURCE_UA = (
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
