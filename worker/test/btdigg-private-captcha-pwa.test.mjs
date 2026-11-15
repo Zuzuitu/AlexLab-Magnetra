@@ -43,23 +43,23 @@ function fixture(){
 
 test("private BTDigg verification iframe only accepts user-entered HTTPS tailnet :8444",()=>{
  const {ui}=fixture();
- const good="https://rock64.tailc14d25.ts.net:8444/vnc.html";
+ const good="https://rock64.example.ts.net:8444/vnc.html";
  assert.equal(ui.validatedBTDiggViewerOrigin(good),
-              "https://rock64.tailc14d25.ts.net:8444");
+              "https://rock64.example.ts.net:8444");
  assert.equal(ui.btdiggPrivateViewerUrl(good),
               good+"?autoconnect=1&resize=scale");
  const rejected=[
-  "http://rock64.tailc14d25.ts.net:8444/vnc.html",
-  "https://rock64.tailc14d25.ts.net:6088/vnc.html",
-  "https://rock64.tailc14d25.ts.net/vnc.html",
+  "http://rock64.example.ts.net:8444/vnc.html",
+  "https://rock64.example.ts.net:6088/vnc.html",
+  "https://rock64.example.ts.net/vnc.html",
   "https://evil.example:8444/vnc.html",
-  "https://rock64.tailc14d25.ts.net.attacker.test:8444/vnc.html",
-  "https://u:p@rock64.tailc14d25.ts.net:8444/vnc.html",
-  "https://rock64.tailc14d25.ts.net:8444/admin",
-  "https://rock64.tailc14d25.ts.net:8444/vnc.html?password=secret",
-  "https://rock64.tailc14d25.ts.net:8444/vnc.html#token",
+  "https://rock64.example.ts.net.attacker.test:8444/vnc.html",
+  "https://u:p@rock64.example.ts.net:8444/vnc.html",
+  "https://rock64.example.ts.net:8444/admin",
+  "https://rock64.example.ts.net:8444/vnc.html?password=secret",
+  "https://rock64.example.ts.net:8444/vnc.html#token",
   "javascript:alert(1)",
-  "https://rock64.tailc14d25.ts.net:8444/vnc.html"+"a".repeat(300)
+  "https://rock64.example.ts.net:8444/vnc.html"+"a".repeat(300)
  ];
  for(const value of rejected){
   assert.equal(ui.validatedBTDiggViewerOrigin(value),null,value);
@@ -74,19 +74,19 @@ test("user click opens only HTTPS iframe and close tears down remote desktop",()
  const host=element("btdiggViewerContainer");
  ui.openBTDiggVerification();
  assert.equal(frame.src,"","never load noVNC automatically");
- input.value="https://rock64.tailc14d25.ts.net:8444/vnc.html";
+ input.value="https://rock64.example.ts.net:8444/vnc.html";
  assert.equal(ui.activateBTDiggViewer(),true);
  assert.equal(host.hidden,false);
  assert.match(frame.src,/^https:\/\/rock64\.tailc14d25\.ts\.net:8444\/vnc\.html\?/);
  assert.equal(element("btdiggViewerFallback").href,frame.src);
  assert.equal(store.get("magnetra.btdigg-private-viewer.v1"),
-              JSON.stringify("https://rock64.tailc14d25.ts.net:8444"));
+              JSON.stringify("https://rock64.example.ts.net:8444"));
  assert.equal(store.size,1,"store only URL origin, no password, CAPTCHA or query");
  ui.finishBTDiggVerification(false);
  assert.equal(frame.src,"about:blank");
  assert.equal(host.hidden,true);
  ui.openBTDiggVerification();
- assert.equal(input.value,"https://rock64.tailc14d25.ts.net:8444");
+ assert.equal(input.value,"https://rock64.example.ts.net:8444");
  assert.equal(frame.src,"about:blank","no automatic remote reconnect");
 });
 
