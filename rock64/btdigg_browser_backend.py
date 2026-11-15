@@ -317,8 +317,13 @@ class VisibleBrowserFetcher:
             self._last_upstream_http_status = None
             self._recovery_failures = 0
             self._recovery_next_at = None
-            original.close()
+            # A failure to close a stale GUI tab must never invalidate a
+            # freshly verified result or close the new owned browser page.
             fresh = None
+            try:
+                original.close()
+            except Exception:
+                pass
             return 200, html
         except Exception:
             self._recovery_failed(terminal=True)
