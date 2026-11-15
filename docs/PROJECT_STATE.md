@@ -1,3 +1,35 @@
+## 15 NOV 2026 — OWNER REQUIRES ONE AUTOMATIC NEW-TAB ATTEMPT ON VISIBLE BTDIGG REFUSAL
+
+Real iPhone PWA embedded noVNC screenshot confirms HTTPS private Tailscale
+viewer functional. Chromium shows a source-owned "Too Many Requests" HTML
+page with no CAPTCHA present, although the dialog offered
+"Am verificat · Reîncearcă". The owner explicitly corrected the expected
+workflow: Magnetra should automatically arrange a new-tab follow-up
+within the SAME initially requested PWA search, not demand a second manual
+tap just to invoke the already-existing Chromium tab-recovery backend.
+
+Implementation: PWA recognizes only the fixed
+BTDIGG_VISIBLE_REFUSAL code (HTTP-200 refusal page, not an observed
+transport HTTP 429). It waits a conservative 30 seconds AFTER receiving
+that first refusal, then issues at most one additional request for the
+SAME query and ONLY the selected BTDigg provider, while the original
+owner-initiated search remains active. The backend 18896 independently
+checks the one-tab/cooldown/source gate and can open one new canonical
+BTDigg tab, closing only a confirmed obsolete tab. On any CAPTCHA,
+genuine HTTP 429, tunnel timeout, other source failure, cancellation
+or hidden iPhone PWA, NO automatic retry is issued. A second visible
+refusal ends the workflow without loops/polling.
+
+A refusal now uses the inspection-only viewer: no misleading "Am verificat"
+or retry button. A true CAPTCHA still offers human verification and the
+explicit owner action. Romanian/Italian translations and CSS are updated
+together. PWA code-only change: NO Rock64 service or browser restart,
+no gateway update, no Tailscale changes. Release requires separately
+gated Cloudflare PWA deployment and live iPhone confirmation. Existing
+PWA HTTP429 cooldown and source Retry-After remain intact.
+
+---
+
 ## 15 NOV 2026 — BTDIGG CHROMIUM CHILD DIED, PYTHON HTTP SERVER STAYED ACTIVE
 
 Owner's exact read-only Rock64 diagnostic: user systemd magnetra-btdigg-browser.service
