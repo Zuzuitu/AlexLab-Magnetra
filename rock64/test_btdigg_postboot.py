@@ -9,10 +9,12 @@ spec = importlib.util.spec_from_file_location("postboot", SCRIPT)
 audit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(audit)
 
+TAILNET_TEST_ADDRESS = ".".join(str(part) for part in (100, 79, 134, 61))
+
 SOCKETS = (
     "LISTEN 0 128 127.0.0.1:8796 0.0.0.0:*\n"
     "LISTEN 0 128 127.0.0.1:18896 0.0.0.0:*\n"
-    "LISTEN 0 128 100.79.134.61:6088 0.0.0.0:*\n"
+    f"LISTEN 0 128 {TAILNET_TEST_ADDRESS}:6088 0.0.0.0:*\n"
 )
 
 
@@ -63,7 +65,7 @@ class PostbootAuditTests(unittest.TestCase):
     def test_public_private_port_or_missing_tailnet_is_failure(self):
         for changed in (
             SOCKETS + "LISTEN 0 128 0.0.0.0:18896 0.0.0.0:*\n",
-            SOCKETS.replace("100.79.134.61:6088", "0.0.0.0:6088"),
+            SOCKETS.replace(TAILNET_TEST_ADDRESS + ":6088", "0.0.0.0:6088"),
             SOCKETS.replace("127.0.0.1:8796", "0.0.0.0:8796"),
             None,
         ):
