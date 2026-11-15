@@ -185,3 +185,43 @@ production deploy, PWA asset publication or live BTDigg search performed
 in creating this change. Each requires a separate guarded operator
 action and validation. Do not confuse a successful unit test with
 production recovery.
+
+
+## PWA-requested new-tab search with 30-second pacing (source-only)
+
+Owner confirmed that manually opening a fresh Chromium tab previously
+delivered **real BTDigg title/magnet result pairs**, not simply a 200 page.
+The next source-only design reproduces that when an owner issues a new
+Magnetra PWA search and a single current Chromium tab shows a source-owned
+visible "Too Many Requests" page, or a previously attempted cold-boot
+restore left a solitary blank tab.
+
+**Normal searches:** the PWA now spaces distinct BTDigg searches by at least
+30 seconds (cached exact-query results can still be reused). There are no
+background searches and no automatic search retry. Once a visible soft
+refusal is observed, the authenticated browser snapshot starts a local
+30-second countdown. A subsequent explicit PWA search, after that
+countdown, can open **one** new tab at the fixed HTTPS BTDigg origin.
+Only a correctly matched canonical URL with at least one genuine
+title/magnet pair promotes the new tab to active and closes the old tab.
+If refused, the temporary tab is closed, the old one preserved, and a
+fresh 30-second cooldown begins for a future explicit owner search.
+
+**Crucial source-limit distinction:** seeing the short "Too Many Requests"
+body on a page loaded with HTTP 200 is NOT proof of a real HTTP 429.
+Private Rock64 status **425** identifies this *visible-page soft refusal*
+end-to-end, with public Worker code `BTDIGG_VISIBLE_REFUSAL`; it does
+**not** trigger the existing five-minute *real-429* Source/Worker latch.
+Real network HTTP 429, a server-specified longer Retry-After, or CAPTCHA
+remains protected by the preexisting source-rate-limit policy. A visible
+CAPTCHA sets a sanitized `visible_captcha_required` browser state and
+disables new-tab recovery entirely; no CAPTCHA bypass or solver is present.
+
+**Scope:** no extra Cloudflare destination or service; no source-origin
+fingerprint/proxy/cookie changes; no modification to TPB or Flud. The
+feature's source files must be activated in BOTH the running 18896
+Chromium backend (after a controlled service restart) and 8796 proxy.
+The Worker/PWA classification and UI code require a separately reviewed
+Cloudflare deployment. PR CI can only validate synthetic localhost
+fixtures, not live BTDigg availability or actual iOS PWA traffic.
+No production changes occur merely by merging this source-only revision.
