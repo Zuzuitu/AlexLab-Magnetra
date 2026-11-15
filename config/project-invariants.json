@@ -263,8 +263,10 @@
     "captcha_automation_forbidden": true,
     "no_identity_proxy_rotation": true,
     "single_new_tab_per_eligible_owner_request": true,
-    "close_existing_tab_only_after_verified_result_magnets": true,
-    "close_failed_new_tab_preserve_existing": true,
+    "close_old_tab_after_trusted_new_btdigg_search_document": true,
+    "retain_new_btdigg_tab_on_visible_refusal_or_captcha": true,
+    "retain_old_tab_if_new_navigation_is_untrusted": true,
+    "unverified_result_html_never_returned_as_success": true,
     "unverified_source_rows_never_reported_as_success": true,
     "all_other_providers_and_flud_unchanged": true,
     "production_8796_and_18896_need_separate_owner_activation": true
