@@ -42,7 +42,7 @@ by NexaCore and without enabling public Funnel. Tailscale must be running
 on the iPhone to access the private viewer.
 
 Owner private URL after configuration:
-https://rock64.tailc14d25.ts.net:8444/vnc.html
+https://rock64.example.ts.net:8444/vnc.html
 
 ## Owner activation (separate from Cloudflare deployment)
 
