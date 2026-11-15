@@ -69,6 +69,24 @@ class VisualSessionTests(unittest.TestCase):
         ]:
             self.assertNotIn(forbidden, s)
 
+    def test_persistent_profile_singleton_precedes_chromium(self):
+        s = self.source
+        for required in (
+            'command -v flock', 'command -v ss',
+            'visual-session.lock', 'exec 9>>"$GUARD_FILE"',
+            'flock -n 9', "'( sport = :18896 )'",
+            'Persistent browser already starting or running',
+            'Private browser gateway already listening',
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, s)
+        self.assertLess(s.index('flock -n 9'), s.index('xvfb-run -a'))
+        self.assertLess(s.index("sport = :18896"), s.index('xvfb-run -a'))
+        self.assertIn('if [[ "$VISUAL_MODE" == persistent ]]; then', s)
+        for destructive in ('tmux kill-session', 'killall', 'pkill ',
+                            'rm -rf "$GUARD_DIR"', '--remote-debugging-port'):
+            self.assertNotIn(destructive, s)
+
     def test_graceful_chromium_stop_precedes_vnc_cleanup(self):
         source = self.source
         self.assertIn('kill -TERM "$CHROME_PID"', source)

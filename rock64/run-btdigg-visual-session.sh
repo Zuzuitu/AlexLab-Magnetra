@@ -21,6 +21,31 @@ for tool in tailscale xvfb-run xauth x11vnc websockify chromium python3; do
 done
 [[ -f /usr/share/novnc/vnc.html ]] || fail 'No /usr/share/novnc/vnc.html; check Debian novnc installation.'
 
+# Serialize only persistent BTDigg sessions. Both owner tmux and user-systemd
+# call this launcher; do not let two NEW instances share the Chromium profile.
+# The lock FD stays open through xvfb-run and its children until they exit.
+# A pre-existing legacy session may not hold this new lock, so also reject an
+# already-listening private browser gateway. Never terminate that process.
+if [[ "$VISUAL_MODE" == persistent ]]; then
+  command -v flock >/dev/null 2>&1 || fail 'Missing util-linux flock.'
+  command -v ss >/dev/null 2>&1 || fail 'Missing iproute2 ss.'
+  GUARD_DIR="$HOME/.local/state/magnetra-btdigg-browser"
+  [[ ! -L "$GUARD_DIR" ]] || fail 'Persistent state directory is a symlink.'
+  mkdir -p -m 0700 "$GUARD_DIR"
+  [[ -d "$GUARD_DIR" && ! -L "$GUARD_DIR" ]] || fail 'Invalid state directory.'
+  chmod 700 "$GUARD_DIR"
+  GUARD_FILE="$GUARD_DIR/visual-session.lock"
+  [[ ! -L "$GUARD_FILE" ]] || fail 'Session lock cannot be a symlink.'
+  exec 9>>"$GUARD_FILE"
+  chmod 600 "$GUARD_FILE"
+  flock -n 9 || fail 'Persistent browser already starting or running; no second session.'
+  LISTENING="$(ss -H -ltn '( sport = :18896 )')" ||
+    fail 'Private browser listener preflight failed; refusing second session.'
+  [[ -z "$LISTENING" ]] ||
+    fail 'Private browser gateway already listening; leave existing session alone.'
+  unset LISTENING
+fi
+
 TS_IP="$(tailscale ip -4 2>/dev/null | head -n1)"
 [[ -n "$TS_IP" ]] || fail 'Tailscale has no IPv4. Check tailscaled and tailscale status.'
 python3 - "$TS_IP" <<'PY' || fail 'Not a valid Tailscale IPv4 address.'
