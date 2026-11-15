@@ -102,7 +102,7 @@ TAIL_DNS="$(tailscale status --json | python3 -c '
 import json,re,sys
 try:
  h=json.load(sys.stdin).get("Self",{}).get("DNSName","").rstrip(".")
- print(h if re.fullmatch(r"[a-z0-9-]+\\.[a-z0-9-]+\\.ts\\.net",h) else "")
+ print(h if re.fullmatch(r"[a-z0-9-]+[.][a-z0-9-]+[.]ts[.]net",h) else "")
 except (ValueError,TypeError,KeyError):
  print("")
 ' || true)"
