@@ -278,6 +278,28 @@
     "all_other_providers_and_flud_unchanged": true,
     "production_8796_and_18896_need_separate_owner_activation": true
   },
+  "btdigg_chromium_crash_supervision_2026_11_15": {
+    "status": "source_only_ci_not_live_activated",
+    "confirmed_owner_evidence": "python_18896_alive_chromium_process_absent_xvfb_novnc_alive",
+    "browser_state_at_failure": "disconnected_zero_tabs_browser_navigation_exception_504",
+    "same_thread_http_server_watchdog": true,
+    "watchdog_interval_seconds": 10,
+    "watchdog_consecutive_disconnections_before_exit": 3,
+    "watchdog_local_dom_inspection_only": true,
+    "watchdog_chromium_navigation_forbidden": true,
+    "watchdog_source_search_forbidden": true,
+    "watchdog_preserves_blank_and_captcha_tabs": true,
+    "systemd_existing_restart_on_failure_only": true,
+    "systemd_existing_restart_delay_seconds": 45,
+    "new_systemd_services_for_supervision": false,
+    "browser_profile_remains_persistent": true,
+    "captcha_survival_after_crash_not_guaranteed": true,
+    "bootstrap_at_most_one_origin_request_per_os_boot_still_applies": true,
+    "gateway_8796_unchanged": true,
+    "novnc_6088_6089_tailscale_8444_unchanged": true,
+    "other_services_and_cloudflare_unchanged": true,
+    "owner_must_restart_only_browser_user_unit_to_activate": true
+  },
   "btdigg_private_pwa_human_verification_2026_11_15": {
     "status": "source_only_pending_owner_activation",
     "trigger": "explicit_pwa_btdigg_error_or_owner_open",
