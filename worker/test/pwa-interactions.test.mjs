@@ -324,13 +324,13 @@ test("rapid BTDigg distinct searches wait locally and aborted waits never reach 
  let calls=0;
  const {api}=harness(async()=>{calls++;return json({results:[],stats:[],errors:[]});});
  const now=Date.now();
- api.btdiggPacing.nextAllowedAt=now+5500;
+ api.btdiggPacing.nextAllowedAt=now+30_000;
  api.btdiggPacing.lastGoodQuery=null;
- assert.ok(api.btdiggWaitMs("new term",now)>=5400);
+ assert.ok(api.btdiggWaitMs("new term",now)>=29_900);
  api.btdiggPacing.lastGoodQuery="ubuntu";
  api.btdiggPacing.lastGoodUntil=now+60000;
  assert.equal(api.btdiggWaitMs("ubuntu",now),0,"reuse cached proven same-query results");
- assert.ok(api.btdiggWaitMs("different",now)>=5400);
+ assert.ok(api.btdiggWaitMs("different",now)>=29_900);
  const controller=new AbortController();
  const pending=api.waitForBTDigg("different",controller.signal);
  controller.abort();
@@ -364,11 +364,35 @@ test("BTDigg local pacing cannot create a persistent 429; TPB results continue o
  assert.equal(api.state.items[0].provider,"thepiratebay");
  assert.equal(api.state.lastFailedSourcesCount,1);
  // A second explicit user action may reattempt after the existing local
- // 5.5s pacing. No automatic retries, and no invented source results.
+ // 30s pacing. No automatic retries, and no invented source results.
  await api.search();
  assert.equal(calls.filter(x=>x==="btdigg").length,2);
  assert.equal(calls.filter(x=>x==="thepiratebay").length,2);
  assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false);
+});
+
+test("BTDigg visible soft refusal permits another explicit search after 30s; not a persistent 429",async()=>{
+ let calls=0;
+ const {api,element,storage}=harness(async()=>{
+  calls++;
+  return json({results:[],stats:[{provider:"btdigg",ok:false,count:0}],
+   errors:[{provider:"btdigg",code:"BTDIGG_VISIBLE_REFUSAL",
+    message:"BTDigg browser displays Too Many Requests."}]});
+ });
+ element("query").value="The Dog Stars 2026";
+ element("category").value="movies";
+ api.state.providers=[{id:"btdigg",name:"BTDigg",ported:true}];
+ api.state.selected=new Set(["btdigg"]);
+ await api.search();
+ assert.equal(calls,1);
+ assert.equal(api.btdiggCooldownRemainingMs(),0);
+ assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false);
+ assert.equal(api.state.selected.has("btdigg"),true);
+ assert.equal(api.state.sessionAudit.btdigg.state,"error");
+ assert.ok(api.btdiggWaitMs("Different query")>29_000);
+ await api.search(); // Explicit new search, simulated timer; no implicit retry.
+ assert.equal(calls,2);
+ assert.equal(api.btdiggCooldownRemainingMs(),0);
 });
 
 test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry",async()=>{
