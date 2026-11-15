@@ -442,6 +442,9 @@ class BrowserBackendTests(TestCase):
             "pwa_tab_recovery_ready": False,
             "pwa_tab_recovery_reason": None,
             "pwa_tab_recovery_wait_seconds": None,
+            "pwa_tab_recovery_attempts": 0,
+            "pwa_tab_recovery_last_outcome": None,
+            "pwa_tab_recovery_last_http_status": None,
             "selected_tab_index": 0,
             "tab_diagnostics": [{
                 "page_kind": "canonical_search",
