@@ -143,3 +143,85 @@ one-shot read-only and tests remain offline. No automatic replay or
 new BTDigg source query is performed. An owner invocation and a new
 post-update health/status inspection remain required. If the service is
 not already healthy, investigate before running the updater again.
+
+## PWA-triggered new-tab recovery — owner-requested 30-second ceiling (candidate)
+
+**Supersedes the earlier proposed 30-minute / 60-minute recovery delays.**
+Owner explicitly chose **30 seconds** between an observed BTDigg refusal
+and the next eligible *manual PWA search* that creates a new Chromium tab.
+No service timer, automatic poller, periodic search or loop creates tabs.
+
+- Rock64 18896: only one controlled tab, an explicitly visible
+  "Too Many Requests" refusal or a previously claimed blank boot restore,
+  and no visible CAPTCHA may enable a fresh tab. First read-only state
+  observation starts 30 seconds; later user-requested queries can initiate
+  at most one new-tab navigation. A repeated refusal waits another 30
+  seconds and requires another PWA action. A human challenge stops recovery.
+- If genuine BTDigg HTML with paired title/BTIH magnet anchors is validated
+  on the new tab, the browser switches ownership and closes the old tab.
+  On failure the newly created tab closes and the old tab is preserved.
+- Rock64 8796: its self-imposed source-refusal lock is 30 seconds
+  (instead of 300). The lock protects all uncached different terms and
+  preserves the genuine 20-minute positive in-memory source cache.
+- Cloudflare Worker: BTDigg's default 429 suppression is 30 seconds
+  per isolate; a *real* longer numeric source `Retry-After` continues to
+  be respected up to its existing bounded maximum. No provider substitution
+  and no cross-isolate coordination claim.
+- iPhone PWA: locally persisted BTDigg rate-refusal cooldown is 30 seconds
+  regardless of consecutive user errors; no automatic re-query. The
+  existing faster pacing for ordinary verified searches is unaffected.
+- No source/IP identity rotation, CAPTCHA solving, automated challenges,
+  direct HTTP fallback, hidden background retries, or new paid services.
+
+The 30-second deadline is **local scheduling policy, NOT a promise that
+BTDigg will lift a real server-side rate limit in 30 seconds**. If the
+source continues refusing requests, the PWA must still report refusal
+rather than fabricate matches. Explicit server Retry-After or a visible
+human challenge remains authoritative.
+
+**Implementation status:** repository source/CI candidate only, no
+production Chromium 18896 restart, gateway 8796 install, Cloudflare
+production deploy, PWA asset publication or live BTDigg search performed
+in creating this change. Each requires a separate guarded operator
+action and validation. Do not confuse a successful unit test with
+production recovery.
+
+
+## PWA-requested new-tab search with 30-second pacing (source-only)
+
+Owner confirmed that manually opening a fresh Chromium tab previously
+delivered **real BTDigg title/magnet result pairs**, not simply a 200 page.
+The next source-only design reproduces that when an owner issues a new
+Magnetra PWA search and a single current Chromium tab shows a source-owned
+visible "Too Many Requests" page, or a previously attempted cold-boot
+restore left a solitary blank tab.
+
+**Normal searches:** the PWA now spaces distinct BTDigg searches by at least
+30 seconds (cached exact-query results can still be reused). There are no
+background searches and no automatic search retry. Once a visible soft
+refusal is observed, the authenticated browser snapshot starts a local
+30-second countdown. A subsequent explicit PWA search, after that
+countdown, can open **one** new tab at the fixed HTTPS BTDigg origin.
+Only a correctly matched canonical URL with at least one genuine
+title/magnet pair promotes the new tab to active and closes the old tab.
+If refused, the temporary tab is closed, the old one preserved, and a
+fresh 30-second cooldown begins for a future explicit owner search.
+
+**Crucial source-limit distinction:** seeing the short "Too Many Requests"
+body on a page loaded with HTTP 200 is NOT proof of a real HTTP 429.
+Private Rock64 status **425** identifies this *visible-page soft refusal*
+end-to-end, with public Worker code `BTDIGG_VISIBLE_REFUSAL`; it does
+**not** trigger the existing five-minute *real-429* Source/Worker latch.
+Real network HTTP 429, a server-specified longer Retry-After, or CAPTCHA
+remains protected by the preexisting source-rate-limit policy. A visible
+CAPTCHA sets a sanitized `visible_captcha_required` browser state and
+disables new-tab recovery entirely; no CAPTCHA bypass or solver is present.
+
+**Scope:** no extra Cloudflare destination or service; no source-origin
+fingerprint/proxy/cookie changes; no modification to TPB or Flud. The
+feature's source files must be activated in BOTH the running 18896
+Chromium backend (after a controlled service restart) and 8796 proxy.
+The Worker/PWA classification and UI code require a separately reviewed
+Cloudflare deployment. PR CI can only validate synthetic localhost
+fixtures, not live BTDigg availability or actual iOS PWA traffic.
+No production changes occur merely by merging this source-only revision.

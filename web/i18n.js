@@ -545,6 +545,10 @@ const DICTIONARY={
     "ro": "Unele site-uri limitează căutarea automată. Poți deschide sursa direct sau folosi alte surse.",
     "it": "Alcuni siti limitano le ricerche automatiche. Puoi aprire la fonte direttamente o usarne altre."
   },
+  "BTDigg shows Too Many Requests. Try another PWA search after 30 seconds; Chromium will open a new tab if the source allows it.": {
+    "ro": "BTDigg afișează Too Many Requests. Încearcă o nouă căutare din PWA după 30 de secunde; Chromium va deschide un tab nou dacă sursa permite.",
+    "it": "BTDigg mostra Too Many Requests. Prova una nuova ricerca dalla PWA dopo 30 secondi; Chromium aprirà una nuova scheda se la fonte lo consente."
+  },
   "BTDigg is rate-limited. It stays selected; no source requests for another {n} seconds.": {
     "ro": "BTDigg limitează cererile. Rămâne selectat; nu trimitem cereri noi timp de încă {n} secunde.",
     "it": "BTDigg limita le richieste. Resta selezionato; nessuna nuova richiesta per altri {n} secondi."

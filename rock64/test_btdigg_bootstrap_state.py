@@ -29,6 +29,24 @@ class BootstrapStateTests(unittest.TestCase):
             self.assertTrue(state.claim_boot_attempt(second))
             self.assertFalse(state.claim_boot_attempt(second))
 
+    def test_readonly_boot_marker_check_never_claims_a_new_attempt(self):
+        with TemporaryDirectory() as base:
+            d=Path(base)
+            state=BootstrapState(d)
+            first="2e0b2420-e8a8-4984-8b4a-84f049a4935b"
+            other="eafee280-0f42-497c-a29b-297f908ab026"
+            self.assertFalse(state.boot_attempted_this_boot(first))
+            self.assertFalse((d / BOOT_MARKER).exists())
+            self.assertTrue(state.claim_boot_attempt(first))
+            prior=(d / BOOT_MARKER).stat().st_mtime_ns
+            self.assertTrue(state.boot_attempted_this_boot(first))
+            self.assertFalse(state.boot_attempted_this_boot(other))
+            self.assertFalse(state.boot_attempted_this_boot("invalid"))
+            self.assertEqual((d / BOOT_MARKER).stat().st_mtime_ns,prior)
+            (d / BOOT_MARKER).unlink()
+            (d / BOOT_MARKER).symlink_to(d / "invalid")
+            self.assertFalse(state.boot_attempted_this_boot(first))
+
     def test_bad_query_never_saved(self):
         with TemporaryDirectory() as base:
             state = BootstrapState(base)

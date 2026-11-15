@@ -249,6 +249,26 @@
       "fabricated_legacy_html_results_forbidden": true
     }
   },
+  "btdigg_pwa_guarded_tab_recovery_2026_11_15": {
+    "status": "source_only_ci_not_deployed",
+    "scope": "single_explicit_owner_pwa_query",
+    "allowed_trigger": "verified_source_refusal_or_guarded_boot_blank_tab",
+    "normal_pwa_search_gap_seconds": 30,
+    "visible_page_refusal_not_a_confirmed_http_429": true,
+    "private_visible_refusal_status": 425,
+    "genuine_http_429_cooldown_unchanged": true,
+    "initial_cooldown_seconds": 30,
+    "failure_backoff_seconds": [30, 30, 30],
+    "no_background_retries": true,
+    "captcha_automation_forbidden": true,
+    "no_identity_proxy_rotation": true,
+    "single_new_tab_per_eligible_owner_request": true,
+    "close_existing_tab_only_after_verified_result_magnets": true,
+    "close_failed_new_tab_preserve_existing": true,
+    "unverified_source_rows_never_reported_as_success": true,
+    "all_other_providers_and_flud_unchanged": true,
+    "production_8796_and_18896_need_separate_owner_activation": true
+  },
   "btdigg_offline_chromium_gateway_2026_11_13": {
     "status": "source_only_owner_opt_in_test",
     "executable": "rock64/check-btdigg-offline-chromium-path.py",
@@ -266,7 +286,7 @@
   },
   "btdigg_rock64_source_rate_limit_candidate_2026_11_12": {
     "status": "code_only_not_deployed",
-    "source_429_cooldown_seconds": 300,
+    "source_429_cooldown_seconds": 30,
     "source_refusal_scope": "single_rock64_gateway_process",
     "new_uncached_queries_denied_during_source_refusal": true,
     "source_429_different_from_local_pacing_429": true,
@@ -285,7 +305,7 @@
     "status": "code_only_not_deployed",
     "source": "btdigg",
     "original_release_query_preserved": true,
-    "default_429_cooldown_ms": 300000,
+    "default_429_cooldown_ms": 30000,
     "max_bounded_retry_after_ms": 1800000,
     "cooldown_scope": "per_worker_isolate_across_btdigg_queries",
     "separate_from_tpb_cooldown": true,

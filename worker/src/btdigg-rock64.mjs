@@ -48,6 +48,12 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
    throw Error("BTDigg gateway redirect refused.");
   if(response.status===401||response.status===403)
    throw Error("BTDigg Rock64 gateway authorization failed.");
+  if(response.status===425){
+   // Private Rock64-only status: browser displays a short visible refusal,
+   // without an observed HTTP 429 or source Retry-After header. Do not
+   // confuse it with a real rate-limit response's longer cooldown.
+   throw Error("BTDigg Chromium visible source refusal (not HTTP 429).");
+  }
   if(response.status===429){
    // The newer private gateway distinguishes an origin denial from a
    // five-second local pacing rejection. A legacy gateway has no scope:

@@ -28,6 +28,7 @@ def good_state():
         "verified_tabs": 1,
         "selected_tab_verified": True,
         "visible_source_rate_limited": False,
+        "visible_captcha_required": False,
         "new_searches_paused": False,
         "last_navigation_status": None,
     }
@@ -101,24 +102,85 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.searches, [])
         self.assertEqual(self.server.visits, ["/v1/browser-state"]*4)
 
-    def test_visible_source_refusal_is_rate_limit_without_new_navigation(self):
-        # The page can say "Too Many Requests" even when Chromium saw HTTP
-        # 200 on boot. This is an observed page-level denial, not a verified
-        # network HTTP 429, and no subsequent source navigation is allowed.
+    def test_visible_source_refusal_is_soft_425_without_new_navigation(self):
+        # HTTP 200 can show a Too Many Requests *page* without network 429.
+        # Private 425 is NOT a real 429 and must not start a 5-min lock.
+        # No source navigation is performed until a later approved PWA action.
         self.server.state={
             **good_state(), "verified_tabs":0,
             "selected_tab_verified":False,
             "visible_source_rate_limited":True,
             "new_searches_paused":True,
         }
-        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(429,b""))
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(425,b""))
         self.assertEqual(self.server.searches,[])
         provider=gw.SearchProvider(fetcher=self.bridge.fetch,clock=lambda:100.0)
-        self.assertEqual(provider.search("The Dog Stars 2026"),(429,b""))
-        self.assertEqual(provider.source_retry_after_seconds(),300)
+        self.assertEqual(provider.search("The Dog Stars 2026"),(425,b""))
+        self.assertEqual(provider.source_retry_after_seconds(),0)
+        # The local five-second gateway pacing applies to immediate distinct
+        # queries, but this does not create an upstream refusal latch.
         self.assertEqual(provider.search("Different query"),(429,b""))
         self.assertEqual(self.server.searches,[])
         self.assertEqual(self.server.visits,["/v1/browser-state"]*2)
+
+    def test_one_explicit_pwa_query_can_reach_ready_new_tab_recovery(self):
+        self.server.state={
+            **good_state(),
+            "verified_tabs":0, "selected_tab_verified":False,
+            "visible_source_rate_limited":True,
+            "new_searches_paused":True,
+            "pwa_tab_recovery_ready":True,
+            "pwa_tab_recovery_reason":"visible_refusal",
+            "pwa_tab_recovery_wait_seconds":0,
+        }
+        self.assertTrue(gw.browser_state_tab_recovery_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("One owner search 2026"),(200,HTML))
+        self.assertEqual(self.server.searches,["One owner search 2026"])
+        self.assertEqual(self.server.visits,[
+            "/v1/browser-state","/v1/search"])
+
+    def test_recovery_refuses_early_legacy_challenge_and_multi_tab(self):
+        base={
+            **good_state(), "verified_tabs":0,"selected_tab_verified":False,
+            "visible_source_rate_limited":True,"new_searches_paused":True,
+            "pwa_tab_recovery_ready":True,
+            "pwa_tab_recovery_reason":"visible_refusal",
+            "pwa_tab_recovery_wait_seconds":0,
+        }
+        cases=(
+            {"pwa_tab_recovery_wait_seconds":1},
+            {"pwa_tab_recovery_ready":False},
+            {"pwa_tab_recovery_reason":"unknown"},
+            {"open_tabs":2},
+            {"verified_tabs":1},
+            {"visible_source_rate_limited":False},
+            {"pwa_tab_recovery_wait_seconds":False},
+            {"visible_captcha_required":True},
+            {"visible_captcha_required":None},
+        )
+        for changed in cases:
+            self.server.state={**base,**changed}
+            self.assertFalse(gw.browser_state_tab_recovery_ready(self.server.state))
+            self.assertNotEqual(self.bridge.fetch("One owner search 2026")[0],200)
+        self.assertEqual(self.server.searches,[],
+                         "unready PWA requests never reach the browser search route")
+
+    def test_guarded_boot_blank_single_tab_can_recover_but_challenge_cannot(self):
+        self.server.state={
+            **good_state(), "verified_tabs":0,
+            "selected_tab_verified":False,
+            "visible_source_rate_limited":False,
+            "pwa_tab_recovery_ready":True,
+            "pwa_tab_recovery_reason":"blank_after_boot",
+            "pwa_tab_recovery_wait_seconds":0,
+            "tab_diagnostics":[{"page_kind":"blank"}],
+        }
+        self.assertTrue(gw.browser_state_tab_recovery_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("Owner 2026")[0],200)
+        self.server.state["tab_diagnostics"]=[{"page_kind":"canonical_search"}]
+        self.assertFalse(gw.browser_state_tab_recovery_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("Other owner 2026")[0],503)
+        self.assertEqual(self.server.searches,["Owner 2026"])
 
     def test_legacy_unverified_or_ambiguous_browser_must_not_navigate(self):
         self.server.state=good_state()
@@ -167,7 +229,16 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(provider.search("The Dog Stars 2026"),(429,b""))
         self.assertEqual(provider.search("Other title 2026"),(429,b""))
         self.assertEqual(self.server.searches,["The Dog Stars 2026"])
-        self.assertEqual(provider.source_retry_after_seconds(),300)
+        self.assertEqual(provider.source_retry_after_seconds(),30)
+
+    def test_browser_visible_soft_refusal_from_search_keeps_429_unlockable(self):
+        self.server.search_status=425
+        provider=gw.SearchProvider(fetcher=self.bridge.fetch,clock=lambda:100.0)
+        self.assertEqual(provider.search("One user query"),(425,b""))
+        self.assertEqual(provider.source_retry_after_seconds(),0)
+        self.assertEqual(self.server.searches,["One user query"])
+        self.assertEqual(provider.search("Immediate different query")[0],429)
+        self.assertEqual(self.server.searches,["One user query"])
 
     def test_local_pacing_does_not_forge_upstream_source_refusal(self):
         self.server.search_status=429

@@ -102,3 +102,18 @@ test("older gateway without a scope header fails closed on 429",async()=>{
   return true;
  });
 });
+
+
+test("visible Chromium refusal uses private 425 instead of claiming real HTTP 429",async()=>{
+ let requests=0;
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:secret},
+  async()=>{requests++;return new Response("",{status:425});});
+ await assert.rejects(()=>adapter("https://btdig.com/search?q=example"),err=>{
+  assert.equal(err.message,
+   "BTDigg Chromium visible source refusal (not HTTP 429).");
+  assert.equal(err.retryAfterMs,undefined);
+  return true;
+ });
+ assert.equal(requests,1,"soft page denial never triggers automatic retries");
+});

@@ -43,7 +43,7 @@ CACHE_MAX_BYTES = 6_000_000
 MIN_SEARCH_INTERVAL = 5
 # A genuine source HTTP 429 pauses all uncached search terms in this single
 # Rock64 gateway process; the existing 5-second pacing is not sufficient.
-SOURCE_REFUSAL_COOLDOWN_SECONDS = 5 * 60
+SOURCE_REFUSAL_COOLDOWN_SECONDS = 30
 INFLIGHT_WAIT_SECONDS = TIMEOUT_SECONDS + 1
 SOURCE_UA = (
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
@@ -417,6 +417,43 @@ def browser_state_ready(state):
     )
 
 
+def browser_state_tab_recovery_ready(state):
+    """Allow exactly one owner-PWA search after the browser's own cooldown.
+
+    Never treat a legacy, ambiguous, challenged or merely unverified tab as
+    permission. The private 18896 browser independently enforces the same
+    one-tab/cooldown gate immediately before its single navigation.
+    """
+    if not isinstance(state, dict):
+        return False
+    if (state.get("browser_connected") is not True
+            or type(state.get("open_tabs")) is not int
+            or state["open_tabs"] != 1
+            or type(state.get("verified_tabs")) is not int
+            or state["verified_tabs"] != 0
+            or state.get("selected_tab_verified") is not False
+            or state.get("pwa_tab_recovery_ready") is not True
+            or type(state.get("pwa_tab_recovery_wait_seconds")) is not int
+            or state["pwa_tab_recovery_wait_seconds"] != 0):
+        return False
+    if state.get("visible_captcha_required") is not False:
+        return False
+    reason = state.get("pwa_tab_recovery_reason")
+    if reason == "visible_refusal":
+        return state.get("visible_source_rate_limited") is True
+    if reason == "latched_429":
+        return state.get("last_navigation_status") == 429
+    if reason == "blank_after_boot":
+        # Private browser verified the durable boot marker. Distinguish
+        # unavailable source from a genuine unverified CAPTCHA page.
+        tabs = state.get("tab_diagnostics")
+        return (isinstance(tabs, list) and len(tabs) == 1
+                and isinstance(tabs[0], dict)
+                and tabs[0].get("page_kind") == "blank"
+                and state.get("visible_source_rate_limited") is False)
+    return False
+
+
 class LocalChromiumBridge:
     """Fixed localhost HTTP transport; independent browser bearer credential."""
 
@@ -457,14 +494,18 @@ class LocalChromiumBridge:
             if status != 200 or "application/json" not in mime:
                 return 503, b""
             state = json.loads(body)
-            if not browser_state_ready(state):
+            if not (browser_state_ready(state)
+                    or browser_state_tab_recovery_ready(state)):
                 # A visible source-owned "Too Many Requests" refusal is a
                 # confirmed page-level denial, even if its navigation returned
                 # HTTP 200. Expose the source-limit status to the PWA without
                 # another browser search; never claim an observed HTTP 429.
                 # All other unverified/ambiguous states remain HTTP 503.
                 if state.get("visible_source_rate_limited") is True:
-                    return 429, b""
+                    # Visible page refusal has no verified HTTP 429 status.
+                    # Private 425 keeps the observed soft refusal distinct
+                    # from the genuine source 429's 5-minute backoff.
+                    return 425, b""
                 return 503, b""
             path = "/v1/search?q=" + quote(query, safe="")
             status, html, mime, scope = self._read(
@@ -474,6 +515,10 @@ class LocalChromiumBridge:
                 # A 5-second *local* denial by the browser process must not
                 # create the production gateway's five-minute source lock.
                 return (503 if scope == "local-pacing" else 429), b""
+            if status == 425:
+                # Local browser has a visible non-HTTP refusal; 30-second
+                # user-triggered recovery is enforced by browser state.
+                return 425, b""
             if status != 200:
                 return (504 if status == 504 else 503), b""
             if "text/html" not in mime.lower():

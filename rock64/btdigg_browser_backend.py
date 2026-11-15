@@ -19,6 +19,8 @@ import os
 from pathlib import Path
 import re
 import signal
+import time
+import math
 import sys
 from urllib.parse import quote, parse_qs, urlsplit
 
@@ -37,6 +39,10 @@ RESULT_PAIR_SELECTOR = (
     'a[href^="magnet:?xt=urn:btih:"])'
 )
 QUERY_RE = re.compile(r"[\x00-\x1f\x7f]")
+# A user-triggered PWA request may open one new tab only after a source
+# refusal has been observed for 30 seconds. No timer sends requests,
+# no CAPTCHA interaction, and each new attempt needs a user action.
+PWA_TAB_RECOVERY_DELAYS = (30, 30, 30, 30)
 CHALLENGE_HINTS = (
     "one more step", "verify you are human", "just a moment",
     "checking your browser", "i'm not a robot", "g-recaptcha",
@@ -151,6 +157,38 @@ def source_rate_limit_visible(page, live_url=None):
         return False
 
 
+def source_challenge_visible(page, live_url=None):
+    """Read-only detection of recognizable human-verification UI.
+
+    Never treat hidden reCAPTCHA assets or strings in genuine result rows as a
+    challenge. Only visible short body text on an unverified source-owned tab
+    can report a human gate. No page HTML/text leaves this browser.
+    """
+    try:
+        if page.is_closed():
+            return False
+        if live_url is None:
+            live_url = live_document_url(page)
+        if not source_landing(live_url):
+            return False
+        if validated_result_html(page, live_url) is not None:
+            return False
+        body = page.locator("body").inner_text(timeout=1500)
+        if not isinstance(body, str) or len(body) > 1800:
+            return False
+        visible = " ".join(body.casefold().split())
+        if visible in ("too many requests", "429 too many requests"):
+            return False
+        return any(hint in visible for hint in (
+            "i'm not a robot", "verify you are human",
+            "please verify you are human", "one more step",
+            "checking your browser", "verify that you are human",
+            "captcha verification",
+        ))
+    except Exception:
+        return False
+
+
 def sanitized_tab_diagnostic(page, live_url=None):
     """Read DOM from one Playwright-owned tab; return counts, never content/URLs.
 
@@ -213,15 +251,126 @@ class VisibleBrowserFetcher:
     A different query enters text in the BTDigg search form of the currently
     verified tab and presses Enter, like the owner. No new tab or direct goto.
     Any source denial or unexpected response pauses further submissions.
+    An opt-in boot-restored blank tab or visible refusal may be recovered by
+    ONE explicit PWA query after a long local cooldown, without auto-retries.
     """
 
-    def __init__(self, page, bootstrap_state=None):
+    def __init__(self, page, bootstrap_state=None, clock=None):
         self._bootstrap_state = bootstrap_state
         self.page = page
         self.reference_page = page
         self._source_stopped = None
         self._last_failure_reason = None
         self._last_upstream_http_status = None
+        self._clock = clock if clock is not None else time.monotonic
+        self._recovery_next_at = None
+        self._recovery_failures = 0
+        self._recovery_locked = False
+
+    def _recovery_reason(self, pages, urls, visible_denial, visible_challenge):
+        """Only a single controlled, unverified tab may trigger recovery.
+
+        Never auto-open a new tab for a CAPTCHA, an arbitrary site, or an
+        ambiguous multi-tab context. The OS-boot marker prevents confusing a
+        genuinely fresh blank profile with an already attempted restoration.
+        """
+        if (self._recovery_locked or visible_challenge or len(pages) != 1
+                or pages[0] is not self.page or self.page.is_closed()):
+            return None
+        if visible_denial:
+            return "visible_refusal"
+        if self._source_stopped == 429:
+            return "latched_429"
+        if (self._source_stopped is None
+                and urls.get(self.page) == "about:blank"
+                and self._bootstrap_state is not None
+                and self._bootstrap_state.boot_attempted_this_boot()):
+            return "blank_after_boot"
+        return None
+
+    def _recovery_status(self, pages, urls, visible_denial, visible_challenge):
+        reason = self._recovery_reason(
+            pages, urls, visible_denial, visible_challenge
+        )
+        if reason is None:
+            return False, None, None
+        now = self._clock()
+        if self._recovery_next_at is None:
+            self._recovery_next_at = now + PWA_TAB_RECOVERY_DELAYS[0]
+        wait = max(0, math.ceil(self._recovery_next_at - now))
+        return wait == 0, reason, wait
+
+    def _recovery_failed(self, terminal=False):
+        """No network activity: protect subsequent explicit PWA requests."""
+        self._recovery_failures = min(
+            self._recovery_failures + 1, len(PWA_TAB_RECOVERY_DELAYS) - 1
+        )
+        self._recovery_next_at = self._clock() + (
+            PWA_TAB_RECOVERY_DELAYS[self._recovery_failures]
+        )
+        if terminal:
+            self._recovery_locked = True
+
+    def _recover_in_one_new_tab(self, query):
+        """One owner-requested navigation, no retry or CAPTCHA automation.
+
+        Close the old refused/blank tab ONLY after genuine HTML/magnet pairs
+        are validated in the new tab. On failure close only the new tab.
+        """
+        original = self.page
+        fresh = None
+        try:
+            fresh = original.context.new_page()
+            response = fresh.goto(
+                query_url(query), wait_until="domcontentloaded", timeout=8000
+            )
+            if response is None:
+                self._recovery_failed(terminal=True)
+                return 503, b""
+            if response.status == 429:
+                self._recovery_failed()
+                return 429, b""
+            if response.status != 200:
+                self._recovery_failed(terminal=True)
+                return 503, b""
+            fresh.wait_for_timeout(500)
+            current_url = live_document_url(fresh)
+            if not same_search_query(source_query(current_url), query):
+                self._recovery_failed(terminal=True)
+                return 503, b""
+            html = validated_result_html(fresh, current_url)
+            if html is None:
+                denied = source_rate_limit_visible(fresh, current_url)
+                self._recovery_failed(terminal=not denied)
+                # An HTTP 200 page with a visible denial is distinct from a
+                # genuine network 429: use private 425 (Too Early) to avoid
+                # forging an upstream Retry-After or 5-minute source lock.
+                return (425 if denied else 503), b""
+            self._remember_verified(current_url, html)
+            self.page = fresh
+            self.reference_page = fresh
+            self._source_stopped = None
+            self._last_failure_reason = None
+            self._last_upstream_http_status = None
+            self._recovery_failures = 0
+            self._recovery_next_at = None
+            # A failure to close a stale GUI tab must never invalidate a
+            # freshly verified result or close the new owned browser page.
+            fresh = None
+            try:
+                original.close()
+            except Exception:
+                pass
+            return 200, html
+        except Exception:
+            self._recovery_failed(terminal=True)
+            return 504, b""
+        finally:
+            if fresh is not None:
+                try:
+                    fresh.close()
+                except Exception:
+                    pass
 
     def _stop_navigation(self, code, reason, http_status=None):
         """Sanitized, fixed-category reason. Never retain source HTML or URL."""
@@ -288,6 +437,16 @@ class VisibleBrowserFetcher:
             visible_denial = any(
                 source_rate_limit_visible(p, urls[p]) for p in checked_pages
             )
+            visible_challenge = any(
+                verified_by_page[p] is None and source_challenge_visible(
+                    p, urls[p]
+                ) for p in checked_pages
+            )
+            recovery_ready, recovery_reason, recovery_wait = (
+                self._recovery_status(
+                    pages, urls, visible_denial, visible_challenge
+                )
+            )
             tab_diagnostics = [
                 sanitized_tab_diagnostic(p, urls[p]) for p in checked_pages
             ]
@@ -304,14 +463,19 @@ class VisibleBrowserFetcher:
                     and verified_by_page[self.page] is not None
                 ),
                 "visible_source_rate_limited": visible_denial,
+                "visible_captcha_required": visible_challenge,
                 "new_searches_paused": (
                     self._source_stopped is not None or visible_denial
+                    or visible_challenge
                     or len(pages) > len(checked_pages)
                 ),
                 # A visible 429 body is not proof of the network HTTP status.
                 "last_navigation_status": self._source_stopped,
                 "last_failure_reason": self._last_failure_reason,
                 "last_upstream_http_status": self._last_upstream_http_status,
+                "pwa_tab_recovery_ready": recovery_ready,
+                "pwa_tab_recovery_reason": recovery_reason,
+                "pwa_tab_recovery_wait_seconds": recovery_wait,
                 "selected_tab_index": selected_index,
                 "tab_diagnostics": tab_diagnostics,
             }
@@ -322,10 +486,14 @@ class VisibleBrowserFetcher:
                 "verified_tabs": 0,
                 "selected_tab_verified": False,
                 "visible_source_rate_limited": False,
+                "visible_captcha_required": False,
                 "new_searches_paused": True,
                 "last_navigation_status": None,
                 "last_failure_reason": None,
                 "last_upstream_http_status": None,
+                "pwa_tab_recovery_ready": False,
+                "pwa_tab_recovery_reason": None,
+                "pwa_tab_recovery_wait_seconds": None,
                 "selected_tab_index": -1,
                 "tab_diagnostics": [],
             }
@@ -340,8 +508,16 @@ class VisibleBrowserFetcher:
                 self.page = existing_page
                 return 200, existing_html
 
+            # Recovery only for one explicit PWA search after prolonged
+            # cooldown. The preceding authenticated browser-state preflight
+            # is repeated here; it does not navigate to any source.
+            recovery = self.browser_state()
+            if recovery["pwa_tab_recovery_ready"] is True:
+                return self._recover_in_one_new_tab(query)
+
             if self._source_stopped is not None:
-                # A failed query cannot trigger another upstream request.
+                # An explicit prior navigation failure cannot be retried
+                # until a guarded recovery is eligible (or human verifies).
                 return self._source_stopped, b""
 
             # A restored browser can display BTDigg's explicit refusal even
@@ -349,7 +525,7 @@ class VisibleBrowserFetcher:
             # treat a fresh local latch as permission to hit the source again.
             if any(source_rate_limit_visible(p) for p in self.page.context.pages
                    if not p.is_closed()):
-                return 429, b""
+                return 425, b""
 
             # No automated navigation while the currently controlled tab is
             # unverified. Owner can first verify an existing tab manually.
