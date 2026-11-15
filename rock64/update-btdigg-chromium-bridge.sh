@@ -80,21 +80,31 @@ EFFECTIVE_EXEC="$(systemctl show "$SERVICE" -p ExecStart --value)" ||
 
 # Authenticated loopback /healthz only: no BTDigg navigation, no source calls.
 local_health(){
-  python3 - "$ENV_FILE" <<'PY'
-import re,sys
+  # Type=simple marks the process active before Python has bound its socket.
+  # For a newly restarted service, poll only localhost /healthz (no BTDigg
+  # source traffic). The initial preflight remains a one-shot health read.
+  local tries="${1:-1}"
+  python3 - "$ENV_FILE" "$tries" <<'PY'
+import re,sys,time
 from pathlib import Path
 from urllib.request import Request,urlopen
 m=re.fullmatch(r"MAGNETRA_BTDIGG_TOKEN=([A-Za-z0-9_-]{48,256})\n",
                Path(sys.argv[1]).read_text(encoding="ascii"))
 if m is None: raise SystemExit(1)
+tries=int(sys.argv[2])
+if not 1 <= tries <= 30: raise SystemExit(1)
 req=Request("http://127.0.0.1:8796/healthz",
             headers={"Authorization":"Bearer "+m.group(1)},method="GET")
-try:
-    with urlopen(req,timeout=4) as response:
-        if response.status != 200 or response.read(100) != b'{"ok":true}':
-            raise SystemExit(1)
-except OSError:
-    raise SystemExit(1)
+for attempt in range(tries):
+    try:
+        with urlopen(req,timeout=2) as response:
+            if response.status == 200 and response.read(100) == b'{"ok":true}':
+                raise SystemExit(0)
+    except OSError:
+        pass
+    if attempt+1 < tries:
+        time.sleep(0.5)
+raise SystemExit(1)
 PY
 }
 local_health || fail 'Authenticated local health failed; no mutation.'
@@ -111,11 +121,21 @@ if [[ "$OLD_INSTALLED" == "$NEW_BLOB" ]]; then
 fi
 [[ "$OLD_INSTALLED" == "$OLD_BLOB" ]] ||
   fail 'Installed gateway is not the expected prior version; manual audit required.'
-[[ ! -e "$BACKUP" && ! -L "$BACKUP" ]] ||
-  fail 'A prior guarded backup exists; refusing overwrite.'
+# A failed first update deliberately preserves a private rollback backup.
+# Reuse it only when it is a real regular file with the EXACT old Git blob.
+# Never overwrite, delete, or trust an unexpected preexisting backup.
+BACKUP_REUSED=0
+if [[ -e "$BACKUP" || -L "$BACKUP" ]]; then
+  [[ -f "$BACKUP" && ! -L "$BACKUP" ]] ||
+    fail 'Existing rollback backup is unsafe.'
+  [[ "$(git hash-object -- "$BACKUP")" == "$OLD_BLOB" ]] ||
+    fail 'Existing rollback backup does not match the exact prior gateway.'
+  BACKUP_REUSED=1
+fi
 
 if [[ "$MODE" == check ]]; then
   echo 'READY: exact old/new code and Chromium overrides verified; no changes.'
+  if (( BACKUP_REUSED )); then echo 'ROLLBACK_BACKUP=EXACT_OLD_VERSION_REUSED'; fi
   echo 'NEXT: sudo bash rock64/update-btdigg-chromium-bridge.sh --apply --owner-approved'
   exit 0
 fi
@@ -136,7 +156,7 @@ finish(){
       install -m 0644 "$BACKUP" "$DEST" || true
       systemctl restart "$SERVICE" || true
     fi
-    if systemctl is-active --quiet "$SERVICE" && local_health; then
+    if systemctl is-active --quiet "$SERVICE" && local_health 30; then
       echo 'ROLLBACK_GATEWAY_HEALTH=PASS' >&2
     else
       echo 'ROLLBACK_GATEWAY_HEALTH=NOT_VERIFIED' >&2
@@ -146,7 +166,11 @@ finish(){
   exit "$code"
 }
 trap finish EXIT
-install -m 0600 "$DEST" "$BACKUP"
+if (( BACKUP_REUSED == 0 )); then
+  install -m 0600 "$DEST" "$BACKUP"
+fi
+[[ "$(git hash-object -- "$BACKUP")" == "$OLD_BLOB" ]] ||
+  fail 'Private rollback backup not verified.'
 install -m 0644 "$SOURCE" "$STAGE"
 [[ "$(git hash-object -- "$STAGE")" == "$NEW_BLOB" ]] ||
   fail 'Staged code does not match reviewed blob.'
@@ -155,7 +179,7 @@ mv -f -- "$STAGE" "$DEST"
 systemctl restart "$SERVICE"
 systemctl is-active --quiet "$SERVICE" ||
   fail 'BTDigg 8796 service restart failed.'
-local_health || fail 'New 8796 gateway failed authenticated loopback health.'
+local_health 30 || fail 'New 8796 gateway failed authenticated loopback health.'
 ROLLBACK=0
 echo 'PASS: updated ONLY the Chromium-backed 8796 gateway; rollback backup retained.'
 echo 'NO_BTDIGG_SEARCH; CHROMIUM_UNTOUCHED; NO_CLOUDFLARE_DEPLOY.'
