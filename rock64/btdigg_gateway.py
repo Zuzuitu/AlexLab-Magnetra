@@ -417,6 +417,41 @@ def browser_state_ready(state):
     )
 
 
+def browser_state_tab_recovery_ready(state):
+    """Allow exactly one owner-PWA search after the browser's own cooldown.
+
+    Never treat a legacy, ambiguous, challenged or merely unverified tab as
+    permission. The private 18896 browser independently enforces the same
+    one-tab/cooldown gate immediately before its single navigation.
+    """
+    if not isinstance(state, dict):
+        return False
+    if (state.get("browser_connected") is not True
+            or type(state.get("open_tabs")) is not int
+            or state["open_tabs"] != 1
+            or type(state.get("verified_tabs")) is not int
+            or state["verified_tabs"] != 0
+            or state.get("selected_tab_verified") is not False
+            or state.get("pwa_tab_recovery_ready") is not True
+            or type(state.get("pwa_tab_recovery_wait_seconds")) is not int
+            or state["pwa_tab_recovery_wait_seconds"] != 0):
+        return False
+    reason = state.get("pwa_tab_recovery_reason")
+    if reason == "visible_refusal":
+        return state.get("visible_source_rate_limited") is True
+    if reason == "latched_429":
+        return state.get("last_navigation_status") == 429
+    if reason == "blank_after_boot":
+        # Private browser verified the durable boot marker. Distinguish
+        # unavailable source from a genuine unverified CAPTCHA page.
+        tabs = state.get("tab_diagnostics")
+        return (isinstance(tabs, list) and len(tabs) == 1
+                and isinstance(tabs[0], dict)
+                and tabs[0].get("page_kind") == "blank"
+                and state.get("visible_source_rate_limited") is False)
+    return False
+
+
 class LocalChromiumBridge:
     """Fixed localhost HTTP transport; independent browser bearer credential."""
 
@@ -457,7 +492,8 @@ class LocalChromiumBridge:
             if status != 200 or "application/json" not in mime:
                 return 503, b""
             state = json.loads(body)
-            if not browser_state_ready(state):
+            if not (browser_state_ready(state)
+                    or browser_state_tab_recovery_ready(state)):
                 # A visible source-owned "Too Many Requests" refusal is a
                 # confirmed page-level denial, even if its navigation returned
                 # HTTP 200. Expose the source-limit status to the PWA without
