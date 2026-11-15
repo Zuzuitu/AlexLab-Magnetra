@@ -97,3 +97,21 @@ local cache remain unchanged. This is a status/reporting correction and
 **does not recover access, bypass the source refusal, or prove a fresh
 successful production PWA query**. Applying new source code to an
 installed running gateway requires a separately authorized deployment.
+
+## Guarded production gateway update (separate owner action)
+
+The new `rock64/update-btdigg-chromium-bridge.sh` supports `--check`
+(read-only) and `--apply --owner-approved` (explicitly restarts only
+`magnetra-btdigg.service`, never Chromium). It validates the installed
+CFFI-then-Chromium override stack, the effective Python entrypoint, an
+authenticated localhost health probe and **exact pinned Git blobs** for
+old/new gateway source. Any divergence stops before mutation. The apply
+path runs offline tests, preserves a protected private backup, replaces
+only `/opt/magnetra-btdigg/btdigg_gateway.py`, and rolls back on a failed
+service restart or health probe. No BTDigg search is sent by either mode.
+
+Source merge or successful CI is not evidence that the installed 8796
+gateway was updated. The owner must separately opt into the apply
+command after the preflight says READY. Even after application, the
+source may remain rate limited, so a real new PWA result is still not
+proven.
