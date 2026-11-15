@@ -36,9 +36,11 @@ function fixture(){
    validatedBTDiggViewerOrigin,btdiggPrivateViewerUrl,
    activateBTDiggViewer,disconnectBTDiggViewer,
    openBTDiggVerification,finishBTDiggVerification,
+   btdiggVerificationModeForCode,btdiggVisibleRefusalOnly,
+   fetchBTDiggWithOneGuardedNewTab,
  };
  `,sandbox,{filename:"web/app.js"});
- return {ui:sandbox.test,element,store};
+ return {ui:sandbox.test,element,store,document:sandbox.document};
 }
 
 test("private BTDigg verification iframe only accepts user-entered HTTPS tailnet :8444",()=>{
@@ -107,4 +109,108 @@ test("manual-only verification UI has no source polling or open web proxy",()=>{
  assert.ok(i18n.includes('"Verify BTDigg inside Magnetra"'));
  assert.ok(i18n.includes('"it": "Verifica BTDigg in Magnetra"'));
  assert.ok(!html.includes('src="https://rock64.'));
+});
+
+test("source refusal offers inspection-only; CAPTCHA still offers manual verification",()=>{
+ const {ui,element}=fixture();
+ const retry=element("btdiggVerificationRetry");
+ assert.equal(ui.btdiggVerificationModeForCode("BTDIGG_VISIBLE_REFUSAL"),"refusal");
+ assert.equal(ui.btdiggVerificationModeForCode("BTDIGG_CAPTCHA_REQUIRED"),"captcha");
+ ui.openBTDiggVerification("refusal");
+ assert.equal(retry.hidden,true,"Too Many Requests is not a solved CAPTCHA");
+ assert.match(element("btdiggVerificationIntro").textContent,/Too Many Requests/);
+ ui.finishBTDiggVerification(true);
+ assert.equal(retry.hidden,true,"refusal must not cause a search");
+ ui.openBTDiggVerification("captcha");
+ assert.equal(retry.hidden,false,"confirmed human challenge may request user retry");
+});
+
+test("one explicit PWA search makes exactly one delayed new-tab opportunity after visible refusal",async()=>{
+ const {ui,element}=fixture();
+ const signal=new AbortController().signal;
+ const original={errors:[{provider:"btdigg",code:"BTDIGG_VISIBLE_REFUSAL"}]};
+ const after={results:[{provider:"btdigg",title:"fixture"}],errors:[]};
+ const calls=[];
+ let waiting=0;
+ const request=async(path,opts)=>{
+  calls.push([path,opts.signal]);
+  return calls.length===1?original:after;
+ };
+ const pause=async(query,requestedSignal)=>{
+  waiting++;
+  assert.equal(query,"synthetic query");
+  assert.equal(requestedSignal,signal);
+ };
+ const now=Date.now();
+ const value=await ui.fetchBTDiggWithOneGuardedNewTab(
+  "/api/search?providers=btdigg","synthetic query",signal,request,pause);
+ assert.equal(value,after);
+ assert.equal(waiting,1);
+ assert.equal(calls.length,2,"strict maximum one additional request");
+ assert.equal(calls[0][0],calls[1][0],"same owner query and provider");
+ assert.equal(element("notice").textContent.includes("BTDigg"),true);
+ assert.ok(Date.now()-now<1000,"offline test does not wait for real 30 seconds");
+});
+
+test("second visible refusal stops; no repeated retry loop",async()=>{
+ const {ui}=fixture();
+ const signal=new AbortController().signal;
+ const refusal={errors:[{provider:"btdigg",code:"BTDIGG_VISIBLE_REFUSAL"}]};
+ let calls=0,waits=0;
+ const result=await ui.fetchBTDiggWithOneGuardedNewTab(
+  "/api/search?providers=btdigg","some title",signal,
+  async()=>{calls++;return refusal;},
+  async()=>{waits++;});
+ assert.equal(result,refusal);
+ assert.equal(calls,2);
+ assert.equal(waits,1);
+});
+
+test("genuine 429, CAPTCHA, transport failure, timeout and normal results NEVER auto retry",async()=>{
+ const cases=[
+  "RATE_LIMIT","RATE_LIMIT_COOLDOWN","BTDIGG_CAPTCHA_REQUIRED",
+  "BTDIGG_TUNNEL_TIMEOUT","BTDIGG_SOURCE_TIMEOUT",
+  "BTDIGG_LOCAL_PACING","BTDIGG_VISIBLE_REFUSAL_OTHER"
+ ];
+ for(const code of cases){
+  const {ui}=fixture();
+  const data={errors:[{provider:"btdigg",code}]};
+  let calls=0;
+  const actual=await ui.fetchBTDiggWithOneGuardedNewTab(
+   "/api/search?providers=btdigg","title",new AbortController().signal,
+   async()=>{calls++;return data;},
+   async()=>{throw Error("not allowed");});
+  assert.equal(actual,data,code);
+  assert.equal(calls,1,code);
+ }
+ const {ui}=fixture();
+ assert.equal(ui.btdiggVisibleRefusalOnly({
+  errors:[{provider:"other",code:"BTDIGG_VISIBLE_REFUSAL"}]
+ }),false,"never retry another provider");
+});
+
+test("cancelled or background iPhone cannot issue deferred source request",async()=>{
+ for(const hidden of [true,false]){
+  const {ui,document}=fixture();
+  const controller=new AbortController();
+  if(hidden)document.visibilityState="hidden";
+  const refusal={errors:[{provider:"btdigg",code:"BTDIGG_VISIBLE_REFUSAL"}]};
+  let calls=0,waits=0;
+  const request=async()=>{calls++;return refusal;};
+  const pause=async()=>{waits++;controller.abort();};
+  const value=await ui.fetchBTDiggWithOneGuardedNewTab(
+   "/api/search?providers=btdigg","title",controller.signal,request,pause);
+  assert.equal(value,refusal);
+  assert.equal(calls,1,"must not send after hidden/cancelled");
+  assert.equal(waits,hidden?0:1);
+ }
+});
+
+test("BTDigg visible source refusal recovery never changes HTTP429 Worker behavior",()=>{
+ assert.match(app,/e\.code==="BTDIGG_VISIBLE_REFUSAL"/);
+ assert.ok(app.includes("document.visibilityState"));
+ assert.ok(app.includes("btdiggCooldownRemainingMs()>0"));
+ assert.ok(app.includes("await pause(query,signal)"));
+ assert.ok(app.includes("return await request(url,{signal});"));
+ assert.ok(!/setInterval\([^)]*fetchBTDigg|setTimeout\([^)]*fetchBTDigg/.test(app));
 });
