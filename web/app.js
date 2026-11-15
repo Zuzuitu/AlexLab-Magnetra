@@ -110,8 +110,12 @@ function btdiggWaitMs(query,at=Date.now()){
  if(query===btdiggPacing.lastGoodQuery&&at<btdiggPacing.lastGoodUntil)return 0;
  return Math.max(0,btdiggPacing.nextAllowedAt-at);
 }
-async function waitForBTDigg(query,signal){
- const wait=btdiggWaitMs(query);
+async function waitForBTDigg(query,signal,forcePacing=false){
+ // Recovery must not bypass its 30-second wait merely because the SAME
+ // query previously produced a positive cache result earlier this session.
+ const wait=forcePacing
+  ?Math.max(0,btdiggPacing.nextAllowedAt-Date.now())
+  :btdiggWaitMs(query);
  if(wait){
   $("notice").textContent=tr("BTDigg: waiting {n}s to respect source search limits…",{n:Math.ceil(wait/1000)});
   await new Promise((resolve,reject)=>{
@@ -728,7 +732,8 @@ function renderProviderErrors(failures,warnings=[]){
   if(failure.provider==="btdigg"&&
     ["BTDIGG_CAPTCHA_REQUIRED","BTDIGG_VISIBLE_REFUSAL"].includes(failure.code)){
    const action=el("button","secondary btdigg-verify-action",
-    tr("Verify BTDigg inside Magnetra"));
+    tr(failure.code==="BTDIGG_VISIBLE_REFUSAL"
+     ?"Inspect BTDigg refusal in Magnetra":"Verify BTDigg inside Magnetra"));
    action.type="button";
    action.addEventListener("click",()=>openBTDiggVerification(
     btdiggVerificationModeForCode(failure.code)));
@@ -790,7 +795,7 @@ async function fetchBTDiggWithOneGuardedNewTab(url,query,signal,
   btdiggPacing.nextAllowedAt,Date.now()+BTDIGG_MIN_GAP_MS);
  $("notice").textContent=tr(
   "BTDigg shows Too Many Requests; waiting 30 seconds for one guarded new-tab attempt…");
- await pause(query,signal);
+ await pause(query,signal,true);
  if(signal.aborted||document.visibilityState==="hidden"||
     btdiggCooldownRemainingMs()>0)return initial;
  $("notice").textContent=tr("BTDigg: attempting one new browser tab…");
