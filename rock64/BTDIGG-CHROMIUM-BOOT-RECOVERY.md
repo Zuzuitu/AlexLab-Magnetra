@@ -115,3 +115,31 @@ gateway was updated. The owner must separately opt into the apply
 command after the preflight says READY. Even after application, the
 source may remain rate limited, so a real new PWA result is still not
 proven.
+
+## First guarded status upgrade: owner-observed health race
+
+Following merge of PRs #279 and #280, the owner executed the guarded
+Chromium-backed 8796 update. All **30 offline fixture tests passed**.
+The script then printed `STOP: New 8796 gateway failed authenticated
+loopback health.`, attempted a rollback, and printed
+`ROLLBACK_GATEWAY_HEALTH=NOT_VERIFIED`. The independent user-Chromium
+`/v1/browser-state` remained HTTP 200 but showed the same visible source
+refusal. **It does not prove the production 8796 service's state**.
+
+Source inspection found a flaw in the updater: after `systemctl restart`,
+it made only one immediate authenticated `/healthz` request. Because the
+service uses `Type=simple`, systemd can report active before the loopback
+port is bound. The same flaw affects rollback health verification. This is
+a plausible explanation, **not a proven root cause** until the production
+systemd state, actual port listener, installed-code hash, and sanitized
+journal are inspected.
+
+The patched updater polls only the private `127.0.0.1:8796/healthz`
+up to 30 attempts separated by 0.5 seconds *after* service restart.
+It also safely reuses the private backup left by the failed attempt
+**only if** its Git blob matches the exact reviewed old gateway; any
+unexpected backup remains fail-closed. The original preflight is
+one-shot read-only and tests remain offline. No automatic replay or
+new BTDigg source query is performed. An owner invocation and a new
+post-update health/status inspection remain required. If the service is
+not already healthy, investigate before running the updater again.
