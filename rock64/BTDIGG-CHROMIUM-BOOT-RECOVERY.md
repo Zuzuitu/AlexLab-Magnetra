@@ -251,3 +251,40 @@ CAPTCHA or ambiguous multi-tab session also blocks automatic navigation.
 
 This is a source/CI change; no private 18896 browser, production 8796 bridge
 or public PWA deployment is activated merely by the merge.
+
+## Owner-approved activation of stale-tab recovery (separate from Cloudflare)
+
+The guarded `rock64/activate-btdigg-idle-recovery.sh` is a **separate,
+explicit** operator action. It does not run because its PR is merged.
+
+```bash
+cd ~/magnetra-cffi-live-20261028
+git pull --ff-only origin main
+bash rock64/activate-btdigg-idle-recovery.sh --check
+# Apply only after READY and once the owner authorizes restarting BTDigg:
+bash rock64/activate-btdigg-idle-recovery.sh --apply --owner-approved
+python3 -B rock64/check-btdigg-browser-backend.py --browser-status
+```
+
+The script verifies exact reviewed blobs, active private ports and systemd
+service identity, the installed existing Chromium gateway blob, and private
+authenticated local health. It uses offline tests before changes. On apply it
+restarts **only** the per-user Chromium BTDigg service on 18896, verifies
+the new authenticated read-only browser-state API, copies the reviewed
+gateway to `/opt/magnetra-btdigg/btdigg_gateway.py` with a private backup,
+then restarts **only** `magnetra-btdigg.service` on 8796 with a bounded local
+health check and gateway rollback if that new service fails.
+
+If browser restart fails, **8796 is not changed**; the browser restart
+requires local operator diagnosis. The installed gateway can be restored
+from the pinned private backup, but that is not proof the Chromium service
+was rolled back. The script does **not** reboot Rock64, touch TPB, NexaCore,
+Plex or other shared services, or deploy Cloudflare. Chromium itself may
+reload saved tabs when restarted, so it is not a guarantee of zero source
+network traffic; no explicit test search is issued by the script.
+
+The public PWA/Worker remains at its prior Cloudflare deployment until an
+independently approved release is executed and checked. A local 8796/18896
+PASS is not evidence that the iPhone site is deployed or that BTDigg has
+returned genuine magnet rows.
+
