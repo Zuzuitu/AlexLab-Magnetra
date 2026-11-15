@@ -27,6 +27,8 @@ jobs:
         run: node --test worker/test/*.test.mjs
       - name: Verify BTDigg-only production smoke contract without source calls
         run: python3 -m unittest discover -s scripts -p 'test_btdigg_pwa_live_asset.py' -v
+      - name: Verify private BTDigg human-verification smoke contract (offline)
+        run: python3 -m unittest discover -s scripts -p 'test_btdigg_private_verification_live.py' -v
       - name: Validate Cloudflare bundle
         run: npx --yes wrangler@4.45.4 deploy --config worker/wrangler.jsonc --dry-run
       - name: Require Cloudflare credentials
@@ -49,8 +51,11 @@ jobs:
       # full 46-indexer source audit just to publish its PWA/Worker assets.
       # Other ordinary deployments retain their existing post-release audit.
       - name: Verify BTDigg PWA assets without provider searches
-        if: github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115'))
+        if: github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-private-verification-20261115'))
         run: python3 scripts/check-btdigg-pwa-live-asset.py
+      - name: Verify private BTDigg CAPTCHA viewer PWA without source requests
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-private-verification-20261115')
+        run: python3 scripts/check-btdigg-private-verification-live.py
       - name: Audit all 46 provider search responses (no torrent downloads)
-        if: github.event_name != 'push' || !(startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115'))
+        if: github.event_name != 'push' || !(startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-private-verification-20261115'))
         run: python3 scripts/audit-live-providers.py
