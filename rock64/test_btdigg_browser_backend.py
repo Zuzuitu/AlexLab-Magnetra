@@ -611,7 +611,7 @@ class BrowserBackendTests(TestCase):
         self.assertTrue(status["new_searches_paused"])
         self.assertIsNone(status["last_navigation_status"])
         self.assertEqual(first.goto_calls, [])
-        self.assertEqual(gateway.fetch("Another query"), (429, b""))
+        self.assertEqual(gateway.fetch("Another query"), (425, b""))
         self.assertEqual(first.context.opened, [],
                          "observing a 429 body never opens a new tab")
 
@@ -625,7 +625,7 @@ class BrowserBackendTests(TestCase):
         status = gateway.browser_state()
         self.assertEqual(status["verified_tabs"], 1)
         self.assertTrue(status["visible_source_rate_limited"])
-        self.assertEqual(gateway.fetch("Unseen query"), (429, b""))
+        self.assertEqual(gateway.fetch("Unseen query"), (425, b""))
         self.assertEqual(len(first.context.opened), 1)
         self.assertEqual(gateway.fetch("The Dog Stars 2026")[0], 200,
                          "already verified result may still be reused")
@@ -638,10 +638,10 @@ class BrowserBackendTests(TestCase):
         before = gateway.browser_state()
         self.assertEqual(before["pwa_tab_recovery_reason"], "visible_refusal")
         self.assertFalse(before["pwa_tab_recovery_ready"])
-        self.assertEqual(before["pwa_tab_recovery_wait_seconds"], 1800)
-        self.assertEqual(gateway.fetch("Second query"), (429, b""))
+        self.assertEqual(before["pwa_tab_recovery_wait_seconds"], 30)
+        self.assertEqual(gateway.fetch("Second query"), (425, b""))
         self.assertEqual(first.context.opened, [])
-        now[0] += 1800
+        now[0] += 30
         allowed = gateway.browser_state()
         self.assertTrue(allowed["pwa_tab_recovery_ready"])
         self.assertEqual(allowed["pwa_tab_recovery_wait_seconds"], 0)
@@ -671,16 +671,16 @@ class BrowserBackendTests(TestCase):
         first.context.new_page = blocked_new_tab
         gateway = backend.VisibleBrowserFetcher(first, clock=lambda: now[0])
         gateway.browser_state()
-        now[0] += 1800
-        self.assertEqual(gateway.fetch("One requested query"), (429, b""))
+        now[0] += 30
+        self.assertEqual(gateway.fetch("One requested query"), (425, b""))
         self.assertEqual(len(first.context.opened), 1)
         self.assertTrue(first.context.opened[0].closed)
         self.assertFalse(first.closed, "old tab survives failed replacement")
         self.assertFalse(gateway.browser_state()["pwa_tab_recovery_ready"])
-        self.assertEqual(gateway.browser_state()["pwa_tab_recovery_wait_seconds"],3600)
-        self.assertEqual(gateway.fetch("Other query"), (429, b""))
+        self.assertEqual(gateway.browser_state()["pwa_tab_recovery_wait_seconds"],30)
+        self.assertEqual(gateway.fetch("Other query"), (425, b""))
         self.assertEqual(len(first.context.opened), 1)
-        now[0] += 3600
+        now[0] += 30
         self.assertTrue(gateway.browser_state()["pwa_tab_recovery_ready"])
         self.assertEqual(first.goto_calls,[], "recovery navigates only new tab")
 
@@ -697,7 +697,7 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(state["pwa_tab_recovery_reason"],"blank_after_boot")
         self.assertFalse(state["pwa_tab_recovery_ready"])
         self.assertEqual(gateway.fetch("The Dog Stars 2026"),(503,b""))
-        now[0] += 1800
+        now[0] += 30
         self.assertEqual(gateway.fetch("The Dog Stars 2026")[0],200)
         self.assertEqual(len(first.context.opened),1)
         self.assertTrue(first.closed)
@@ -717,10 +717,10 @@ class BrowserBackendTests(TestCase):
         limited.rate_limited = True
         multiple = limited.context.new_page()
         gateway = backend.VisibleBrowserFetcher(limited,clock=lambda:now[0])
-        now[0] += 1800
+        now[0] += 30
         self.assertIsNone(gateway.browser_state()["pwa_tab_recovery_reason"])
         self.assertFalse(gateway.browser_state()["pwa_tab_recovery_ready"])
-        self.assertEqual(gateway.fetch("Requested 2026"),(429,b""))
+        self.assertEqual(gateway.fetch("Requested 2026"),(425,b""))
         self.assertEqual(len(limited.context.opened),1)
         self.assertIs(multiple,limited.context.opened[0])
 
