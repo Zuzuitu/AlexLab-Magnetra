@@ -288,3 +288,41 @@ independently approved release is executed and checked. A local 8796/18896
 PASS is not evidence that the iPhone site is deployed or that BTDigg has
 returned genuine magnet rows.
 
+
+## Owner screenshot: new BTDigg tab must be retained (15 Nov, 12:08)
+
+The owner showed noVNC after a PWA-only BTDigg test: only an
+`about:blank` Chromium tab with a "Restore pages?" banner remained,
+while the PWA reported a visible "Too Many Requests" source refusal.
+The prior source's `_recover_in_one_new_tab` **closes any newly opened
+tab when its HTML has no verified magnet pairs**. Thus a valid search
+navigation to a source-owned BTDigg denial/challenge can happen and be
+closed before the owner inspects the GUI; this explains the discrepancy
+without claiming the site actually yielded a successful result.
+
+Corrected owner-requested behavior:
+
+- On ONE explicit PWA search, a fresh tab navigates to the fixed canonical
+  BTDigg query. If the final URL remains that same canonical source
+  search, keep the NEW tab and close the OLD blank/refusal tab regardless
+  of whether it contains valid title/magnet rows.
+- Real verified results are returned to the PWA. Visible non-HTTP
+  refusal is returned as private HTTP 425; real source HTTP 429 remains
+  an actual 429, with its own stop/cooldown. If a CAPTCHA appears on the
+  trusted page, leave that page visible for the owner and **do not**
+  attempt to solve it, create additional tabs or report phantom results.
+- If the new tab never reaches the exact approved source search (blank,
+  navigation error, unexpected redirect or untrusted origin), preserve
+  the old tab and close only the rejected new tab.
+- Private `/v1/browser-state` now exposes bounded, sanitized
+  `pwa_tab_recovery_attempts`, `pwa_tab_recovery_last_outcome` and
+  `pwa_tab_recovery_last_http_status`. The local read-only checker
+  reports these fields; **no query, source URL, magnet, HTML or token**
+  is included. This lets the operator identify whether a tab was
+  actually attempted, rejected or retained without making new searches.
+
+This is a new Python-only browser implementation. It must be checked
+and separately activated by the owner through the existing user-systemd
+browser service; a GitHub merge does not hot-reload Chromium. It does
+not require modifying the active 8796 gateway or deploying PWA/Worker,
+which already support the private result/status contract.
