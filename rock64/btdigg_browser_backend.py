@@ -40,8 +40,8 @@ RESULT_PAIR_SELECTOR = (
 )
 QUERY_RE = re.compile(r"[\x00-\x1f\x7f]")
 # A user-triggered PWA request may open one new tab only after a source
-# refusal has been observed for an extended bounded interval. No timer sends
-# any request, no CAPTCHA interaction, and each failed attempt backs off.
+# refusal has been observed for 30 seconds. No timer sends requests,
+# no CAPTCHA interaction, and each new attempt needs a user action.
 PWA_TAB_RECOVERY_DELAYS = (30, 30, 30, 30)
 CHALLENGE_HINTS = (
     "one more step", "verify you are human", "just a moment",
