@@ -268,6 +268,32 @@ class VisibleBrowserFetcher:
         self._recovery_next_at = None
         self._recovery_failures = 0
         self._recovery_locked = False
+        # Bounded, private diagnostics: no search terms, URLs, HTML, tokens,
+        # cookies, magnet names or browser identity are retained or returned.
+        self._recovery_attempts = 0
+        self._recovery_last_outcome = None
+        self._recovery_last_http_status = None
+
+    def _record_recovery(self, outcome, http_status=None):
+        self._recovery_last_outcome = outcome
+        self._recovery_last_http_status = (
+            http_status if type(http_status) is int
+            and 100 <= http_status <= 599 else None
+        )
+
+    def _adopt_recovery_tab(self, original, fresh):
+        """Retain the newly loaded BTDigg tab for inspection or CAPTCHA.
+
+        Only call after verifying its URL is the canonical requested BTDigg
+        search. The fresh tab becomes authoritative BEFORE closing the old
+        stale tab. Closing the old GUI tab is best effort, not a new search.
+        """
+        self.page = fresh
+        self.reference_page = fresh
+        try:
+            original.close()
+        except Exception:
+            pass
 
     def _refusal_page_age_seconds(self):
         """Read navigation age from the open tab, no network activity.
@@ -340,58 +366,91 @@ class VisibleBrowserFetcher:
     def _recover_in_one_new_tab(self, query):
         """One owner-requested navigation, no retry or CAPTCHA automation.
 
-        Close the old refused/blank tab ONLY after genuine HTML/magnet pairs
-        are validated in the new tab. On failure close only the new tab.
+        Keep the NEW tab when it reaches the requested canonical BTDigg page,
+        even if it displays a source refusal or CAPTCHA. Close the OLD stale
+        tab, not the new evidence. If navigation never reaches that trusted
+        page, preserve the original and discard only the invalid new tab.
         """
         original = self.page
         fresh = None
+        self._recovery_attempts = min(self._recovery_attempts + 1, 1_000_000)
+        self._record_recovery("started")
         try:
             fresh = original.context.new_page()
             response = fresh.goto(
                 query_url(query), wait_until="domcontentloaded", timeout=8000
             )
             if response is None:
+                self._record_recovery("no_navigation_response")
                 self._recovery_failed(terminal=True)
                 return 503, b""
-            if response.status == 429:
-                self._recovery_failed()
-                return 429, b""
-            if response.status != 200:
-                self._recovery_failed(terminal=True)
-                return 503, b""
-            fresh.wait_for_timeout(500)
+
+            http_status = response.status
+            if http_status == 200:
+                fresh.wait_for_timeout(500)
             current_url = live_document_url(fresh)
             if not same_search_query(source_query(current_url), query):
+                self._record_recovery("untrusted_navigation", http_status)
                 self._recovery_failed(terminal=True)
                 return 503, b""
+
+            # The fresh tab is a real source-owned document. Keep it visible
+            # for a future human challenge and close the old blank/refusal.
+            if http_status == 429:
+                self._record_recovery("source_http_429", 429)
+                self._stop_navigation(429, "upstream_http_429", 429)
+                self._recovery_failed(terminal=True)
+                self._adopt_recovery_tab(original, fresh)
+                fresh = None
+                return 429, b""
+            if http_status != 200:
+                self._record_recovery("source_http_non200", http_status)
+                self._stop_navigation(
+                    503, "upstream_http_non200", http_status
+                )
+                self._recovery_failed(terminal=True)
+                self._adopt_recovery_tab(original, fresh)
+                fresh = None
+                return 503, b""
+
             html = validated_result_html(fresh, current_url)
             if html is None:
                 denied = source_rate_limit_visible(fresh, current_url)
+                challenge = source_challenge_visible(fresh, current_url)
+                self._record_recovery(
+                    "visible_refusal" if denied else
+                    "captcha_required" if challenge else
+                    "unverified_result_html",
+                    200,
+                )
+                # The old tab is discarded even when the new source-owned
+                # page lacks magnet rows. Keep CAPTCHA visible for the owner.
+                # A visible non-HTTP refusal gets one NEW user-triggered
+                # opportunity after 30 seconds; CAPTCHA/unknown states stop.
                 self._recovery_failed(terminal=not denied)
-                # An HTTP 200 page with a visible denial is distinct from a
-                # genuine network 429: use private 425 (Too Early) to avoid
-                # forging an upstream Retry-After or 5-minute source lock.
+                self._adopt_recovery_tab(original, fresh)
+                fresh = None
                 return (425 if denied else 503), b""
+
             self._remember_verified(current_url, html)
-            self.page = fresh
-            self.reference_page = fresh
+            self._record_recovery("verified_results", 200)
+            self._adopt_recovery_tab(original, fresh)
+            fresh = None
             self._source_stopped = None
             self._last_failure_reason = None
             self._last_upstream_http_status = None
             self._recovery_failures = 0
             self._recovery_next_at = None
-            # A failure to close a stale GUI tab must never invalidate a
-            # freshly verified result or close the new owned browser page.
-            fresh = None
-            try:
-                original.close()
-            except Exception:
-                pass
+            self._recovery_locked = False
             return 200, html
         except Exception:
+            self._record_recovery("navigation_exception")
             self._recovery_failed(terminal=True)
             return 504, b""
         finally:
+            # Do not leave an untrusted or blank temporary tab attached.
+            # A trusted new BTDigg tab has already transferred ownership and
+            # set 'fresh = None', so it is NEVER closed here.
             if fresh is not None:
                 try:
                     fresh.close()
@@ -502,6 +561,11 @@ class VisibleBrowserFetcher:
                 "pwa_tab_recovery_ready": recovery_ready,
                 "pwa_tab_recovery_reason": recovery_reason,
                 "pwa_tab_recovery_wait_seconds": recovery_wait,
+                "pwa_tab_recovery_attempts": self._recovery_attempts,
+                "pwa_tab_recovery_last_outcome": self._recovery_last_outcome,
+                "pwa_tab_recovery_last_http_status": (
+                    self._recovery_last_http_status
+                ),
                 "selected_tab_index": selected_index,
                 "tab_diagnostics": tab_diagnostics,
             }
@@ -520,6 +584,11 @@ class VisibleBrowserFetcher:
                 "pwa_tab_recovery_ready": False,
                 "pwa_tab_recovery_reason": None,
                 "pwa_tab_recovery_wait_seconds": None,
+                "pwa_tab_recovery_attempts": self._recovery_attempts,
+                "pwa_tab_recovery_last_outcome": self._recovery_last_outcome,
+                "pwa_tab_recovery_last_http_status": (
+                    self._recovery_last_http_status
+                ),
                 "selected_tab_index": -1,
                 "tab_diagnostics": [],
             }
