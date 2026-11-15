@@ -225,3 +225,29 @@ The Worker/PWA classification and UI code require a separately reviewed
 Cloudflare deployment. PR CI can only validate synthetic localhost
 fixtures, not live BTDigg availability or actual iOS PWA traffic.
 No production changes occur merely by merging this source-only revision.
+
+## Stale refusal after idle: eliminate redundant 30-second startup wait
+
+Owner reports that a Chromium tab left idle can later display the visible
+"Too Many Requests" page, while opening a fresh tab manually has repeatedly
+produced **real BTDigg title/magnet rows**. This is a reproducible owner
+observation, **not confirmation** of how or why the site serves its refusal.
+
+The original PR #282 implementation starts its local 30-second window only
+when the backend first reads a refusal, which penalizes an already-old tab.
+The revised browser implementation reads `performance.now()` in the
+*already-open tab* (no source request). When a visible HTTP-200-style refusal
+has been on that tab for at least 30 seconds, the **first explicit PWA
+search** is eligible immediately to create exactly one new tab. If it was
+loaded 25 seconds ago, only 5 seconds remain. If page age is missing or
+untrusted, the conservative 30-second guard remains. A failed replacement
+still closes the new tab and requires another user action after 30 seconds.
+
+Any genuine HTTP 429 observed on a prior browser navigation is deliberately
+**not eligible** for soft-refusal recovery, even if its rendered error text
+resembles the stale HTTP-200 page. The gateway and Worker preserve confirmed
+rate-limit handling and explicit server `Retry-After` values. A visible
+CAPTCHA or ambiguous multi-tab session also blocks automatic navigation.
+
+This is a source/CI change; no private 18896 browser, production 8796 bridge
+or public PWA deployment is activated merely by the merge.
