@@ -43,6 +43,8 @@ export function classifyProviderError(err){
   return {code:"BTDIGG_TUNNEL_ERROR",message:"Connection to the Rock64 BTDigg tunnel failed.",retryable:false};
  if(/BTDigg Rock64 local pacing/i.test(raw))
   return {code:"BTDIGG_LOCAL_PACING",message:"BTDigg gateway is spacing requests; this does not prove an upstream source block.",retryable:false};
+ if(/BTDigg Chromium human verification required/i.test(raw))
+  return {code:"BTDIGG_CAPTCHA_REQUIRED",message:"BTDigg needs manual verification in the existing private Chromium session.",retryable:false};
  if(/BTDigg Chromium visible source refusal \(not HTTP 429\)/i.test(raw))
   return {code:"BTDIGG_VISIBLE_REFUSAL",message:"BTDigg browser displays Too Many Requests without a verified HTTP 429; no automatic retry was sent.",retryable:false};
  if(/EZTV series title ambiguous/i.test(raw))
