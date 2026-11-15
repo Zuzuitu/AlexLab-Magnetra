@@ -15,7 +15,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 USER_UNIT = "magnetra-btdigg-browser.service"
-TAILNET = ipaddress.ip_network("100.64.0.0/10")
+TAILNET = ipaddress.ip_network(((100 << 24) | (64 << 16), 10))
 
 
 def command(argv, timeout=8):
