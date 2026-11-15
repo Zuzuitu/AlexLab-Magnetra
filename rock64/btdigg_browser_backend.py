@@ -43,6 +43,7 @@ QUERY_RE = re.compile(r"[\x00-\x1f\x7f]")
 # refusal has been observed for 30 seconds. No timer sends requests,
 # no CAPTCHA interaction, and each new attempt needs a user action.
 PWA_TAB_RECOVERY_DELAYS = (30, 30, 30, 30)
+PAGE_AGE_SCRIPT = "() => performance.now()"
 CHALLENGE_HINTS = (
     "one more step", "verify you are human", "just a moment",
     "checking your browser", "i'm not a robot", "g-recaptcha",
@@ -252,7 +253,8 @@ class VisibleBrowserFetcher:
     verified tab and presses Enter, like the owner. No new tab or direct goto.
     Any source denial or unexpected response pauses further submissions.
     An opt-in boot-restored blank tab or visible refusal may be recovered by
-    ONE explicit PWA query after a long local cooldown, without auto-retries.
+    ONE explicit PWA query. A page already older than the 30-second
+    interval needs no extra wait; new refusals still pace further attempts.
     """
 
     def __init__(self, page, bootstrap_state=None, clock=None):
@@ -267,6 +269,23 @@ class VisibleBrowserFetcher:
         self._recovery_failures = 0
         self._recovery_locked = False
 
+    def _refusal_page_age_seconds(self):
+        """Read navigation age from the open tab, no network activity.
+
+        A persisted refusal may be hours old. It is not a new HTTP 429 just
+        because the user first observes it now. If age cannot be read, use
+        the full 30-second local guard instead of assuming the page is old.
+        """
+        try:
+            elapsed_ms = self.page.evaluate(PAGE_AGE_SCRIPT)
+            if (type(elapsed_ms) not in (float, int)
+                    or not math.isfinite(elapsed_ms)
+                    or elapsed_ms < 0):
+                return 0.0
+            return min(elapsed_ms / 1000, PWA_TAB_RECOVERY_DELAYS[0])
+        except Exception:
+            return 0.0
+
     def _recovery_reason(self, pages, urls, visible_denial, visible_challenge):
         """Only a single controlled, unverified tab may trigger recovery.
 
@@ -277,10 +296,13 @@ class VisibleBrowserFetcher:
         if (self._recovery_locked or visible_challenge or len(pages) != 1
                 or pages[0] is not self.page or self.page.is_closed()):
             return None
+        # A genuine transport HTTP 429 is authoritative even if Chromium
+        # happens to render its text on a canonical search page. Never
+        # treat that as a stale HTTP-200 tab that can be replaced.
+        if self._source_stopped == 429 or self._last_upstream_http_status == 429:
+            return None
         if visible_denial:
             return "visible_refusal"
-        if self._source_stopped == 429:
-            return "latched_429"
         if (self._source_stopped is None
                 and urls.get(self.page) == "about:blank"
                 and self._bootstrap_state is not None
@@ -296,7 +318,11 @@ class VisibleBrowserFetcher:
             return False, None, None
         now = self._clock()
         if self._recovery_next_at is None:
-            self._recovery_next_at = now + PWA_TAB_RECOVERY_DELAYS[0]
+            elapsed = (self._refusal_page_age_seconds()
+                       if reason == "visible_refusal" else 0.0)
+            self._recovery_next_at = now + max(
+                0.0, PWA_TAB_RECOVERY_DELAYS[0] - elapsed
+            )
         wait = max(0, math.ceil(self._recovery_next_at - now))
         return wait == 0, reason, wait
 
@@ -508,8 +534,9 @@ class VisibleBrowserFetcher:
                 self.page = existing_page
                 return 200, existing_html
 
-            # Recovery only for one explicit PWA search after prolonged
-            # cooldown. The preceding authenticated browser-state preflight
+            # Recovery only on one explicit PWA search. A pre-existing old
+            # refusal may already satisfy the local 30-second interval.
+            # The preceding authenticated browser-state preflight
             # is repeated here; it does not navigate to any source.
             recovery = self.browser_state()
             if recovery["pwa_tab_recovery_ready"] is True:

@@ -56,10 +56,13 @@ class FakePage:
         self._response=None
         self.live_url_override=None
         self.evaluate_count=0
+        self.navigation_age_ms=0.0
 
     def evaluate(self, script):
-        assert script == "() => window.location.href"
         self.evaluate_count += 1
+        if script == backend.PAGE_AGE_SCRIPT:
+            return self.navigation_age_ms
+        assert script == "() => window.location.href"
         return self.live_url_override if self.live_url_override is not None else self.url
 
     def locator(self, selector):
@@ -657,6 +660,61 @@ class BrowserBackendTests(TestCase):
         self.assertFalse(gateway.browser_state()["new_searches_paused"])
         self.assertEqual(gateway.fetch("Second query"), (200, HTML.encode()))
         self.assertEqual(len(new.goto_calls), 1, "cached tab never navigated again")
+
+    def test_stale_refusal_page_allows_first_user_query_without_new_wait(self):
+        now=[50.0]
+        first=FakePage(valid=False)
+        first.rate_limited=True
+        first.navigation_age_ms=60 * 60 * 1000
+        gateway=backend.VisibleBrowserFetcher(first, clock=lambda:now[0])
+        before=gateway.browser_state()
+        self.assertEqual(before["pwa_tab_recovery_reason"],"visible_refusal")
+        self.assertTrue(before["pwa_tab_recovery_ready"])
+        self.assertEqual(before["pwa_tab_recovery_wait_seconds"],0)
+        status,html=gateway.fetch("The Dog Stars 2026 1080p")
+        self.assertEqual((status,html),(200,HTML.encode()))
+        self.assertEqual(len(first.context.opened),1)
+        self.assertTrue(first.closed)
+        self.assertEqual(first.context.opened[0].goto_calls,
+            [backend.query_url("The Dog Stars 2026 1080p")])
+
+    def test_recent_denial_uses_only_remaining_time_not_fresh_30s(self):
+        now=[1000.0]
+        first=FakePage(valid=False)
+        first.rate_limited=True
+        first.navigation_age_ms=25_000.0
+        gateway=backend.VisibleBrowserFetcher(first,clock=lambda:now[0])
+        status=gateway.browser_state()
+        self.assertFalse(status["pwa_tab_recovery_ready"])
+        self.assertEqual(status["pwa_tab_recovery_wait_seconds"],5)
+        self.assertEqual(gateway.fetch("Requested title"),(425,b""))
+        self.assertEqual(first.context.opened,[])
+        now[0]+=5
+        self.assertEqual(gateway.fetch("Requested title")[0],200)
+
+    def test_explicit_network_429_never_becomes_soft_refusal_even_when_old(self):
+        first=FakePage(valid=True)
+        first.next_status=429
+        gateway=backend.VisibleBrowserFetcher(first,clock=lambda:90000.0)
+        self.assertEqual(gateway.fetch("Other title"),(429,b""))
+        first.rate_limited=True
+        first.navigation_age_ms=5*60*60*1000
+        status=gateway.browser_state()
+        self.assertTrue(status["visible_source_rate_limited"])
+        self.assertFalse(status["pwa_tab_recovery_ready"])
+        self.assertIsNone(status["pwa_tab_recovery_reason"])
+        self.assertEqual(gateway.fetch("Another title"),(429,b""))
+        self.assertEqual(first.context.opened,[])
+
+    def test_unreadable_or_invalid_page_age_fails_closed_with_30s_wait(self):
+        for age in (None,False,"old",-1,float("nan"),float("inf")):
+            first=FakePage(valid=False)
+            first.rate_limited=True
+            first.navigation_age_ms=age
+            gateway=backend.VisibleBrowserFetcher(first,clock=lambda:0.0)
+            status=gateway.browser_state()
+            self.assertEqual(status["pwa_tab_recovery_wait_seconds"],30)
+            self.assertEqual(first.context.opened,[])
 
     def test_recovery_failure_closes_new_only_and_backs_off(self):
         now = [0.0]

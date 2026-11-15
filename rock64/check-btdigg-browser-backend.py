@@ -177,6 +177,28 @@ def main():
                     })
                 result["browser_state"]["selected_tab_index"] = selected
                 result["browser_state"]["tab_diagnostics"] = filtered
+            # New guarded tab-recovery fields are optional on older running
+            # browser processes. Read-only and strictly sanitized: no URLs,
+            # torrent names, HTML, navigation or credentials are exposed.
+            if "pwa_tab_recovery_ready" in state:
+                ready = state["pwa_tab_recovery_ready"]
+                wait = state.get("pwa_tab_recovery_wait_seconds")
+                reason = state.get("pwa_tab_recovery_reason")
+                captcha = state.get("visible_captcha_required")
+                if (type(ready) is not bool
+                        or type(captcha) is not bool
+                        or (wait is not None and (
+                            type(wait) is not int or not 0 <= wait <= 3600))
+                        or reason not in (
+                            None, "visible_refusal", "blank_after_boot",
+                            "latched_429")):
+                    raise ValueError("invalid private tab-recovery state")
+                result["browser_state"].update({
+                    "pwa_tab_recovery_ready": ready,
+                    "pwa_tab_recovery_reason": reason,
+                    "pwa_tab_recovery_wait_seconds": wait,
+                    "visible_captcha_required": captcha,
+                })
             # New browser versions disclose only fixed, secret-free reason codes.
             reasons = {
                 "search_input_missing", "no_navigation_response", "upstream_http_429",
