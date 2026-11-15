@@ -49,8 +49,11 @@ jobs:
       # full 46-indexer source audit just to publish its PWA/Worker assets.
       # Other ordinary deployments retain their existing post-release audit.
       - name: Verify BTDigg PWA assets without provider searches
-        if: github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115'))
+        if: github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-private-verification-20261115'))
         run: python3 scripts/check-btdigg-pwa-live-asset.py
+      - name: Verify private BTDigg CAPTCHA viewer PWA without source requests
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-private-verification-20261115')
+        run: python3 scripts/check-btdigg-private-verification-live.py
       - name: Audit all 46 provider search responses (no torrent downloads)
-        if: github.event_name != 'push' || !(startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115'))
+        if: github.event_name != 'push' || !(startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-idle-recovery-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-pwa-30s-gate-20261115') || startsWith(github.event.head_commit.message, '[deploy-pwa] btdigg-private-verification-20261115'))
         run: python3 scripts/audit-live-providers.py
