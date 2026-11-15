@@ -229,7 +229,7 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(provider.search("The Dog Stars 2026"),(429,b""))
         self.assertEqual(provider.search("Other title 2026"),(429,b""))
         self.assertEqual(self.server.searches,["The Dog Stars 2026"])
-        self.assertEqual(provider.source_retry_after_seconds(),300)
+        self.assertEqual(provider.source_retry_after_seconds(),30)
 
     def test_browser_visible_soft_refusal_from_search_keeps_429_unlockable(self):
         self.server.search_status=425
