@@ -157,6 +157,38 @@ def source_rate_limit_visible(page, live_url=None):
         return False
 
 
+def source_challenge_visible(page, live_url=None):
+    """Read-only detection of recognizable human-verification UI.
+
+    Never treat hidden reCAPTCHA assets or strings in genuine result rows as a
+    challenge. Only visible short body text on an unverified source-owned tab
+    can report a human gate. No page HTML/text leaves this browser.
+    """
+    try:
+        if page.is_closed():
+            return False
+        if live_url is None:
+            live_url = live_document_url(page)
+        if not source_landing(live_url):
+            return False
+        if validated_result_html(page, live_url) is not None:
+            return False
+        body = page.locator("body").inner_text(timeout=1500)
+        if not isinstance(body, str) or len(body) > 1800:
+            return False
+        visible = " ".join(body.casefold().split())
+        if visible in ("too many requests", "429 too many requests"):
+            return False
+        return any(hint in visible for hint in (
+            "i'm not a robot", "verify you are human",
+            "please verify you are human", "one more step",
+            "checking your browser", "verify that you are human",
+            "captcha verification",
+        ))
+    except Exception:
+        return False
+
+
 def sanitized_tab_diagnostic(page, live_url=None):
     """Read DOM from one Playwright-owned tab; return counts, never content/URLs.
 
@@ -235,14 +267,14 @@ class VisibleBrowserFetcher:
         self._recovery_failures = 0
         self._recovery_locked = False
 
-    def _recovery_reason(self, pages, urls, visible_denial):
+    def _recovery_reason(self, pages, urls, visible_denial, visible_challenge):
         """Only a single controlled, unverified tab may trigger recovery.
 
         Never auto-open a new tab for a CAPTCHA, an arbitrary site, or an
         ambiguous multi-tab context. The OS-boot marker prevents confusing a
         genuinely fresh blank profile with an already attempted restoration.
         """
-        if (self._recovery_locked or len(pages) != 1
+        if (self._recovery_locked or visible_challenge or len(pages) != 1
                 or pages[0] is not self.page or self.page.is_closed()):
             return None
         if visible_denial:
@@ -256,8 +288,10 @@ class VisibleBrowserFetcher:
             return "blank_after_boot"
         return None
 
-    def _recovery_status(self, pages, urls, visible_denial):
-        reason = self._recovery_reason(pages, urls, visible_denial)
+    def _recovery_status(self, pages, urls, visible_denial, visible_challenge):
+        reason = self._recovery_reason(
+            pages, urls, visible_denial, visible_challenge
+        )
         if reason is None:
             return False, None, None
         now = self._clock()
@@ -400,8 +434,15 @@ class VisibleBrowserFetcher:
             visible_denial = any(
                 source_rate_limit_visible(p, urls[p]) for p in checked_pages
             )
+            visible_challenge = any(
+                verified_by_page[p] is None and source_challenge_visible(
+                    p, urls[p]
+                ) for p in checked_pages
+            )
             recovery_ready, recovery_reason, recovery_wait = (
-                self._recovery_status(pages, urls, visible_denial)
+                self._recovery_status(
+                    pages, urls, visible_denial, visible_challenge
+                )
             )
             tab_diagnostics = [
                 sanitized_tab_diagnostic(p, urls[p]) for p in checked_pages
@@ -419,8 +460,10 @@ class VisibleBrowserFetcher:
                     and verified_by_page[self.page] is not None
                 ),
                 "visible_source_rate_limited": visible_denial,
+                "visible_captcha_required": visible_challenge,
                 "new_searches_paused": (
                     self._source_stopped is not None or visible_denial
+                    or visible_challenge
                     or len(pages) > len(checked_pages)
                 ),
                 # A visible 429 body is not proof of the network HTTP status.
@@ -440,6 +483,7 @@ class VisibleBrowserFetcher:
                 "verified_tabs": 0,
                 "selected_tab_verified": False,
                 "visible_source_rate_limited": False,
+                "visible_captcha_required": False,
                 "new_searches_paused": True,
                 "last_navigation_status": None,
                 "last_failure_reason": None,
