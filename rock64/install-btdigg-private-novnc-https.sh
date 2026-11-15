@@ -96,4 +96,18 @@ sudo tailscale serve status
 echo 'BTDIGG_PRIVATE_NOVNC_HTTPS=CONFIGURED_PORT_8444'
 echo 'CHROMIUM_18896=UNCHANGED; GATEWAY_8796=UNCHANGED'
 echo 'NO_CAPTCHA_SOLVER; NO_BTDIGG_SEARCH; NO_FUNNEL'
-echo 'OPEN: https://rock64.tailc14d25.ts.net:8444/vnc.html'
+# Print the node's actual private MagicDNS name only to the owner's terminal.
+# No private hostname or credential is ever committed to this repository.
+TAIL_DNS="$(tailscale status --json | python3 -c '
+import json,re,sys
+try:
+ h=json.load(sys.stdin).get("Self",{}).get("DNSName","").rstrip(".")
+ print(h if re.fullmatch(r"[a-z0-9-]+\\.[a-z0-9-]+\\.ts\\.net",h) else "")
+except (ValueError,TypeError,KeyError):
+ print("")
+' || true)"
+if [[ -n "$TAIL_DNS" ]]; then
+ echo "OPEN_PRIVATE_URL=https://$TAIL_DNS:8444/vnc.html"
+else
+ echo 'OPEN_PRIVATE_URL=Use the Rock64 MagicDNS FQDN from tailscale status, HTTPS port 8444 /vnc.html'
+fi
