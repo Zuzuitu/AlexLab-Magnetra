@@ -577,6 +577,10 @@ const DICTIONARY={
     "ro": "BTDigg afișează Too Many Requests. Poate fi necesar un CAPTCHA; verifică tabul Chromium privat.",
     "it": "BTDigg mostra Too Many Requests. Potrebbe servire un CAPTCHA: controlla la scheda Chromium privata."
   },
+  "Inspect BTDigg refusal in Magnetra": {
+    "ro": "Inspectează refuzul BTDigg în Magnetra",
+    "it": "Controlla il rifiuto BTDigg in Magnetra"
+  },
   "Verify BTDigg inside Magnetra": {
     "ro": "Verifică BTDigg în Magnetra",
     "it": "Verifica BTDigg in Magnetra"
