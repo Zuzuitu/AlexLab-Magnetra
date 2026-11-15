@@ -45,6 +45,23 @@ class PrivateNoVNCTests(unittest.TestCase):
         self.assertNotIn("tailscale serve reset",code)
         self.assertNotIn("systemctl --user restart magnetra-btdigg-browser",code)
         self.assertNotIn("systemctl restart magnetra-btdigg",code)
+        # The first live owner install failed while the new Type=simple
+        # process had not yet bound its 6089 socket. A second attempt must
+        # adopt ONLY the same reviewed user unit/PID, never bind a duplicate.
+        self.assertIn("ADAPTER_PRESENT=1",code)
+        self.assertIn('systemctl --user show "$SERVICE" -p MainPID --value',code)
+        self.assertIn('"pid=$MAIN_PID,"',code)
+        self.assertIn('"127.0.0.1:6089"',code)
+        self.assertIn("for attempt in {1..20}; do",code)
+        self.assertIn("sleep 0.4",code)
+        self.assertIn("RELAY_OK=1",code)
+        self.assertIn("Existing relay is inactive; inspect its journal",code)
+        self.assertIn("ADAPTER_DIAG_BEGIN",code)
+        self.assertIn("Existing isolated relay is not healthy.",code)
+        # Never start another browser, reset Serve routes, or touch :443.
+        self.assertNotIn("systemctl --user restart",code)
+        self.assertNotIn("tailscale serve reset",code)
+        self.assertNotIn("tailscale funnel --",code)
 
 
 class PrivateNoVNCStreamingTests(unittest.IsolatedAsyncioTestCase):
