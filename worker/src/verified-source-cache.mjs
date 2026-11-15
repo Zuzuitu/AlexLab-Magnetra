@@ -10,7 +10,7 @@ const TPB_DEFAULT_COOLDOWN_MS=60_000;
 const TPB_MAX_COOLDOWN_MS=5*60_000;
 // Unlike PWA's local UI pacing, this protects direct Worker API traffic too.
 // Per-isolate only: never claim coordination across Cloudflare isolates.
-export const BTDIGG_DEFAULT_COOLDOWN_MS=5*60_000;
+export const BTDIGG_DEFAULT_COOLDOWN_MS=30_000;
 export const BTDIGG_MAX_COOLDOWN_MS=30*60_000;
 
 export function createVerifiedSourceCache(clock=()=>Date.now()){
