@@ -120,6 +120,63 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.searches,[])
         self.assertEqual(self.server.visits,["/v1/browser-state"]*2)
 
+    def test_one_explicit_pwa_query_can_reach_ready_new_tab_recovery(self):
+        self.server.state={
+            **good_state(),
+            "verified_tabs":0, "selected_tab_verified":False,
+            "visible_source_rate_limited":True,
+            "new_searches_paused":True,
+            "pwa_tab_recovery_ready":True,
+            "pwa_tab_recovery_reason":"visible_refusal",
+            "pwa_tab_recovery_wait_seconds":0,
+        }
+        self.assertTrue(gw.browser_state_tab_recovery_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("One owner search 2026"),(200,HTML))
+        self.assertEqual(self.server.searches,["One owner search 2026"])
+        self.assertEqual(self.server.visits,[
+            "/v1/browser-state","/v1/search"])
+
+    def test_recovery_refuses_early_legacy_challenge_and_multi_tab(self):
+        base={
+            **good_state(), "verified_tabs":0,"selected_tab_verified":False,
+            "visible_source_rate_limited":True,"new_searches_paused":True,
+            "pwa_tab_recovery_ready":True,
+            "pwa_tab_recovery_reason":"visible_refusal",
+            "pwa_tab_recovery_wait_seconds":0,
+        }
+        cases=(
+            {"pwa_tab_recovery_wait_seconds":1},
+            {"pwa_tab_recovery_ready":False},
+            {"pwa_tab_recovery_reason":"unknown"},
+            {"open_tabs":2},
+            {"verified_tabs":1},
+            {"visible_source_rate_limited":False},
+            {"pwa_tab_recovery_wait_seconds":False},
+        )
+        for changed in cases:
+            self.server.state={**base,**changed}
+            self.assertFalse(gw.browser_state_tab_recovery_ready(self.server.state))
+            self.assertNotEqual(self.bridge.fetch("One owner search 2026")[0],200)
+        self.assertEqual(self.server.searches,[],
+                         "unready PWA requests never reach the browser search route")
+
+    def test_guarded_boot_blank_single_tab_can_recover_but_challenge_cannot(self):
+        self.server.state={
+            **good_state(), "verified_tabs":0,
+            "selected_tab_verified":False,
+            "visible_source_rate_limited":False,
+            "pwa_tab_recovery_ready":True,
+            "pwa_tab_recovery_reason":"blank_after_boot",
+            "pwa_tab_recovery_wait_seconds":0,
+            "tab_diagnostics":[{"page_kind":"blank"}],
+        }
+        self.assertTrue(gw.browser_state_tab_recovery_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("Owner 2026")[0],200)
+        self.server.state["tab_diagnostics"]=[{"page_kind":"canonical_search"}]
+        self.assertFalse(gw.browser_state_tab_recovery_ready(self.server.state))
+        self.assertEqual(self.bridge.fetch("Other owner 2026")[0],503)
+        self.assertEqual(self.server.searches,["Owner 2026"])
+
     def test_legacy_unverified_or_ambiguous_browser_must_not_navigate(self):
         self.server.state=good_state()
         self.server.state.pop("visible_source_rate_limited")
