@@ -458,8 +458,13 @@ class LocalChromiumBridge:
                 return 503, b""
             state = json.loads(body)
             if not browser_state_ready(state):
-                # A stale 429 page, unverified tab, refused navigation or
-                # ambiguous legacy multi-tab session cannot reach the source.
+                # A visible source-owned "Too Many Requests" refusal is a
+                # confirmed page-level denial, even if its navigation returned
+                # HTTP 200. Expose the source-limit status to the PWA without
+                # another browser search; never claim an observed HTTP 429.
+                # All other unverified/ambiguous states remain HTTP 503.
+                if state.get("visible_source_rate_limited") is True:
+                    return 429, b""
                 return 503, b""
             path = "/v1/search?q=" + quote(query, safe="")
             status, html, mime, scope = self._read(

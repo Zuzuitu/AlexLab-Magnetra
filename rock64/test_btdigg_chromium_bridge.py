@@ -91,7 +91,6 @@ class ChromiumBridgeContract(unittest.TestCase):
     def test_no_unverified_browser_tab_may_trigger_a_source_search(self):
         for changes in (
             {"verified_tabs":0,"selected_tab_verified":False},
-            {"visible_source_rate_limited":True,"new_searches_paused":True},
             {"new_searches_paused":True},
             {"browser_connected":False},
             {"verified_tabs":0},
@@ -100,7 +99,26 @@ class ChromiumBridgeContract(unittest.TestCase):
             self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),
                              (503,b""))
         self.assertEqual(self.server.searches, [])
-        self.assertEqual(self.server.visits, ["/v1/browser-state"]*5)
+        self.assertEqual(self.server.visits, ["/v1/browser-state"]*4)
+
+    def test_visible_source_refusal_is_rate_limit_without_new_navigation(self):
+        # The page can say "Too Many Requests" even when Chromium saw HTTP
+        # 200 on boot. This is an observed page-level denial, not a verified
+        # network HTTP 429, and no subsequent source navigation is allowed.
+        self.server.state={
+            **good_state(), "verified_tabs":0,
+            "selected_tab_verified":False,
+            "visible_source_rate_limited":True,
+            "new_searches_paused":True,
+        }
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"),(429,b""))
+        self.assertEqual(self.server.searches,[])
+        provider=gw.SearchProvider(fetcher=self.bridge.fetch,clock=lambda:100.0)
+        self.assertEqual(provider.search("The Dog Stars 2026"),(429,b""))
+        self.assertEqual(provider.source_retry_after_seconds(),300)
+        self.assertEqual(provider.search("Different query"),(429,b""))
+        self.assertEqual(self.server.searches,[])
+        self.assertEqual(self.server.visits,["/v1/browser-state"]*2)
 
     def test_legacy_unverified_or_ambiguous_browser_must_not_navigate(self):
         self.server.state=good_state()
