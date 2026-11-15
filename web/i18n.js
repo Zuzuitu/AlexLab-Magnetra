@@ -545,6 +545,66 @@ const DICTIONARY={
     "ro": "Unele site-uri limitează căutarea automată. Poți deschide sursa direct sau folosi alte surse.",
     "it": "Alcuni siti limitano le ricerche automatiche. Puoi aprire la fonte direttamente o usarne altre."
   },
+  "BTDigg needs a human check in your private Chromium session. Open verification below.": {
+    "ro": "BTDigg solicită verificarea umană în Chromium privat. Deschide verificarea de mai jos.",
+    "it": "BTDigg richiede una verifica umana in Chromium privato. Apri la verifica qui sotto."
+  },
+  "BTDigg shows Too Many Requests. A browser verification may be needed; inspect the private Chromium tab.": {
+    "ro": "BTDigg afișează Too Many Requests. Poate fi necesar un CAPTCHA; verifică tabul Chromium privat.",
+    "it": "BTDigg mostra Too Many Requests. Potrebbe servire un CAPTCHA: controlla la scheda Chromium privata."
+  },
+  "Verify BTDigg inside Magnetra": {
+    "ro": "Verifică BTDigg în Magnetra",
+    "it": "Verifica BTDigg in Magnetra"
+  },
+  "Enter your private Tailscale HTTPS address ending in :8444/vnc.html.": {
+    "ro": "Introdu adresa privată Tailscale HTTPS, terminată în :8444/vnc.html.",
+    "it": "Inserisci l'indirizzo privato HTTPS di Tailscale che termina con :8444/vnc.html."
+  },
+  "Private Chromium viewer opened. Complete any verification yourself.": {
+    "ro": "Sesiunea Chromium privată este deschisă. Completează verificarea, dacă apare.",
+    "it": "La sessione Chromium privata è aperta. Completa la verifica, se richiesta."
+  },
+  "A search is already running.": {
+    "ro": "O căutare este deja în desfășurare.",
+    "it": "Una ricerca è già in corso."
+  },
+  "BTDigg verification": {
+    "ro": "Verificare BTDigg",
+    "it": "Verifica BTDigg"
+  },
+  "Complete the check in your existing Chromium session. Your VNC password and CAPTCHA never pass through Magnetra servers.": {
+    "ro": "Verifică în sesiunea Chromium existentă. Parola VNC și CAPTCHA nu trec prin serverele Magnetra.",
+    "it": "Completa la verifica nella sessione Chromium esistente. Password VNC e CAPTCHA non passano dai server Magnetra."
+  },
+  "Private Tailscale HTTPS address (configure once)": {
+    "ro": "Adresă HTTPS privată Tailscale (o singură configurare)",
+    "it": "Indirizzo HTTPS privato Tailscale (configurazione unica)"
+  },
+  "Only an HTTPS Tailscale address on port 8444 is accepted. Stored only on this device. Connect your iPhone to Tailscale.": {
+    "ro": "Acceptăm numai adresa HTTPS Tailscale pe portul 8444. Este salvată doar pe dispozitiv. Conectează iPhone-ul la Tailscale.",
+    "it": "È accettato solo l'indirizzo HTTPS Tailscale sulla porta 8444. È salvato solo sul dispositivo. Connetti l'iPhone a Tailscale."
+  },
+  "Open verification here": {
+    "ro": "Deschide verificarea aici",
+    "it": "Apri la verifica qui"
+  },
+  "Use the VNC password and complete the CAPTCHA in the private window if required. If Safari blocks the embedded viewer, open the secure link separately.": {
+    "ro": "Introdu parola VNC și completează CAPTCHA în fereastra privată, dacă apare. Dacă Safari blochează integrarea, deschide separat conexiunea securizată.",
+    "it": "Inserisci la password VNC e completa il CAPTCHA nella finestra privata, se richiesto. Se Safari blocca il riquadro, apri il collegamento protetto separatamente."
+  },
+  "Open private viewer in Safari": {
+    "ro": "Deschide conexiunea privată în Safari",
+    "it": "Apri il visualizzatore privato in Safari"
+  },
+  "Verified · Search again": {
+    "ro": "Am verificat · Reîncearcă",
+    "it": "Verificato · Cerca di nuovo"
+  },
+  "Close verification": {
+    "ro": "Închide",
+    "it": "Chiudi"
+  },
   "BTDigg shows Too Many Requests. Try another PWA search after 30 seconds; Chromium will open a new tab if the source allows it.": {
     "ro": "BTDigg afișează Too Many Requests. Încearcă o nouă căutare din PWA după 30 de secunde; Chromium va deschide un tab nou dacă sursa permite.",
     "it": "BTDigg mostra Too Many Requests. Prova una nuova ricerca dalla PWA dopo 30 secondi; Chromium aprirà una nuova scheda se la fonte lo consente."

@@ -104,6 +104,21 @@ test("older gateway without a scope header fails closed on 429",async()=>{
 });
 
 
+test("human CAPTCHA state becomes private 428 without retry or credentials",async()=>{
+ let requests=0;
+ const adapter=rock64BTDiggFetcher(
+  {BTDIGG_GATEWAY_TOKEN:secret},
+  async()=>{requests++;return new Response("",{status:428});}
+ );
+ await assert.rejects(()=>adapter("https://btdig.com/search?q=example"),err=>{
+  assert.equal(err.message,"BTDigg Chromium human verification required.");
+  assert.equal(err.retryAfterMs,undefined);
+  assert.doesNotMatch(err.message,/token|Bearer|magnet:\?/i);
+  return true;
+ });
+ assert.equal(requests,1,"a CAPTCHA never triggers an automatic retry");
+});
+
 test("visible Chromium refusal uses private 425 instead of claiming real HTTP 429",async()=>{
  let requests=0;
  const adapter=rock64BTDiggFetcher(

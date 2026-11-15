@@ -102,6 +102,24 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.searches, [])
         self.assertEqual(self.server.visits, ["/v1/browser-state"]*4)
 
+    def test_visible_human_challenge_returns_private_428_without_navigation(self):
+        # A source CAPTCHA is not a rate limit and must not become a PWA
+        # local 429 cooldown. No new source search, tab or CAPTCHA automation.
+        self.server.state={
+            **good_state(),
+            "verified_tabs":0,
+            "selected_tab_verified":False,
+            "visible_captcha_required":True,
+            "new_searches_paused":True,
+        }
+        self.assertEqual(self.bridge.fetch("The dog stars 720p"),(428,b""))
+        self.assertEqual(self.server.searches,[])
+        self.assertEqual(self.server.visits,["/v1/browser-state"])
+        provider=gw.SearchProvider(fetcher=self.bridge.fetch,clock=lambda:100.0)
+        self.assertEqual(provider.search("The dog stars 720p"),(428,b""))
+        self.assertEqual(provider.source_retry_after_seconds(),0)
+        self.assertEqual(self.server.searches,[])
+
     def test_visible_source_refusal_is_soft_425_without_new_navigation(self):
         # HTTP 200 can show a Too Many Requests *page* without network 429.
         # Private 425 is NOT a real 429 and must not start a 5-min lock.

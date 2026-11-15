@@ -31,7 +31,8 @@ const genericError=(failure)=>{
  const code=String(failure?.code||"").toUpperCase();
  const msg=String(failure?.message||failure?.error||"").toLowerCase();
  if(code==="BTDIGG_LOCAL_PACING")return tr("BTDigg is spacing local requests; no source rate limit was confirmed.");
- if(code==="BTDIGG_VISIBLE_REFUSAL")return tr("BTDigg shows Too Many Requests. Try another PWA search after 30 seconds; Chromium will open a new tab if the source allows it.");
+ if(code==="BTDIGG_CAPTCHA_REQUIRED")return tr("BTDigg needs a human check in your private Chromium session. Open verification below.");
+ if(code==="BTDIGG_VISIBLE_REFUSAL")return tr("BTDigg shows Too Many Requests. A browser verification may be needed; inspect the private Chromium tab.");
  if(/TIMEOUT/.test(code)||/timed out|timeout/.test(msg))return tr("Provider timed out");
  if(/RATE_LIMIT|429/.test(code)||/rate.limit|too many requests/.test(msg))return tr("Provider rate limited");
  if(/REDIRECT/.test(code)||/redirect/.test(msg))return tr("Provider redirected");
@@ -68,7 +69,7 @@ function magnetFailureText(item,error){
  }
  return genericError(error);
 }
-const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1",btdiggCooldown:"magnetra.btdigg-cooldown.v1"};
+const STORAGE={selected:"magnetra.providers.v1",bookmarks:"magnetra.bookmarks.v1",pairing:"magnetra.companion.v1",paused:"magnetra.paused-indexers.v1",btdiggCooldown:"magnetra.btdigg-cooldown.v1",btdiggViewerOrigin:"magnetra.btdigg-private-viewer.v1"};
 const preferred=["btdigg","knaben","torrentscsv","thepiratebay","internetarchive"];
 const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"];
 // Owner correction: restore 34 formerly hidden PWA IDs and additionally hide SubsPlease.
@@ -178,6 +179,80 @@ function load(key,fallback){
 function save(key,value){localStorage.setItem(key,JSON.stringify(value));}
 function el(tag,className,text){
  const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=String(text);return e;
+}
+// One-time local, private Tailscale endpoint preference. Never place remote
+// desktop passwords, browser cookies, magnet URIs or query strings in URLs.
+// This URL is never sent to the public Worker or mixed into provider searches.
+function validatedBTDiggViewerOrigin(raw){
+ try{
+  if(typeof raw!=="string"||raw.length>240)return null;
+  const url=new URL(raw.trim());
+  if(url.protocol!=="https:"||url.port!=="8444"||url.username||
+     url.password||url.hash||url.search||!["/","/vnc.html"].includes(url.pathname)||
+     !/^[a-z0-9-]+\.[a-z0-9-]+\.ts\.net$/.test(url.hostname))return null;
+  return url.origin;
+ }catch{return null;}
+}
+function btdiggPrivateViewerUrl(origin){
+ const safe=validatedBTDiggViewerOrigin(origin);
+ return safe?safe+"/vnc.html?autoconnect=1&resize=scale":null;
+}
+function localizeBTDiggVerification(){
+ const labels=[
+  ["btdiggVerificationTitle","BTDigg verification"],
+  ["btdiggVerificationIntro","Complete the check in your existing Chromium session. Your VNC password and CAPTCHA never pass through Magnetra servers."],
+  ["btdiggViewerAddressLabel","Private Tailscale HTTPS address (configure once)"],
+  ["btdiggVerificationPrivacy","Only an HTTPS Tailscale address on port 8444 is accepted. Stored only on this device. Connect your iPhone to Tailscale."],
+  ["btdiggOpenPrivateViewer","Open verification here"],
+  ["btdiggViewerHelp","Use the VNC password and complete the CAPTCHA in the private window if required. If Safari blocks the embedded viewer, open the secure link separately."],
+  ["btdiggViewerFallback","Open private viewer in Safari"],
+  ["btdiggVerificationRetry","Verified · Search again"],
+  ["btdiggVerificationClose","Close verification"]
+ ];
+ for(const [id,key] of labels)$(id).textContent=tr(key);
+}
+function openBTDiggVerification(){
+ localizeBTDiggVerification();
+ const saved=load(STORAGE.btdiggViewerOrigin,"");
+ $("btdiggNovncOrigin").value=validatedBTDiggViewerOrigin(saved)||"";
+ $("btdiggVerificationStatus").textContent="";
+ openDialog("btdiggVerificationDialog");
+}
+function activateBTDiggViewer(){
+ const origin=validatedBTDiggViewerOrigin($("btdiggNovncOrigin").value);
+ if(!origin){
+  $("btdiggVerificationStatus").textContent=tr(
+   "Enter your private Tailscale HTTPS address ending in :8444/vnc.html.");
+  return false;
+ }
+ const url=btdiggPrivateViewerUrl(origin);
+ if(!url)return false;
+ try{save(STORAGE.btdiggViewerOrigin,origin);}catch{
+  // Private URL preference is optional; no secret is needed in storage.
+ }
+ $("btdiggViewerFallback").href=url;
+ $("btdiggViewerFrame").src=url;
+ $("btdiggViewerContainer").hidden=false;
+ $("btdiggVerificationStatus").textContent=tr(
+  "Private Chromium viewer opened. Complete any verification yourself.");
+ return true;
+}
+function disconnectBTDiggViewer(){
+ $("btdiggViewerFrame").src="about:blank";
+ $("btdiggViewerContainer").hidden=true;
+}
+function finishBTDiggVerification(retry){
+ disconnectBTDiggViewer();
+ closeDialog("btdiggVerificationDialog");
+ // Explicit tap only, no polling, CAPTCHAs or automatic provider requests.
+ if(retry){
+  if(state.searching){toast(tr("A search is already running."));return;}
+  if(!state.selected.has("btdigg")){
+   state.selected.add("btdigg");
+   save(STORAGE.selected,[...state.selected]);updateProviderCount();
+  }
+  search();
+ }
 }
 let toastTimer;
 function toast(message){
@@ -641,6 +716,14 @@ function renderProviderErrors(failures,warnings=[]){
    a.href=link;a.target="_blank";a.rel="noopener noreferrer";
    entry.append(a);
   }
+  if(failure.provider==="btdigg"&&
+    ["BTDIGG_CAPTCHA_REQUIRED","BTDIGG_VISIBLE_REFUSAL"].includes(failure.code)){
+   const action=el("button","secondary btdigg-verify-action",
+    tr("Verify BTDigg inside Magnetra"));
+   action.type="button";
+   action.addEventListener("click",openBTDiggVerification);
+   entry.append(action);
+  }
   details.append(entry);
  }
  const alternatives=el("button","source-alt",tr("Search with available indexers →"));
@@ -804,6 +887,7 @@ async function status(){
 }
 function switchLanguage(locale){
  if(!globalThis.MagnetraI18n?.set(locale))return;
+ localizeBTDiggVerification();
  renderProviders();renderResults();savePausedSources();updateSelectAllButton();
  if(!state.searching)$("searchButton").textContent=tr("Search →");
  else $("searchButton").textContent=tr("Cancel search ×");
@@ -857,7 +941,13 @@ function init(){
  });
 
  $("providersButton").addEventListener("click",()=>openDialog("providersDialog"));
- for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>closeDialog(button.dataset.close));
+ $("btdiggOpenPrivateViewer").addEventListener("click",activateBTDiggViewer);
+ $("btdiggVerificationRetry").addEventListener("click",()=>finishBTDiggVerification(true));
+ $("btdiggVerificationDialog").addEventListener("close",disconnectBTDiggViewer);
+ for(const button of document.querySelectorAll("[data-close]"))button.addEventListener("click",()=>{
+  if(button.dataset.close==="btdiggVerificationDialog")finishBTDiggVerification(false);
+  else closeDialog(button.dataset.close);
+ });
  $("viewBookmarks").addEventListener("click",()=>{
   state.bookmarksMode=!state.bookmarksMode;
   state.resultsPage=1;

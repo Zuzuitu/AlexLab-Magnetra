@@ -1,3 +1,35 @@
+## 15 NOV 2026 — BTDIGG PWA HUMAN CAPTCHA VIEWER (SOURCE/CI CANDIDATE)
+
+Owner showed genuine PWA BTDigg success after MANUALLY verifying a CAPTCHA in
+persistent Chromium/noVNC on Rock64. Next title search yielded 3 relevant
+results with magnet links (Toy Story). Chromium owner state confirmed one
+verified tab, 10 paired result/magnet rows, no visible refusal, and no
+source search pause. No automated CAPTCHA solving was proved or built.
+
+This change makes future manual verification available INSIDE Magnetra PWA:
+private authenticated 8796 read-only 18896 preflight returns 428 for a
+visible CAPTCHA, Worker maps it to BTDIGG_CAPTCHA_REQUIRED, and the RO/IT
+PWA displays a user-clicked private noVNC dialog for CAPTCHA or soft denial.
+Only a validated HTTPS tailnet *.ts.net:8444 URL may be embedded, stored
+locally as origin only; the VNC password and CAPTCHA are never sent to
+Cloudflare, a Worker API or localStorage. A user-clicked retry sends ONE
+new search; nothing polls, retries or solves CAPTCHA automatically.
+
+Existing websockify binds the Rock64 Tailscale 100.64/10 IP:6088.
+An owner opt-in local TCP adapter binds only 127.0.0.1:6089 and
+proxies unchanged WebSocket/HTTP bytes to the existing noVNC port.
+Tailscale Serve HTTPS:8444 publishes the adapter ONLY to the tailnet;
+not Funnel/public. The existing Tailscale 443/NexaCore, Plex, Chromium
+18896, gateway state, PWA provider catalog, Flud and TPB are preserved.
+The PWA CSP allows frame-src only https://*.ts.net:8444, not arbitrary
+remote iframes. Safari external private HTTPS fallback is explicitly shown
+if embedded rendering is unsupported. The owner must opt in to separate
+8796-only (backup/rollback) and Tailscale HTTPS activation scripts and
+review a separate Cloudflare PWA deployment. Current code in GitHub must
+NOT be mistaken for a verified live HTTPS iframe or a persistent CAPTCHA
+session after reboot. Detailed operator note: docs/BTDIGG-PWA-HUMAN-VERIFICATION.md.
+
+---
 ## 15 NOV 2026 — LIVE BTDIGG MANUAL-VERIFIED TAB BLOCKED BY OLD REFUSAL
 
 Owner evidence, NOT synthetic: in noVNC the old BTDigg tab #0 displays Too Many Requests. The owner opened tab #1 MANUALLY, solved the BTDigg CAPTCHA and obtained 10 real result/magnet pairs for The dog stars 720p. Authenticated browser-state: open_tabs=2, selected_tab_index=0, selected_tab_verified=false, verified_tabs=1, visible_source_rate_limited=true; tab #1 has canonical_search/valid, paired_rows=10, magnet_rows=10, title_rows=10. The 8796 gateway is alive but its preflight blocks the entire context because the selected tab is old/refused.

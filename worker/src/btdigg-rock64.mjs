@@ -48,6 +48,10 @@ export function rock64BTDiggFetcher(env, transport=fetch) {
    throw Error("BTDigg gateway redirect refused.");
   if(response.status===401||response.status===403)
    throw Error("BTDigg Rock64 gateway authorization failed.");
+  if(response.status===428)
+   // Private Rock64-only signal: owner must use the already running
+   // persistent Chromium session. No CAPTCHA solver or browser refresh.
+   throw Error("BTDigg Chromium human verification required.");
   if(response.status===425){
    // Private Rock64-only status: browser displays a short visible refusal,
    // without an observed HTTP 429 or source Retry-After header. Do not

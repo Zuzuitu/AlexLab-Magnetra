@@ -68,6 +68,22 @@
   <div class="pair-status" id="pairStatus" role="status" aria-live="polite"></div>
   <p class="muted">Pentru utilizare locală sau de rezervă, copiază magnetul și deschide <a href="https://flud-remote.alexlab.media/app" target="_blank" rel="noopener noreferrer">Flud Companion PWA ↗</a>.</p>
 </dialog>
+<dialog id="btdiggVerificationDialog" class="sheet btdigg-verification-sheet">
+  <div class="sheet-head"><div><div class="section-overline">BTDIGG / CHROMIUM PRIVAT</div><h2 id="btdiggVerificationTitle">Verificare BTDigg</h2><p class="muted" id="btdiggVerificationIntro">Rezolvă verificarea în sesiunea Chromium existentă. Această fereastră nu trimite CAPTCHA sau parola VNC către Magnetra.</p></div><button type="button" class="close-btn" data-close="btdiggVerificationDialog" aria-label="Închide">×</button></div>
+  <label class="setting-label" for="btdiggNovncOrigin"><span id="btdiggViewerAddressLabel">Adresă HTTPS privată Tailscale (o singură configurare)</span>
+    <input id="btdiggNovncOrigin" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://rock64.exemplu.ts.net:8444/vnc.html">
+  </label>
+  <p class="muted" id="btdiggVerificationPrivacy">Acceptăm numai adresa HTTPS Tailscale de pe portul 8444. Rămâne salvată doar pe acest dispozitiv. Conectează iPhone-ul la Tailscale.</p>
+  <button type="button" class="secondary" id="btdiggOpenPrivateViewer">Deschide verificarea aici</button>
+  <div id="btdiggVerificationStatus" class="pair-status" role="status" aria-live="polite"></div>
+  <div id="btdiggViewerContainer" class="btdigg-viewer-container" hidden>
+    <iframe id="btdiggViewerFrame" title="Chromium BTDigg privat — verificare umană" referrerpolicy="no-referrer" sandbox="allow-forms allow-scripts allow-same-origin allow-pointer-lock" allow="fullscreen" loading="lazy"></iframe>
+    <p class="muted" id="btdiggViewerHelp">Folosește parola VNC în fereastra privată și completează CAPTCHA acolo, dacă apare. Dacă Safari nu permite încadrarea, deschide conexiunea securizată în filă separată.</p>
+    <a id="btdiggViewerFallback" class="source-open" href="#" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Deschide conexiunea privată în Safari</a>
+  </div>
+  <div class="sheet-actions"><button type="button" class="secondary" data-close="btdiggVerificationDialog" id="btdiggVerificationClose">Închide</button><button type="button" class="primary" id="btdiggVerificationRetry">Am verificat · Reîncearcă</button></div>
+</dialog>
+
 <dialog id="manualMagnetDialog" class="sheet">
   <div class="sheet-head"><div><div class="section-overline">DIRECT CĂTRE FLUD COMPANION</div><h2>Trimite un magnet</h2><p class="muted">Lipește un magnet copiat de pe BTDigg sau alt site. Acesta va fi trimis prin Flud Companion.</p></div><button class="close-btn" data-close="manualMagnetDialog" aria-label="Închide">×</button></div>
   <form id="manualMagnetForm">
