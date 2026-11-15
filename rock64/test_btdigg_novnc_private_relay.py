@@ -19,11 +19,11 @@ class PrivateNoVNCTests(unittest.TestCase):
                 return subprocess.CompletedProcess(argv,0,stdout=value)
             return run
         valid=str(ipaddress.IPv4Address(bytes([100,79,134,61])))
-        self.assertEqual(relay.tailnet_ipv4(mock(valid+"\\n")),valid)
+        self.assertEqual(relay.tailnet_ipv4(mock(valid+"\n")),valid)
         bad_addresses=((127,0,0,1),(192,168,0,216),(8,8,8,8),
                        (100,200,1,3))
         invalid=[str(ipaddress.IPv4Address(bytes(x))) for x in bad_addresses]
-        invalid+=["some-name",valid+"\\n"+invalid[2]]
+        invalid+=["some-name",valid+"\n"+invalid[2]]
         for bad in invalid:
             with self.subTest(bad=bad),self.assertRaises(ValueError):
                 relay.tailnet_ipv4(mock(bad))
