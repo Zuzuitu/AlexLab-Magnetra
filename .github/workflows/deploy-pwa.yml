@@ -25,6 +25,8 @@ jobs:
           node-version: "22"
       - name: Verify provider contracts and Companion safety
         run: node --test worker/test/*.test.mjs
+      - name: Verify BTDigg-only production smoke contract without source calls
+        run: python3 -m unittest discover -s scripts -p 'test_btdigg_pwa_live_asset.py' -v
       - name: Validate Cloudflare bundle
         run: npx --yes wrangler@4.45.4 deploy --config worker/wrangler.jsonc --dry-run
       - name: Require Cloudflare credentials
