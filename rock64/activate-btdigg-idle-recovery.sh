@@ -89,15 +89,19 @@ gateway_health(){
 import re
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.error import URLError
 p=Path("/etc/magnetra-btdigg/gateway.env")
 m=re.fullmatch(r"MAGNETRA_BTDIGG_TOKEN=([A-Za-z0-9_-]{48,256})\n",
                p.read_text(encoding="ascii"))
 if m is None: raise SystemExit(1)
 r=Request("http://127.0.0.1:8796/healthz",
           headers={"Authorization":"Bearer "+m.group(1)})
-with urlopen(r,timeout=2) as response:
-    if response.status != 200 or response.read(100) != b'{"ok":true}':
-        raise SystemExit(1)
+try:
+    with urlopen(r,timeout=2) as response:
+        if response.status != 200 or response.read(100) != b'{"ok":true}':
+            raise SystemExit(1)
+except (OSError, URLError):
+    raise SystemExit(1)
 PY
 }
 
@@ -107,6 +111,7 @@ browser_ready(){
 import json,re
 from pathlib import Path
 from urllib.request import Request,urlopen
+from urllib.error import URLError
 p=Path.home()/".local/state/magnetra-btdigg-browser/gateway.token"
 if p.is_symlink() or not p.is_file() or p.stat().st_mode&0o077:
     raise SystemExit(1)
@@ -115,8 +120,11 @@ if not re.fullmatch(r"[A-Za-z0-9_-]{48,256}",token):
     raise SystemExit(1)
 req=Request("http://127.0.0.1:18896/v1/browser-state",
             headers={"Authorization":"Bearer "+token})
-with urlopen(req,timeout=2) as response:
-    data=json.load(response)
+try:
+    with urlopen(req,timeout=2) as response:
+        data=json.load(response)
+except (OSError, URLError, ValueError):
+    raise SystemExit(1)
 if (data.get("browser_connected") is not True
     or type(data.get("pwa_tab_recovery_ready")) is not bool
     or type(data.get("visible_captcha_required")) is not bool):
