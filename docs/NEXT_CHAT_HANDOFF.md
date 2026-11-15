@@ -1,3 +1,28 @@
+## LATEST OWNER DECISION — ONE BTDIGG NEW TAB FOLLOW-UP PER PWA SEARCH, 15 NOV 2026
+
+Owner confirmed embedded noVNC via PWA on iPhone but screenshot showed
+"Too Many Requests" (no CAPTCHA), while dialog misleadingly displayed
+"Am verificat · Reîncearcă". Their explicit correction: after one
+owner-triggered PWA search sees a visible NON-HTTP429 refusal, Magnetra
+should automatically attempt recovery in a new Chromium tab rather than
+require an additional manual tap. Existing Python backend already
+supports ONE guarded new tab after 30s on a subsequent explicit request;
+the missing piece was the PWA scheduling this second request ONCE within
+the same user search.
+
+PWA fix schedules exactly one delayed BTDigg-only follow-up after
+30 seconds from the first BTDIGG_VISIBLE_REFUSAL, abortable and only
+while visible. The backend independently enforces source/refusal age,
+canonical BTDigg origin, one-tab guard and real-HTTP429/CAPTCHA stops.
+No retries on HTTP 429, CAPTCHA, timeouts, other providers or second
+refusal. Inspection-only dialog hides "Am verificat" for rate-limit
+pages; human CAPTCHA continues to require owner action.
+No direct VNC manipulations, no browser restart, no new BTDigg service.
+Needs CI, PR merge, separately gated Cloudflare deploy and iPhone
+verification. Do not confuse source merge with live rollout.
+
+---
+
 ## BTDIGG LIVE CRASH — 15 NOV 2026 (MOST RECENT OPERATIONAL STATE)
 
 Owner reported noVNC black/empty X desktop and PWA source timeout after
