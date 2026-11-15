@@ -34,9 +34,9 @@ class BrowserLivenessSupervisorTests(TestCase):
         self.assertEqual(guard._failures,0)
 
     def test_crashed_browser_dies_after_three_consecutive_checks(self):
-        now,rows,calls,guard=self.fake([
-            {"browser_connected":False} for _ in range(3),
-        ])
+        now,rows,calls,guard=self.fake(
+            [{"browser_connected":False} for _ in range(3)]
+        )
         for second in (10,20):
             now[0]=second
             guard.check()
