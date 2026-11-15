@@ -210,7 +210,7 @@ test("BTDigg visible source refusal recovery never changes HTTP429 Worker behavi
  assert.match(app,/e\.code==="BTDIGG_VISIBLE_REFUSAL"/);
  assert.ok(app.includes("document.visibilityState"));
  assert.ok(app.includes("btdiggCooldownRemainingMs()>0"));
- assert.ok(app.includes("await pause(query,signal)"));
+ assert.ok(app.includes("await pause(query,signal,true)"));
  assert.ok(app.includes("return await request(url,{signal});"));
  assert.ok(!/setInterval\([^)]*fetchBTDigg|setTimeout\([^)]*fetchBTDigg/.test(app));
 });
