@@ -77,7 +77,7 @@ test("user click opens only HTTPS iframe and close tears down remote desktop",()
  input.value="https://rock64.example.ts.net:8444/vnc.html";
  assert.equal(ui.activateBTDiggViewer(),true);
  assert.equal(host.hidden,false);
- assert.match(frame.src,/^https:\/\/rock64\.tailc14d25\.ts\.net:8444\/vnc\.html\?/);
+ assert.ok(frame.src.startsWith("https://rock64.example.ts.net:8444/vnc.html?"));
  assert.equal(element("btdiggViewerFallback").href,frame.src);
  assert.equal(store.get("magnetra.btdigg-private-viewer.v1"),
               JSON.stringify("https://rock64.example.ts.net:8444"));
