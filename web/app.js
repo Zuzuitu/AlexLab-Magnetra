@@ -32,7 +32,7 @@ const genericError=(failure)=>{
  const msg=String(failure?.message||failure?.error||"").toLowerCase();
  if(code==="BTDIGG_LOCAL_PACING")return tr("BTDigg is spacing local requests; no source rate limit was confirmed.");
  if(code==="BTDIGG_CAPTCHA_REQUIRED")return tr("BTDigg needs a human check in your private Chromium session. Open verification below.");
- if(code==="BTDIGG_VISIBLE_REFUSAL")return tr("BTDigg shows Too Many Requests. A browser verification may be needed; inspect the private Chromium tab.");
+ if(code==="BTDIGG_VISIBLE_REFUSAL")return tr("BTDigg shows Too Many Requests, not a CAPTCHA. The guarded new-tab retry has finished. Inspect the Chromium tab; no further automatic requests will be sent.");
  if(/TIMEOUT/.test(code)||/timed out|timeout/.test(msg))return tr("Provider timed out");
  if(/RATE_LIMIT|429/.test(code)||/rate.limit|too many requests/.test(msg))return tr("Provider rate limited");
  if(/REDIRECT/.test(code)||/redirect/.test(msg))return tr("Provider redirected");
@@ -197,10 +197,14 @@ function btdiggPrivateViewerUrl(origin){
  const safe=validatedBTDiggViewerOrigin(origin);
  return safe?safe+"/vnc.html?autoconnect=1&resize=scale":null;
 }
+let btdiggVerificationMode="captcha";
+function btdiggVerificationModeForCode(code){
+ return code==="BTDIGG_VISIBLE_REFUSAL"?"refusal":"captcha";
+}
 function localizeBTDiggVerification(){
  const labels=[
-  ["btdiggVerificationTitle","BTDigg verification"],
-  ["btdiggVerificationIntro","Complete the check in your existing Chromium session. Your VNC password and CAPTCHA never pass through Magnetra servers."],
+  ["btdiggVerificationTitle",btdiggVerificationMode==="refusal"?"BTDigg source refusal":"BTDigg verification"],
+  ["btdiggVerificationIntro",btdiggVerificationMode==="refusal"?"The BTDigg page shows Too Many Requests, not a CAPTCHA. The bounded automatic retry has already run. Inspect only; new source requests are stopped.":"Complete the check in your existing Chromium session. Your VNC password and CAPTCHA never pass through Magnetra servers."],
   ["btdiggViewerAddressLabel","Private Tailscale HTTPS address (configure once)"],
   ["btdiggVerificationPrivacy","Only an HTTPS Tailscale address on port 8444 is accepted. Stored only on this device. Connect your iPhone to Tailscale."],
   ["btdiggOpenPrivateViewer","Open verification here"],
@@ -210,8 +214,10 @@ function localizeBTDiggVerification(){
   ["btdiggVerificationClose","Close verification"]
  ];
  for(const [id,key] of labels)$(id).textContent=tr(key);
+ $("btdiggVerificationRetry").hidden=btdiggVerificationMode!=="captcha";
 }
-function openBTDiggVerification(){
+function openBTDiggVerification(mode="captcha"){
+ btdiggVerificationMode=mode==="refusal"?"refusal":"captcha";
  localizeBTDiggVerification();
  const saved=load(STORAGE.btdiggViewerOrigin,"");
  $("btdiggNovncOrigin").value=validatedBTDiggViewerOrigin(saved)||"";
@@ -234,7 +240,9 @@ function activateBTDiggViewer(){
  $("btdiggViewerFrame").src=url;
  $("btdiggViewerContainer").hidden=false;
  $("btdiggVerificationStatus").textContent=tr(
-  "Private Chromium viewer opened. Complete any verification yourself.");
+  btdiggVerificationMode==="refusal"
+   ?"Private Chromium viewer opened for inspection only. Do not retry a source refusal."
+   :"Private Chromium viewer opened. Complete any verification yourself.");
  return true;
 }
 function disconnectBTDiggViewer(){
@@ -242,10 +250,11 @@ function disconnectBTDiggViewer(){
  $("btdiggViewerContainer").hidden=true;
 }
 function finishBTDiggVerification(retry){
+ const allowed=retry&&btdiggVerificationMode==="captcha";
  disconnectBTDiggViewer();
  closeDialog("btdiggVerificationDialog");
  // Explicit tap only, no polling, CAPTCHAs or automatic provider requests.
- if(retry){
+ if(allowed){
   if(state.searching){toast(tr("A search is already running."));return;}
   if(!state.selected.has("btdigg")){
    state.selected.add("btdigg");
@@ -721,7 +730,8 @@ function renderProviderErrors(failures,warnings=[]){
    const action=el("button","secondary btdigg-verify-action",
     tr("Verify BTDigg inside Magnetra"));
    action.type="button";
-   action.addEventListener("click",openBTDiggVerification);
+   action.addEventListener("click",()=>openBTDiggVerification(
+    btdiggVerificationModeForCode(failure.code)));
    entry.append(action);
   }
   details.append(entry);
@@ -757,6 +767,35 @@ function renderProviderErrors(failures,warnings=[]){
     source:name,n:Math.max(1,Math.ceil(warning.ageSeconds/60))})));
  }
  root.append(details);
+}
+// The owner's original PWA search may perform at most ONE additional
+// guarded request after a visible HTTP-200 "Too Many Requests" page.
+// Chromium itself opens one fresh tab only after its independent 30-second
+// local guard. Never retry a genuine HTTP 429, CAPTCHA, timeout or transport
+// error. This callback is not a background monitor; a hidden/cancelled
+// iPhone page never sends a deferred request. Results from the final attempt
+// alone are shown to avoid false duplicate provider failures.
+function btdiggVisibleRefusalOnly(data){
+ return Array.isArray(data?.errors)&&data.errors.some(e=>
+  e?.provider==="btdigg"&&e.code==="BTDIGG_VISIBLE_REFUSAL");
+}
+async function fetchBTDiggWithOneGuardedNewTab(url,query,signal,
+    request=api,pause=waitForBTDigg){
+ const initial=await request(url,{signal});
+ if(!btdiggVisibleRefusalOnly(initial)||signal.aborted||
+    document.visibilityState==="hidden")return initial;
+ // A page-level refusal is NOT a confirmed upstream HTTP 429. Wait 30s
+ // after OBSERVING it, even if the original PWA search was already paced.
+ btdiggPacing.nextAllowedAt=Math.max(
+  btdiggPacing.nextAllowedAt,Date.now()+BTDIGG_MIN_GAP_MS);
+ $("notice").textContent=tr(
+  "BTDigg shows Too Many Requests; waiting 30 seconds for one guarded new-tab attempt…");
+ await pause(query,signal);
+ if(signal.aborted||document.visibilityState==="hidden"||
+    btdiggCooldownRemainingMs()>0)return initial;
+ $("notice").textContent=tr("BTDigg: attempting one new browser tab…");
+ // No recursive retry and no source request after this second attempt.
+ return await request(url,{signal});
 }
 async function search(){
  if(state.searching){
@@ -794,7 +833,9 @@ async function search(){
       // Guard even a cancelled HTTP request: Rock64 may still be working.
       btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
      }
-     const data=await api(url.pathname+url.search,{signal:controller.signal});
+     const data=id==="btdigg"
+      ?await fetchBTDiggWithOneGuardedNewTab(url.pathname+url.search,query,controller.signal)
+      :await api(url.pathname+url.search,{signal:controller.signal});
      if(controller.signal.aborted)return;
      if(typeof data.searchedAs==="string"&&data.searchedAs.length<=180&&data.searchedAs!==query)
       state.searchedAs=data.searchedAs;
