@@ -1,3 +1,43 @@
+## 15 NOV 2026 — BTDIGG CHROMIUM CHILD DIED, PYTHON HTTP SERVER STAYED ACTIVE
+
+Owner's exact read-only Rock64 diagnostic: user systemd magnetra-btdigg-browser.service
+remained active/running (MainPID=4796, NRestarts=0); Xvfb PID 4833, x11vnc
+4837 and websockify 4838 still ran; NO chromium/chrome process appeared in
+the process list. Private Python gateway 127.0.0.1:18896 (PID 4840) still
+LISTENed, plus private noVNC relay 6089 and tailnet noVNC 6088.
+Authenticated state reported browser_connected=false, open_tabs=0,
+new_searches_paused=true, last_failure_reason=browser_navigation_exception,
+last_navigation_status=504, 8796 active. noVNC showed an empty X server
+(black desktop with X pointer) rather than a CAPTCHA. **The Chromium process
+was gone, not the Rock64 OS, VNC, or Cloudflare.**
+
+Root cause in reviewed source: the single-threaded private Python HTTPServer
+keeps serving local /v1/browser-state even after the Playwright-owned
+Chromium GUI process dies. Existing user systemd Restart=on-failure cannot
+fire because the Python process has not exited. The 8796 health 200
+alone does not prove a live browser.
+
+Source fix adds a BrowserLivenessSupervisor via HTTPServer.service_actions
+(same Playwright owner thread, no secondary worker). Every 10 seconds it
+reads the existing private DOM state without new navigation or network
+requests to BTDigg; 3 consecutive browser_connected=false/reader errors
+make the Python process exit nonzero, allowing the existing user systemd
+Restart=on-failure / RestartSec=45s policy to recreate ONLY its existing
+Chromium/Xvfb/noVNC service. Transient errors reset after recovery, and
+about:blank, a genuine BTDigg refusal and a manual CAPTCHA page count as
+live browser states — never restart based only on absent magnet results.
+
+Owner recovery instruction for CURRENT dead browser: restart only
+`magnetra-btdigg-browser.service` once, then inspect browser-state.
+Chromium's previous CAPTCHA session may need re-verification; persistent
+profile remains on disk. One owner-opted OS-boot source restoration may
+still be attempted at most once per OS boot per existing durable marker.
+GitHub merge of this fix does not change the currently-running Python
+service: activation still requires a separate, guarded browser-only
+service restart. Never reboot Rock64 or restart Plex, NexaCore, 8796,
+Cloudflare/Tailscale, or noVNC 6089 just to recover this GUI child.
+
+---
 ## 15 NOV 2026 — BTDIGG PWA HUMAN CAPTCHA VIEWER (SOURCE/CI CANDIDATE)
 
 Owner showed genuine PWA BTDigg success after MANUALLY verifying a CAPTCHA in

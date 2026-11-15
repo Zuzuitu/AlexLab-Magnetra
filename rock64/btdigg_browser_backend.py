@@ -744,6 +744,70 @@ def restore_boot_page_once(context, page, state):
         return "state_unavailable"
 
 
+class BrowserProcessUnavailable(RuntimeError):
+    """Fatal local Chromium loss; let the existing user systemd unit restart."""
+
+
+class BrowserLivenessSupervisor:
+    """Bounded read-only GUI liveness checks while HTTPServer is idle.
+
+    This makes a dead Chromium process visible to the existing
+    Restart=on-failure user unit instead of leaving a healthy-looking HTTP
+    listener on 18896 forever. Each probe reads ONLY existing page/DOM state,
+    never navigates BTDigg or retries a CAPTCHA. Three consecutive failures
+    are needed so transient Playwright event delays do not drop a good session.
+    """
+
+    INTERVAL_SECONDS = 10
+    CONSECUTIVE_FAILURES = 3
+
+    def __init__(self, reader, clock=time.monotonic):
+        self._reader = reader
+        self._clock = clock
+        self._next_at = clock() + self.INTERVAL_SECONDS
+        self._failures = 0
+
+    def check(self):
+        now = self._clock()
+        if now < self._next_at:
+            return
+        self._next_at = now + self.INTERVAL_SECONDS
+        try:
+            snapshot = self._reader()
+            connected = (isinstance(snapshot, dict)
+                         and snapshot.get("browser_connected") is True)
+        except Exception:
+            # A dead Playwright connection may raise instead of reporting
+            # a disconnected browser; do not expose exception details.
+            connected = False
+        if connected:
+            self._failures = 0
+            return
+        self._failures += 1
+        if self._failures >= self.CONSECUTIVE_FAILURES:
+            raise BrowserProcessUnavailable("local Chromium is disconnected")
+
+
+class BrowserSupervisedHTTPServer(HTTPServer):
+    """Plain single-threaded private HTTPServer with idle Playwright checks.
+
+    socketserver.BaseServer.serve_forever() calls service_actions() on every
+    polling iteration. Playwright sync operations therefore remain in the
+    SAME thread that owns the browser; there is no watchdog thread.
+    """
+
+    def __init__(self, address, handler, browser_state_reader,
+                 clock=time.monotonic):
+        self._browser_supervisor = BrowserLivenessSupervisor(
+            browser_state_reader, clock=clock
+        )
+        super().__init__(address, handler)
+
+    def service_actions(self):
+        super().service_actions()
+        self._browser_supervisor.check()
+
+
 def browser_handler_class(token, provider, fetcher):
     """Extra authenticated read-only route, experimental loopback only.
 
@@ -839,9 +903,10 @@ def main():
             provider = SearchProvider(fetcher=browser_fetcher.fetch)
             # HTTPServer (NOT ThreadingHTTPServer): Playwright sync page remains
             # owned by the same thread for every subsequent search.
-            server = HTTPServer(
+            server = BrowserSupervisedHTTPServer(
                 (BIND, port),
                 browser_handler_class(token, provider, browser_fetcher),
+                browser_fetcher.browser_state,
             )
             print("BTDigg verified-browser gateway: loopback only; "
                   "waiting for optional manual verification", flush=True)
@@ -849,6 +914,13 @@ def main():
                 server.serve_forever(poll_interval=0.3)
             except KeyboardInterrupt:
                 pass
+            except BrowserProcessUnavailable:
+                # Deliberately fail the backend, not the Rock64 host. The
+                # existing user systemd Restart=on-failure can now recreate
+                # ONLY this BTDigg GUI after repeated disconnection.
+                print("BTDigg local Chromium process lost; exiting for "
+                      "existing user service recovery", flush=True)
+                raise
             finally:
                 server.server_close()
         finally:

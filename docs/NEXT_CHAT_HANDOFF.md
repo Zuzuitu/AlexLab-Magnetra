@@ -1,3 +1,29 @@
+## BTDIGG LIVE CRASH — 15 NOV 2026 (MOST RECENT OPERATIONAL STATE)
+
+Owner reported noVNC black/empty X desktop and PWA source timeout after
+several successful BTDigg searches. Read-only Rock64 shows:
+user-systemd browser service active/running MainPID 4796 NRestarts 0;
+Xvfb 4833, x11vnc 4837, websockify 4838, authenticated Python 18896
+PID 4840, 6089 HTTPS relay and 8796 gateway all active; **no Chromium
+process**, browser_connected=false, open_tabs=0, last_failure_reason
+browser_navigation_exception, last_navigation_status=504. Do not suggest
+clicking 'Restore pages': Chromium is GONE. This is not evidence of a
+CAPTCHA. Safely restart only the user service
+`systemctl --user restart magnetra-btdigg-browser.service` to recover.
+
+Root cause source: local HTTPServer survives after Chromium dies, so
+systemd Restart=on-failure never runs. Proposed code fix adds same-thread
+10-second read-only browser-state watchdog with 3 consecutive failures,
+then exits nonzero to reuse existing user-systemd Restart=on-failure
+(45-second delay). No direct BTDigg searches in watchdog, no extra service
+or background retry. Existing boot restore marker still allows at most
+one original source navigation per OS boot and may prompt CAPTCHA later.
+Permanent fix requires GitHub PR CI and explicit browser-only restart;
+neither a green CI nor commit alone changes the live Python process.
+Keep 8796, private HTTPS 8444, loopback 6089, Tailscale 443, Plex,
+NexaCore and Flud untouched.
+
+---
 ## 15 NOV 2026 — BTDIGG PWA HUMAN CAPTCHA VIEWER (SOURCE/CI CANDIDATE)
 
 Owner showed genuine PWA BTDigg success after MANUALLY verifying a CAPTCHA in
