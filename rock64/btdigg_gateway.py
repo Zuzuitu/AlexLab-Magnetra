@@ -502,7 +502,10 @@ class LocalChromiumBridge:
                 # another browser search; never claim an observed HTTP 429.
                 # All other unverified/ambiguous states remain HTTP 503.
                 if state.get("visible_source_rate_limited") is True:
-                    return 429, b""
+                    # Visible page refusal has no verified HTTP 429 status.
+                    # Private 425 keeps the observed soft refusal distinct
+                    # from the genuine source 429's 5-minute backoff.
+                    return 425, b""
                 return 503, b""
             path = "/v1/search?q=" + quote(query, safe="")
             status, html, mime, scope = self._read(
@@ -512,6 +515,10 @@ class LocalChromiumBridge:
                 # A 5-second *local* denial by the browser process must not
                 # create the production gateway's five-minute source lock.
                 return (503 if scope == "local-pacing" else 429), b""
+            if status == 425:
+                # Local browser has a visible non-HTTP refusal; 30-second
+                # user-triggered recovery is enforced by browser state.
+                return 425, b""
             if status != 200:
                 return (504 if status == 504 else 503), b""
             if "text/html" not in mime.lower():
