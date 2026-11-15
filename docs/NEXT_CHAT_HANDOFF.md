@@ -1,3 +1,12 @@
+## 15 NOV 2026 — CONFIRMED MANUAL TAB ADOPTION ISSUE (LIVE)
+
+Owner manually created and CAPTCHA-verified a second Chromium BTDigg tab, then manually searched The dog stars 720p. Browser-state: two tabs, selected #0 old visible refusal; tab #1 canonical/valid with 10 real paired result/magnet rows, verified_tabs=1, selected_tab_verified=false, visible_source_rate_limited=true. Gateway 8796 rejects this exact arrangement. This is not evidence that a new tab was automatically created or CAPTCHA solved by the code.
+
+Scoped source fix allows 8796 authenticated /v1/search preflight for this strict safe two-tab state and makes 18896 adopt the verified human-owned tab on an EXPLICIT PWA search. No browser-state mutation, CAPTCHA automation or repeated source calls. Same-query results may be returned without source navigation.
+
+To preserve the owner's currently solved CAPTCHA, install ONLY the 8796 gateway first (guarded exact version/rollback); do not restart the 18896 browser. Search from PWA exactly The dog stars 720p once: the EXISTING live browser already has _verified_existing_query to select and reuse manual matching results, though without closing the old tab. After validating PWA magnets, owner may close the old error tab manually. Automatic closure from the new browser source needs a separate browser restart later and might require another CAPTCHA. Record deployment and source results separately; do not conflate CI with production.
+
+---
 # AlexLab Magnetra — New-chat engineering handoff
 
 ## 13 NOV 2026 — FOLLOW-UP: BTDIGG LOCAL PACING MISCLASSIFICATION (SOURCE/CI ONLY)
