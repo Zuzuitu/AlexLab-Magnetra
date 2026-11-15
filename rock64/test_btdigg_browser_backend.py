@@ -442,6 +442,9 @@ class BrowserBackendTests(TestCase):
             "pwa_tab_recovery_ready": False,
             "pwa_tab_recovery_reason": None,
             "pwa_tab_recovery_wait_seconds": None,
+            "pwa_tab_recovery_attempts": 0,
+            "pwa_tab_recovery_last_outcome": None,
+            "pwa_tab_recovery_last_http_status": None,
             "selected_tab_index": 0,
             "tab_diagnostics": [{
                 "page_kind": "canonical_search",
@@ -716,7 +719,7 @@ class BrowserBackendTests(TestCase):
             self.assertEqual(status["pwa_tab_recovery_wait_seconds"],30)
             self.assertEqual(first.context.opened,[])
 
-    def test_recovery_failure_closes_new_only_and_backs_off(self):
+    def test_recovery_refusal_keeps_new_tab_closes_old_and_paces_30s(self):
         now = [0.0]
         first = FakePage(valid=False)
         first.rate_limited = True
@@ -732,15 +735,109 @@ class BrowserBackendTests(TestCase):
         now[0] += 30
         self.assertEqual(gateway.fetch("One requested query"), (425, b""))
         self.assertEqual(len(first.context.opened), 1)
-        self.assertTrue(first.context.opened[0].closed)
-        self.assertFalse(first.closed, "old tab survives failed replacement")
-        self.assertFalse(gateway.browser_state()["pwa_tab_recovery_ready"])
-        self.assertEqual(gateway.browser_state()["pwa_tab_recovery_wait_seconds"],30)
+        new = first.context.opened[0]
+        self.assertFalse(new.closed, "new BTDigg refusal must remain visible")
+        self.assertTrue(first.closed, "old blank/refusal must be closed")
+        self.assertIs(gateway.page, new)
+        state = gateway.browser_state()
+        self.assertEqual(state["open_tabs"], 1)
+        self.assertEqual(state["pwa_tab_recovery_attempts"], 1)
+        self.assertEqual(state["pwa_tab_recovery_last_outcome"],
+                         "visible_refusal")
+        self.assertEqual(state["pwa_tab_recovery_last_http_status"], 200)
+        self.assertEqual(state["pwa_tab_recovery_wait_seconds"], 30)
         self.assertEqual(gateway.fetch("Other query"), (425, b""))
         self.assertEqual(len(first.context.opened), 1)
         now[0] += 30
         self.assertTrue(gateway.browser_state()["pwa_tab_recovery_ready"])
-        self.assertEqual(first.goto_calls,[], "recovery navigates only new tab")
+        self.assertEqual(first.goto_calls, [], "never reuses old page")
+
+    def test_new_captcha_page_stays_visible_until_owner_verifies(self):
+        class Marker:
+            def boot_attempted_this_boot(self):
+                return True
+            def remember_verified(self, _query):
+                pass
+        now=[0.0]
+        old=FakePage(url="about:blank", valid=False)
+        original_new=old.context.new_page
+        def challenge_new_tab():
+            new=original_new()
+            new.after_navigation_valid=False
+            new.body_text="Please verify you are human. I'm not a robot"
+            return new
+        old.context.new_page=challenge_new_tab
+        gateway=backend.VisibleBrowserFetcher(old,Marker(),clock=lambda:now[0])
+        gateway.browser_state()
+        now[0]+=30
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"),(503,b""))
+        new=old.context.opened[0]
+        self.assertTrue(old.closed)
+        self.assertFalse(new.closed)
+        self.assertIs(gateway.page,new)
+        state=gateway.browser_state()
+        self.assertTrue(state["visible_captcha_required"])
+        self.assertFalse(state["pwa_tab_recovery_ready"])
+        self.assertEqual(state["pwa_tab_recovery_last_outcome"],
+                         "captcha_required")
+        self.assertEqual(state["pwa_tab_recovery_attempts"],1)
+        self.assertEqual(gateway.fetch("Different query"),(503,b""))
+        self.assertEqual(len(old.context.opened),1,
+                         "no automatic CAPTCHA bypass or tab rotation")
+
+    def test_untrusted_navigation_discards_only_new_tab(self):
+        class Marker:
+            def boot_attempted_this_boot(self):
+                return True
+            def remember_verified(self, _query):
+                pass
+        old=FakePage(url="about:blank",valid=False)
+        original_new=old.context.new_page
+        def untrusted_new_tab():
+            new=original_new()
+            new.redirect_to="https://example.invalid/not-btdigg"
+            new.live_url_override="https://example.invalid/not-btdigg"
+            new.after_navigation_valid=False
+            return new
+        old.context.new_page=untrusted_new_tab
+        gateway=backend.VisibleBrowserFetcher(old,Marker(),clock=lambda:0.0)
+        gateway.browser_state()
+        gateway._recovery_next_at=0.0
+        self.assertEqual(gateway.fetch("Owner query 2026"),(503,b""))
+        self.assertFalse(old.closed)
+        self.assertTrue(old.context.opened[0].closed)
+        self.assertIs(gateway.page,old)
+        self.assertEqual(gateway.browser_state()["pwa_tab_recovery_last_outcome"],
+                         "untrusted_navigation")
+
+    def test_real_source_http_429_tab_stays_visible_but_no_auto_retry(self):
+        class Marker:
+            def boot_attempted_this_boot(self):
+                return True
+            def remember_verified(self, _query):
+                pass
+        old=FakePage(url="about:blank",valid=False)
+        original_new=old.context.new_page
+        def http429_new_tab():
+            new=original_new()
+            new.next_status=429
+            new.after_navigation_valid=False
+            new.rate_limited=True
+            return new
+        old.context.new_page=http429_new_tab
+        gateway=backend.VisibleBrowserFetcher(old,Marker(),clock=lambda:0.0)
+        gateway.browser_state()
+        gateway._recovery_next_at=0.0
+        self.assertEqual(gateway.fetch("Owner query 2026"),(429,b""))
+        self.assertTrue(old.closed)
+        self.assertFalse(old.context.opened[0].closed)
+        state=gateway.browser_state()
+        self.assertEqual(state["pwa_tab_recovery_last_outcome"],
+                         "source_http_429")
+        self.assertEqual(state["pwa_tab_recovery_last_http_status"],429)
+        self.assertFalse(state["pwa_tab_recovery_ready"])
+        self.assertEqual(gateway.fetch("Another query 2026"),(429,b""))
+        self.assertEqual(len(old.context.opened),1)
 
     def test_blank_after_guarded_boot_can_recover_after_cooldown(self):
         class Marker:

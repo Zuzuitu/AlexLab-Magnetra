@@ -199,6 +199,30 @@ def main():
                     "pwa_tab_recovery_wait_seconds": wait,
                     "visible_captcha_required": captcha,
                 })
+                if "pwa_tab_recovery_attempts" in state:
+                    # Never disclose queries, URLs, magnets or challenge HTML.
+                    attempts = state["pwa_tab_recovery_attempts"]
+                    outcome = state.get("pwa_tab_recovery_last_outcome")
+                    http = state.get("pwa_tab_recovery_last_http_status")
+                    allowed = {
+                        None, "started", "no_navigation_response",
+                        "untrusted_navigation", "source_http_429",
+                        "source_http_non200", "visible_refusal",
+                        "captcha_required", "unverified_result_html",
+                        "verified_results", "navigation_exception",
+                    }
+                    if (type(attempts) is not int
+                            or not 0 <= attempts <= 1_000_000
+                            or outcome not in allowed
+                            or (http is not None and (
+                                type(http) is not int
+                                or not 100 <= http <= 599))):
+                        raise ValueError("invalid private attempt diagnostic")
+                    result["browser_state"].update({
+                        "pwa_tab_recovery_attempts": attempts,
+                        "pwa_tab_recovery_last_outcome": outcome,
+                        "pwa_tab_recovery_last_http_status": http,
+                    })
             # New browser versions disclose only fixed, secret-free reason codes.
             reasons = {
                 "search_input_missing", "no_navigation_response", "upstream_http_429",
