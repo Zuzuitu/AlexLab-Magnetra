@@ -432,6 +432,7 @@ class BrowserBackendTests(TestCase):
             "selected_tab_verified": True,
             "new_searches_paused": False,
             "visible_source_rate_limited": False,
+            "visible_captcha_required": False,
             "last_navigation_status": None,
             "last_failure_reason": None,
             "last_upstream_http_status": None,
@@ -722,6 +723,31 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(gateway.fetch("Requested 2026"),(429,b""))
         self.assertEqual(len(limited.context.opened),1)
         self.assertIs(multiple,limited.context.opened[0])
+
+    def test_visible_captcha_pauses_search_without_tab_rotation(self):
+        now=[0]
+        challenged=FakePage(valid=False)
+        challenged.body_text="Please verify you are human. I'm not a robot"
+        gateway=backend.VisibleBrowserFetcher(challenged,clock=lambda:now[0])
+        state=gateway.browser_state()
+        self.assertTrue(state["visible_captcha_required"])
+        self.assertFalse(state["pwa_tab_recovery_ready"])
+        self.assertIsNone(state["pwa_tab_recovery_reason"])
+        self.assertTrue(state["new_searches_paused"])
+        now[0] += 100_000
+        self.assertEqual(gateway.fetch("New owner search"),(503,b""))
+        self.assertEqual(challenged.context.opened,[])
+        self.assertFalse(challenged.closed)
+
+    def test_captcha_hints_inside_verified_results_are_not_a_human_gate(self):
+        page=FakePage(valid=True)
+        page.body_text="A release called I'm not a robot"
+        self.assertFalse(backend.source_challenge_visible(page))
+        self.assertFalse(
+            backend.VisibleBrowserFetcher(page).browser_state()[
+                "visible_captcha_required"
+            ]
+        )
 
     def test_deny_marker_requires_exact_body_and_canonical_origin(self):
         page = FakePage(valid=False)
