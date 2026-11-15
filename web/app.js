@@ -197,7 +197,22 @@ function btdiggPrivateViewerUrl(origin){
  const safe=validatedBTDiggViewerOrigin(origin);
  return safe?safe+"/vnc.html?autoconnect=1&resize=scale":null;
 }
+function localizeBTDiggVerification(){
+ const labels=[
+  ["btdiggVerificationTitle","BTDigg verification"],
+  ["btdiggVerificationIntro","Complete the check in your existing Chromium session. Your VNC password and CAPTCHA never pass through Magnetra servers."],
+  ["btdiggViewerAddressLabel","Private Tailscale HTTPS address (configure once)"],
+  ["btdiggVerificationPrivacy","Only an HTTPS Tailscale address on port 8444 is accepted. Stored only on this device. Connect your iPhone to Tailscale."],
+  ["btdiggOpenPrivateViewer","Open verification here"],
+  ["btdiggViewerHelp","Use the VNC password and complete the CAPTCHA in the private window if required. If Safari blocks the embedded viewer, open the secure link separately."],
+  ["btdiggViewerFallback","Open private viewer in Safari"],
+  ["btdiggVerificationRetry","Verified · Search again"],
+  ["btdiggVerificationClose","Close verification"]
+ ];
+ for(const [id,key] of labels)$(id).textContent=tr(key);
+}
 function openBTDiggVerification(){
+ localizeBTDiggVerification();
  const saved=load(STORAGE.btdiggViewerOrigin,"");
  $("btdiggNovncOrigin").value=validatedBTDiggViewerOrigin(saved)||"";
  $("btdiggVerificationStatus").textContent="";
@@ -872,6 +887,7 @@ async function status(){
 }
 function switchLanguage(locale){
  if(!globalThis.MagnetraI18n?.set(locale))return;
+ localizeBTDiggVerification();
  renderProviders();renderResults();savePausedSources();updateSelectAllButton();
  if(!state.searching)$("searchButton").textContent=tr("Search →");
  else $("searchButton").textContent=tr("Cancel search ×");
