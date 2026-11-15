@@ -549,6 +549,30 @@ const DICTIONARY={
     "ro": "BTDigg solicită verificarea umană în Chromium privat. Deschide verificarea de mai jos.",
     "it": "BTDigg richiede una verifica umana in Chromium privato. Apri la verifica qui sotto."
   },
+  "BTDigg shows Too Many Requests, not a CAPTCHA. The guarded new-tab retry has finished. Inspect the Chromium tab; no further automatic requests will be sent.": {
+    "ro": "BTDigg afișează Too Many Requests, nu CAPTCHA. Încercarea automată controlată s-a încheiat. Inspectează tabul Chromium; nu se mai trimit cereri automate.",
+    "it": "BTDigg mostra Too Many Requests, non un CAPTCHA. Il tentativo automatico controllato è terminato. Controlla la scheda Chromium; non verranno inviate altre richieste automatiche."
+  },
+  "BTDigg source refusal": {
+    "ro": "BTDigg — acces limitat",
+    "it": "BTDigg — accesso limitato"
+  },
+  "The BTDigg page shows Too Many Requests, not a CAPTCHA. The bounded automatic retry has already run. Inspect only; new source requests are stopped.": {
+    "ro": "Pagina BTDigg afișează Too Many Requests, nu CAPTCHA. Reîncercarea unică a fost deja efectuată. Poți doar inspecta Chromium; nu se trimit alte cereri către sursă.",
+    "it": "La pagina BTDigg mostra Too Many Requests, non un CAPTCHA. Il tentativo singolo è già stato eseguito. Puoi solo controllare Chromium; non partono altre richieste."
+  },
+  "Private Chromium viewer opened for inspection only. Do not retry a source refusal.": {
+    "ro": "Chromium privat este deschis doar pentru inspecție. Nu reîncerca acum o cerere refuzată.",
+    "it": "Chromium privato è aperto solo per verifica visiva. Non ripetere ora una richiesta rifiutata."
+  },
+  "BTDigg shows Too Many Requests; waiting 30 seconds for one guarded new-tab attempt…": {
+    "ro": "BTDigg afișează Too Many Requests. Așteptăm 30 de secunde pentru o singură încercare într-un tab nou…",
+    "it": "BTDigg mostra Too Many Requests. Attesa di 30 secondi prima di un unico tentativo in una nuova scheda…"
+  },
+  "BTDigg: attempting one new browser tab…": {
+    "ro": "BTDigg: încercăm o singură căutare într-un tab nou…",
+    "it": "BTDigg: un solo tentativo di ricerca in una nuova scheda…"
+  },
   "BTDigg shows Too Many Requests. A browser verification may be needed; inspect the private Chromium tab.": {
     "ro": "BTDigg afișează Too Many Requests. Poate fi necesar un CAPTCHA; verifică tabul Chromium privat.",
     "it": "BTDigg mostra Too Many Requests. Potrebbe servire un CAPTCHA: controlla la scheda Chromium privata."
