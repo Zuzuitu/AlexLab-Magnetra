@@ -416,7 +416,7 @@ test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry"
  assert.equal(api.btdiggCooldownRemainingMs()>0,true);
  const first=JSON.parse(storage.get("magnetra.btdigg-cooldown.v1"));
  assert.equal(first.strikes,1);
- assert.equal(first.until-first.failedAt,60_000);
+ assert.equal(first.until-first.failedAt,30_000);
  await api.search();
  assert.deepEqual([...requests].sort(),["btdigg","knaben","knaben"].sort(),
   "second user search may use other sources but MUST NOT fetch BTDigg during cooldown");
@@ -447,21 +447,40 @@ test("genuine BTDigg 429 cooldown expires only for a new user action",async()=>{
  // Emulate an expired first cooldown without sleeping or sending source requests.
  const now=Date.now();
  storage.set("magnetra.btdigg-cooldown.v1",JSON.stringify({
-  until:now-1000,failedAt:now-61_000,strikes:1
+  until:now-1000,failedAt:now-31_000,strikes:1
  }));
  await api.search();
  assert.equal(calls,2,"one additional fetch only after manual search");
  const second=JSON.parse(storage.get("magnetra.btdigg-cooldown.v1"));
  assert.equal(second.strikes,2);
- assert.equal(second.until-second.failedAt,120_000);
+ assert.equal(second.until-second.failedAt,30_000);
  fail=false;
  storage.set("magnetra.btdigg-cooldown.v1",JSON.stringify({
-  until:now-1000,failedAt:now-61_000,strikes:2
+  until:now-1000,failedAt:now-31_000,strikes:2
  }));
  await api.search();
  assert.equal(calls,3);
  assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false,
   "successful upstream response clears prior 429 state");
+});
+
+test("legacy 60-to-300-second PWA BTDigg cooldown is ignored after 30s migration",async()=>{
+ const source="magnetra.btdigg-cooldown.v1";
+ const now=Date.now();
+ const old={failedAt:now-61_000,until:now+90_000,strikes:2};
+ const requests=[];
+ const {api,storage,element}=harness(async(path)=>{
+  requests.push(new URL(path,"https://index.alexlab.media").searchParams.get("providers"));
+  return json({results:[],stats:[{provider:"btdigg",ok:true,count:0}],errors:[]});
+ },{[source]:JSON.stringify(old)});
+ element("query").value="The Dog Stars 2026 720p";
+ api.state.selected=new Set(["btdigg"]);
+ assert.equal(api.btdiggCooldownRemainingMs(),0,
+  "legacy 120-second record must not block this owner's PWA request");
+ await api.search();
+ assert.deepEqual(requests,["btdigg"]);
+ assert.equal(storage.has(source),false,
+  "live successful response clears prior legacy refusal record");
 });
 
 test("cached BTDigg source rows never masquerade as live 429 recovery",async()=>{
