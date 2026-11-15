@@ -371,7 +371,7 @@ test("BTDigg local pacing cannot create a persistent 429; TPB results continue o
  assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false);
 });
 
-test("BTDigg visible soft refusal permits another explicit search after 30s; not a persistent 429",async()=>{
+test("BTDigg visible HTTP200 refusal yields one guarded new-tab retry within same user search",async()=>{
  let calls=0;
  const {api,element,storage}=harness(async()=>{
   calls++;
@@ -384,14 +384,17 @@ test("BTDigg visible soft refusal permits another explicit search after 30s; not
  api.state.providers=[{id:"btdigg",name:"BTDigg",ported:true}];
  api.state.selected=new Set(["btdigg"]);
  await api.search();
- assert.equal(calls,1);
- assert.equal(api.btdiggCooldownRemainingMs(),0);
+ assert.equal(calls,2,"one initial and exactly one deferred owner-scoped retry");
+ assert.equal(api.btdiggCooldownRemainingMs(),0,
+  "HTML Too Many Requests is not a confirmed origin HTTP 429");
  assert.equal(storage.has("magnetra.btdigg-cooldown.v1"),false);
  assert.equal(api.state.selected.has("btdigg"),true);
  assert.equal(api.state.sessionAudit.btdigg.state,"error");
+ assert.equal(api.state.lastFailedSourcesCount,1,
+  "second refusal must not duplicate source error");
  assert.ok(api.btdiggWaitMs("Different query")>29_000);
- await api.search(); // Explicit new search, simulated timer; no implicit retry.
- assert.equal(calls,2);
+ await api.search(); // A NEW owner action permits at most one more bounded pair.
+ assert.equal(calls,4,"each owner action has a strict maximum of 2 requests");
  assert.equal(api.btdiggCooldownRemainingMs(),0);
 });
 
