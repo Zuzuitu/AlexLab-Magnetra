@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 ORIGIN="https://index.alexlab.media"
 EXPECTED=(
     "const BTDIGG_MIN_GAP_MS=30_000;",
-    "const BTDIGG_429_DELAYS_MS=[60_000,120_000,300_000];",
+    "const BTDIGG_429_DELAYS_MS=[30_000,30_000,30_000];",
     "function btdiggCooldownRemainingMs(",
     "async function waitForBTDigg(",
 )
