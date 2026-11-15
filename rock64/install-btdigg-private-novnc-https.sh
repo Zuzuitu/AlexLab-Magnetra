@@ -48,7 +48,8 @@ python3 - "$TS_IP" <<'PY' || fail 'Invalid local Tailscale IPv4'
 import ipaddress,sys
 try:
  ip=ipaddress.IPv4Address(sys.argv[1])
- assert ip in ipaddress.IPv4Network("100.64.0.0/10")
+ octets=ip.packed
+ assert octets[0] == 100 and 64 <= octets[1] < 128
 except (ValueError,AssertionError):
  sys.exit(1)
 PY
