@@ -94,6 +94,17 @@ class BootstrapState:
             return  # Avoid repeated writes on the Rock64 SD/SSD.
         _write_file(self.directory, LAST_QUERY, normalized)
 
+    def boot_attempted_this_boot(self, boot_id=None):
+        """Read-only check: a past guarded startup already used this boot."""
+        try:
+            if boot_id is None:
+                boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+            import uuid
+            expected = str(uuid.UUID(boot_id))
+            return _load_file(self.directory / BOOT_MARKER, 64) == expected
+        except (OSError, UnicodeError, ValueError):
+            return False
+
     def claim_boot_attempt(self, boot_id=None):
         """Never initiate a second automatic source visit in one OS boot."""
         if boot_id is None:
