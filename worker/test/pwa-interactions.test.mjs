@@ -416,7 +416,7 @@ test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry"
  assert.equal(api.btdiggCooldownRemainingMs()>0,true);
  const first=JSON.parse(storage.get("magnetra.btdigg-cooldown.v1"));
  assert.equal(first.strikes,1);
- assert.equal(first.until-first.failedAt,30_000);
+ assert.equal(first.until-first.failedAt,60_000);
  await api.search();
  assert.deepEqual([...requests].sort(),["btdigg","knaben","knaben"].sort(),
   "second user search may use other sources but MUST NOT fetch BTDigg during cooldown");
@@ -430,7 +430,7 @@ test("genuine BTDigg 429 never auto-deselects PSA source or causes hidden retry"
   "cooldown persists across browser and tab reloads without auto-retry");
 });
 
-test("BTDigg cooldown expires only for a new user action and remains 30 seconds",async()=>{
+test("genuine BTDigg 429 cooldown expires only for a new user action",async()=>{
  let calls=0,fail=true;
  const {api,element,storage}=harness(async(path)=>{
   calls++;
@@ -453,7 +453,7 @@ test("BTDigg cooldown expires only for a new user action and remains 30 seconds"
  assert.equal(calls,2,"one additional fetch only after manual search");
  const second=JSON.parse(storage.get("magnetra.btdigg-cooldown.v1"));
  assert.equal(second.strikes,2);
- assert.equal(second.until-second.failedAt,30_000);
+ assert.equal(second.until-second.failedAt,120_000);
  fail=false;
  storage.set("magnetra.btdigg-cooldown.v1",JSON.stringify({
   until:now-1000,failedAt:now-61_000,strikes:2
