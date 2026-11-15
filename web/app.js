@@ -31,6 +31,7 @@ const genericError=(failure)=>{
  const code=String(failure?.code||"").toUpperCase();
  const msg=String(failure?.message||failure?.error||"").toLowerCase();
  if(code==="BTDIGG_LOCAL_PACING")return tr("BTDigg is spacing local requests; no source rate limit was confirmed.");
+ if(code==="BTDIGG_VISIBLE_REFUSAL")return tr("BTDigg shows Too Many Requests. Try another PWA search after 30 seconds; Chromium will open a new tab if the source allows it.");
  if(/TIMEOUT/.test(code)||/timed out|timeout/.test(msg))return tr("Provider timed out");
  if(/RATE_LIMIT|429/.test(code)||/rate.limit|too many requests/.test(msg))return tr("Provider rate limited");
  if(/REDIRECT/.test(code)||/redirect/.test(msg))return tr("Provider redirected");
@@ -74,7 +75,7 @@ const previousPreferred=["knaben","torrentscsv","thepiratebay","internetarchive"
 // 10 curated visible sources; original 46 backend/Android adapters remain intact.
 const hiddenIndexerIds=new Set(["anirena","bt4g","bitsearch","extdotto","eztvx","filemood","limetorrents","nyaasi","1337x","tokyotoshokan","torrentdatabase","torrentdownloadinfo","torrentdownloads","torrentkitty","uindex","xxxclub","torrentz","animetosho","mikanproject","bangumimoe","btsow","dmhy","linuxtracker","mypornclub","nekobt","sukebeinyaa","ytsmx","anilibria","blueroms","epublibre","megapeer","rutorinfo","xxxtracker","fitgirlrepacks","subsplease","audiobookbay"]);
 const RESULTS_PER_PAGE=50;
-const BTDIGG_MIN_GAP_MS=5500;
+const BTDIGG_MIN_GAP_MS=30_000;
 // Preserve the primary indexer after a genuine 429 without automatic retries.
 const BTDIGG_429_DELAYS_MS=[60_000,120_000,300_000];
 const BTDIGG_429_RESET_MS=30*60_000;
