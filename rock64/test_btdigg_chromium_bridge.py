@@ -28,6 +28,7 @@ def good_state():
         "verified_tabs": 1,
         "selected_tab_verified": True,
         "visible_source_rate_limited": False,
+        "visible_captcha_required": False,
         "new_searches_paused": False,
         "last_navigation_status": None,
     }
@@ -152,6 +153,8 @@ class ChromiumBridgeContract(unittest.TestCase):
             {"verified_tabs":1},
             {"visible_source_rate_limited":False},
             {"pwa_tab_recovery_wait_seconds":False},
+            {"visible_captcha_required":True},
+            {"visible_captcha_required":None},
         )
         for changed in cases:
             self.server.state={**base,**changed}
