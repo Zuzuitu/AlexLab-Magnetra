@@ -42,7 +42,7 @@ QUERY_RE = re.compile(r"[\x00-\x1f\x7f]")
 # A user-triggered PWA request may open one new tab only after a source
 # refusal has been observed for an extended bounded interval. No timer sends
 # any request, no CAPTCHA interaction, and each failed attempt backs off.
-PWA_TAB_RECOVERY_DELAYS = (30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60)
+PWA_TAB_RECOVERY_DELAYS = (30, 30, 30, 30)
 CHALLENGE_HINTS = (
     "one more step", "verify you are human", "just a moment",
     "checking your browser", "i'm not a robot", "g-recaptcha",
@@ -342,7 +342,10 @@ class VisibleBrowserFetcher:
             if html is None:
                 denied = source_rate_limit_visible(fresh, current_url)
                 self._recovery_failed(terminal=not denied)
-                return (429 if denied else 503), b""
+                # An HTTP 200 page with a visible denial is distinct from a
+                # genuine network 429: use private 425 (Too Early) to avoid
+                # forging an upstream Retry-After or 5-minute source lock.
+                return (425 if denied else 503), b""
             self._remember_verified(current_url, html)
             self.page = fresh
             self.reference_page = fresh
@@ -522,7 +525,7 @@ class VisibleBrowserFetcher:
             # treat a fresh local latch as permission to hit the source again.
             if any(source_rate_limit_visible(p) for p in self.page.context.pages
                    if not p.is_closed()):
-                return 429, b""
+                return 425, b""
 
             # No automated navigation while the currently controlled tab is
             # unverified. Owner can first verify an existing tab manually.
