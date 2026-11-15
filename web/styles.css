@@ -56,3 +56,22 @@
 .results-pagination button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
 .pagination-status{font-size:13px;color:#cbd8df;text-align:center;font-variant-numeric:tabular-nums}
 @media(max-width:480px){.results-pagination{gap:8px}.results-pagination button{padding:10px 11px}.pagination-status{flex:1 0 100%;order:-1}}
+
+/* Human-only private Chromium verification, inside the existing Magnetra PWA.
+   Iframe loads solely on owner interaction; no cloud video stream or CAPTCHA
+   credentials, and no automatic reconnect while the dialog is closed. */
+.btdigg-verify-action{min-height:44px;margin-top:10px;max-width:100%;white-space:normal}
+.btdigg-verification-sheet{max-width:1160px;width:calc(100% - 18px);max-height:96dvh;padding:18px 20px}
+.btdigg-verification-sheet .setting-label{margin-top:12px}
+.btdigg-verification-sheet .setting-label input{font-size:16px;min-height:46px}
+.btdigg-verification-sheet #btdiggOpenPrivateViewer{margin-top:12px;min-height:44px;width:100%}
+.btdigg-viewer-container{margin-top:12px}
+.btdigg-viewer-container[hidden]{display:none}
+#btdiggViewerFrame{display:block;width:100%;height:min(64dvh,700px);min-height:340px;border:1px solid #3a5947;border-radius:12px;background:#172127;color-scheme:light}
+#btdiggViewerFallback{display:inline-flex;min-height:44px;align-items:center;margin-top:7px}
+.btdigg-verification-sheet .sheet-actions{position:sticky;bottom:0;background:#101b24;padding:8px 0 0;z-index:1}
+@media(max-width:760px){
+ .btdigg-verification-sheet{width:100%;max-width:none;max-height:97dvh;padding:16px 13px;border-radius:18px 18px 0 0}
+ #btdiggViewerFrame{height:57dvh;min-height:300px}
+ .btdigg-verification-sheet .sheet-actions>button{flex:1;white-space:normal}
+}
