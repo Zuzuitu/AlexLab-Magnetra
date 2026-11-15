@@ -123,6 +123,98 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.searches,[])
         self.assertEqual(self.server.visits,["/v1/browser-state"]*2)
 
+    def test_manual_verified_second_tab_may_pass_gateway_without_source_probe(self):
+        state={
+            **good_state(),
+            "open_tabs": 2,
+            "verified_tabs": 1,
+            "selected_tab_verified": False,
+            "visible_source_rate_limited": True,
+            "visible_captcha_required": False,
+            "new_searches_paused": True,
+            "selected_tab_index": 0,
+            "last_upstream_http_status": None,
+            "tab_diagnostics": [
+                {"page_kind":"canonical_search","validation":"no_paired_rows",
+                 "paired_rows":0,"title_rows":0,"magnet_rows":0},
+                {"page_kind":"canonical_search","validation":"valid",
+                 "paired_rows":10,"title_rows":10,"magnet_rows":10},
+            ],
+        }
+        self.server.state=state
+        self.assertFalse(gw.browser_state_ready(state))
+        self.assertTrue(gw.browser_state_owner_verified_adoption_ready(state))
+        self.assertEqual(self.bridge.fetch("The dog stars 720p"),(200,HTML))
+        self.assertEqual(self.server.searches,["The dog stars 720p"])
+        self.assertEqual(self.server.visits,
+                         ["/v1/browser-state","/v1/search"])
+
+    def test_manual_adoption_gateway_rejects_unsafe_or_unverified_pair(self):
+        base={
+            **good_state(),
+            "open_tabs": 2, "verified_tabs": 1,
+            "selected_tab_verified": False,
+            "visible_source_rate_limited": True,
+            "visible_captcha_required": False,
+            "new_searches_paused": True,
+            "last_navigation_status": None,
+            "last_upstream_http_status": None,
+            "selected_tab_index": 0,
+            "tab_diagnostics": [
+                {"page_kind":"canonical_search","validation":"no_paired_rows",
+                 "paired_rows":0,"title_rows":0,"magnet_rows":0},
+                {"page_kind":"canonical_search","validation":"valid",
+                 "paired_rows":10,"title_rows":10,"magnet_rows":10},
+            ],
+        }
+        failures=(
+            {"visible_captcha_required":True},
+            {"visible_source_rate_limited":False},
+            {"last_navigation_status":429},
+            {"last_upstream_http_status":429},
+            {"open_tabs":3},
+            {"verified_tabs":2},
+            {"selected_tab_verified":True},
+            {"selected_tab_index":2},
+            {"new_searches_paused":False},
+            {"tab_diagnostics":[
+                base["tab_diagnostics"][0],
+                {"page_kind":"canonical_search","validation":"no_paired_rows",
+                 "paired_rows":0,"title_rows":0,"magnet_rows":0}]},
+            {"tab_diagnostics":[
+                base["tab_diagnostics"][0],
+                {"page_kind":"canonical_search","validation":"valid",
+                 "paired_rows":10,"title_rows":10,"magnet_rows":0}]},
+            {"tab_diagnostics":[
+                base["tab_diagnostics"][0],
+                {"page_kind":"other","validation":"valid",
+                 "paired_rows":10,"title_rows":10,"magnet_rows":10}]},
+        )
+        for override in failures:
+            with self.subTest(override=override):
+                self.server.state={**base,**override}
+                self.assertFalse(
+                    gw.browser_state_owner_verified_adoption_ready(
+                        self.server.state))
+                self.assertNotEqual(
+                    self.bridge.fetch("The dog stars 720p")[0],200)
+        self.assertEqual(self.server.searches,[])
+        self.assertEqual(self.server.visits,
+                         ["/v1/browser-state"]*len(failures))
+
+    def test_manual_adoption_accepts_safely_reversed_selected_tab_index(self):
+        old={"page_kind":"canonical_search","validation":"no_paired_rows",
+             "paired_rows":0,"title_rows":0,"magnet_rows":0}
+        verified={"page_kind":"canonical_search","validation":"valid",
+                  "paired_rows":10,"title_rows":10,"magnet_rows":10}
+        state={
+            **good_state(), "open_tabs":2,"verified_tabs":1,
+            "selected_tab_verified":False,"visible_source_rate_limited":True,
+            "new_searches_paused":True,"selected_tab_index":1,
+            "tab_diagnostics":[verified,old],
+        }
+        self.assertTrue(gw.browser_state_owner_verified_adoption_ready(state))
+
     def test_one_explicit_pwa_query_can_reach_ready_new_tab_recovery(self):
         self.server.state={
             **good_state(),

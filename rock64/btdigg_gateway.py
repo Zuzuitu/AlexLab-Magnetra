@@ -454,6 +454,53 @@ def browser_state_tab_recovery_ready(state):
     return False
 
 
+def browser_state_owner_verified_adoption_ready(state):
+    """Permit one explicit PWA request to adopt an owner-verified second tab.
+
+    Exactly the owner-observed arrangement: first selected source tab shows
+    a visible non-HTTP refusal, second manual tab contains real validated
+    BTDigg title/magnet rows. Do not trust mixed CAPTCHA, ambiguous tabs,
+    legacy snapshots, or prior genuine transport HTTP 429. This check is
+    read-only; the 18896 backend independently verifies both DOMs before
+    closing the obsolete refusal tab.
+    """
+    if not isinstance(state, dict):
+        return False
+    if (state.get("browser_connected") is not True
+            or type(state.get("open_tabs")) is not int
+            or state["open_tabs"] != 2
+            or type(state.get("verified_tabs")) is not int
+            or state["verified_tabs"] != 1
+            or state.get("selected_tab_verified") is not False
+            or state.get("visible_source_rate_limited") is not True
+            or state.get("visible_captcha_required") is not False
+            or state.get("new_searches_paused") is not True
+            or state.get("last_navigation_status") is not None
+            or state.get("last_upstream_http_status") not in (None, 200)):
+        return False
+    index = state.get("selected_tab_index")
+    tabs = state.get("tab_diagnostics")
+    if (type(index) is not int or index not in (0, 1)
+            or not isinstance(tabs, list) or len(tabs) != 2
+            or not all(isinstance(tab, dict) for tab in tabs)):
+        return False
+    old = tabs[index]
+    manual = tabs[1 - index]
+    return (
+        old.get("page_kind") == "canonical_search"
+        and old.get("validation") == "no_paired_rows"
+        and old.get("paired_rows") == 0
+        and manual.get("page_kind") == "canonical_search"
+        and manual.get("validation") == "valid"
+        and type(manual.get("paired_rows")) is int
+        and manual["paired_rows"] > 0
+        and type(manual.get("magnet_rows")) is int
+        and manual["magnet_rows"] > 0
+        and type(manual.get("title_rows")) is int
+        and manual["title_rows"] > 0
+    )
+
+
 class LocalChromiumBridge:
     """Fixed localhost HTTP transport; independent browser bearer credential."""
 
@@ -495,7 +542,8 @@ class LocalChromiumBridge:
                 return 503, b""
             state = json.loads(body)
             if not (browser_state_ready(state)
-                    or browser_state_tab_recovery_ready(state)):
+                    or browser_state_tab_recovery_ready(state)
+                    or browser_state_owner_verified_adoption_ready(state)):
                 # A visible source-owned "Too Many Requests" refusal is a
                 # confirmed page-level denial, even if its navigation returned
                 # HTTP 200. Expose the source-limit status to the PWA without

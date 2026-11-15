@@ -295,6 +295,47 @@ class VisibleBrowserFetcher:
         except Exception:
             pass
 
+    def _adopt_owner_verified_tab(self):
+        """At an explicit PWA search, adopt a manually verified BTDigg tab.
+
+        The selected old tab must visibly contain the source refusal and be
+        unverified; exactly one OTHER tab must have authentic title/magnet
+        pairs on a canonical BTDigg search page. Neither a read-only status
+        probe nor this adoption itself navigates to the source. Close the
+        stale old tab only AFTER validated results are already present.
+        """
+        try:
+            # A documented real upstream HTTP refusal is not overwritten
+            # merely by the presence of another browser tab.
+            if (self._source_stopped is not None
+                    or self._last_upstream_http_status == 429):
+                return False
+            pages = [p for p in self.page.context.pages if not p.is_closed()]
+            if len(pages) != 2 or self.page not in pages:
+                return False
+            old = self.page
+            candidate = next(p for p in pages if p is not old)
+            old_url = live_document_url(old)
+            if (not source_rate_limit_visible(old, old_url)
+                    or validated_result_html(old, old_url) is not None):
+                return False
+            candidate_url = live_document_url(candidate)
+            verified_html = validated_result_html(candidate, candidate_url)
+            if (verified_html is None
+                    or source_rate_limit_visible(candidate, candidate_url)
+                    or source_challenge_visible(candidate, candidate_url)):
+                return False
+            self._remember_verified(candidate_url, verified_html)
+            self._adopt_recovery_tab(old, candidate)
+            self._record_recovery("manual_verified_tab_adopted")
+            self._recovery_next_at = None
+            self._recovery_failures = 0
+            self._recovery_locked = False
+            return True
+        except Exception:
+            # A DOM/context inspection failure never closes either tab.
+            return False
+
     def _refusal_page_age_seconds(self):
         """Read navigation age from the open tab, no network activity.
 
@@ -596,6 +637,9 @@ class VisibleBrowserFetcher:
     def fetch(self, query):
         try:
             query_url(query)  # Validate without initiating any source request.
+            # This runs ONLY for an authenticated owner PWA /v1/search call;
+            # browser-state/healthz remain strictly read-only.
+            self._adopt_owner_verified_tab()
             existing_page, existing_html = self._verified_existing_query(query)
             if existing_html is not None:
                 # A manual search in another already-open tab is safe to read;

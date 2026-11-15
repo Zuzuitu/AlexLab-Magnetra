@@ -210,6 +210,7 @@ def main():
                         "source_http_non200", "visible_refusal",
                         "captcha_required", "unverified_result_html",
                         "verified_results", "navigation_exception",
+                        "manual_verified_tab_adopted",
                     }
                     if (type(attempts) is not int
                             or not 0 <= attempts <= 1_000_000

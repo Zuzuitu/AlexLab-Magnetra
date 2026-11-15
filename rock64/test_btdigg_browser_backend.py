@@ -484,6 +484,81 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(gateway.fetch("Other new query"), (429, b""))
         self.assertEqual(len(first.context.opened), 1)
 
+    def test_owner_verified_second_tab_adopted_without_new_source_request(self):
+        old = FakePage(valid=False)
+        old.rate_limited = True
+        manual = old.context.new_page()
+        manual.url = backend.query_url("The dog stars 720p")
+        manual.valid = True
+        fetcher = backend.VisibleBrowserFetcher(old)
+        preflight = fetcher.browser_state()
+        self.assertEqual(preflight["open_tabs"], 2)
+        self.assertFalse(preflight["selected_tab_verified"])
+        self.assertEqual(preflight["verified_tabs"], 1)
+        self.assertTrue(preflight["visible_source_rate_limited"])
+        self.assertFalse(old.closed, "read-only status never mutates tabs")
+        self.assertEqual(fetcher.fetch("THE DOG STARS 720P"),(200,HTML.encode()))
+        self.assertTrue(old.closed, "only verified adoption closes stale refusal")
+        self.assertFalse(manual.closed)
+        self.assertIs(fetcher.page, manual)
+        self.assertEqual(manual.goto_calls, [])
+        self.assertEqual(manual.submit_calls, 0)
+        self.assertEqual(len(old.context.opened), 1)
+        state = fetcher.browser_state()
+        self.assertEqual((state["open_tabs"],state["verified_tabs"]), (1,1))
+        self.assertTrue(state["selected_tab_verified"])
+        self.assertFalse(state["visible_source_rate_limited"])
+        self.assertFalse(state["new_searches_paused"])
+        self.assertEqual(state["pwa_tab_recovery_last_outcome"],
+                         "manual_verified_tab_adopted")
+
+    def test_owner_adopted_tab_can_submit_one_different_user_query(self):
+        old=FakePage(valid=False)
+        old.rate_limited=True
+        manual=old.context.new_page()
+        manual.url=backend.query_url("The dog stars 720p")
+        manual.valid=True
+        gateway=backend.VisibleBrowserFetcher(old)
+        self.assertEqual(gateway.fetch("Other movie 2026"),(200,HTML.encode()))
+        self.assertTrue(old.closed)
+        self.assertIs(gateway.page,manual)
+        self.assertEqual(manual.submit_calls,1)
+        self.assertEqual(manual.search_fills,["Other movie 2026"])
+        self.assertEqual(manual.goto_calls,[])
+        self.assertEqual(manual.url,backend.query_url("Other movie 2026"))
+
+    def test_manual_adoption_refuses_invalid_challenge_or_ambiguous_tab(self):
+        cases=("invalid_manual","captcha_manual","untrusted_manual",
+               "three_tabs","old_not_denied","real_http_429")
+        for variant in cases:
+            with self.subTest(variant=variant):
+                old=FakePage(valid=False)
+                old.rate_limited=True
+                manual=old.context.new_page()
+                manual.url=backend.query_url("The dog stars 720p")
+                manual.valid=True
+                gateway=backend.VisibleBrowserFetcher(old)
+                if variant=="invalid_manual":
+                    manual.valid=False
+                if variant=="captcha_manual":
+                    manual.valid=False
+                    manual.body_text="Please verify you are human"
+                if variant=="untrusted_manual":
+                    manual.url="https://example.invalid/source"
+                if variant=="three_tabs":
+                    old.context.new_page()
+                if variant=="old_not_denied":
+                    old.rate_limited=False
+                if variant=="real_http_429":
+                    gateway._source_stopped=429
+                    gateway._last_upstream_http_status=429
+                self.assertFalse(gateway._adopt_owner_verified_tab())
+                self.assertFalse(old.closed)
+                self.assertFalse(manual.closed)
+                self.assertIs(gateway.page,old)
+                self.assertEqual(manual.goto_calls,[])
+                self.assertEqual(manual.submit_calls,0)
+
     def test_failure_reason_for_upstream_http_or_invalid_html(self):
         for status,reason in ((429,"upstream_http_429"),
                               (503,"upstream_http_non200"),
