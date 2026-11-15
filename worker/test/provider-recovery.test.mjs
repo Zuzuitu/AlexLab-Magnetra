@@ -34,6 +34,8 @@ test("provider error categories distinguish timeouts, rate limits, access denial
  assert.equal(classifyProviderError("BTDigg Rock64 tunnel Cloudflare 1042.").code,"BTDIGG_TUNNEL_1042");
  assert.equal(classifyProviderError("BTDigg Rock64 gateway transport failed.").code,"BTDIGG_TUNNEL_ERROR");
  assert.equal(classifyProviderError("BTDigg Rock64 local pacing.").code,"BTDIGG_LOCAL_PACING");
+ assert.equal(classifyProviderError("BTDigg Chromium human verification required.").code,"BTDIGG_CAPTCHA_REQUIRED");
+ assert.equal(classifyProviderError("BTDigg Chromium visible source refusal (not HTTP 429).").code,"BTDIGG_VISIBLE_REFUSAL");
  assert.match(classifyProviderError("BTDigg Rock64 local pacing.").message,/gateway is spacing requests/);
 });
 test("provider timeouts have explicit recovery metadata, not opaque failure text",async()=>{
