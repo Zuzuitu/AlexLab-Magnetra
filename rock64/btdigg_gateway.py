@@ -541,6 +541,12 @@ class LocalChromiumBridge:
             if status != 200 or "application/json" not in mime:
                 return 503, b""
             state = json.loads(body)
+            # A human-verification page is a distinct, non-rate-limit state.
+            # Only the authenticated local browser can confirm that its
+            # visible DOM requires manual input. Do not navigate or retry.
+            if (isinstance(state, dict)
+                    and state.get("visible_captcha_required") is True):
+                return 428, b""
             if not (browser_state_ready(state)
                     or browser_state_tab_recovery_ready(state)
                     or browser_state_owner_verified_adoption_ready(state)):
