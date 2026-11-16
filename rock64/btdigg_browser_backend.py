@@ -808,7 +808,19 @@ class VisibleBrowserFetcher:
             if (self._source_stopped is None
                     and source_challenge_visible(self.page)):
                 return self._attempt_simple_recaptcha_checkbox(query)
-            self._adopt_owner_verified_tab(query)
+            adopted = self._adopt_owner_verified_tab(query)
+            if not adopted:
+                # A 3+-tab context must never bypass failed adoption by
+                # scanning and returning a matching but ambiguous document.
+                # In particular, no new source request may be submitted.
+                open_pages = [
+                    p for p in self.page.context.pages if not p.is_closed()
+                ]
+                if len(open_pages) >= 3:
+                    refused = any(
+                        source_rate_limit_visible(p) for p in open_pages
+                    )
+                    return (425 if refused else 503), b""
             existing_page, existing_html = self._verified_existing_query(query)
             if existing_html is not None:
                 # A manual search in another already-open tab is safe to read;
