@@ -525,6 +525,7 @@ class VisibleBrowserFetcher:
                 if challenge:
                     result = self._attempt_simple_recaptcha_checkbox(query)
                     if result[0] == 200:
+                        self._record_recovery("verified_after_checkbox", 200)
                         self._source_stopped = None
                         self._recovery_locked = False
                         self._recovery_failures = 0
