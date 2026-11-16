@@ -541,13 +541,26 @@ class LocalChromiumBridge:
             if status != 200 or "application/json" not in mime:
                 return 503, b""
             state = json.loads(body)
-            # A human-verification page is a distinct, non-rate-limit state.
-            # Only the authenticated local browser can confirm that its
-            # visible DOM requires manual input. Do not navigate or retry.
-            if (isinstance(state, dict)
-                    and state.get("visible_captcha_required") is True):
+            # Source CAPTCHA is distinct from rate-limit. Only an explicit
+            # authenticated owner search may reach the Chromium backend's
+            # one-click-per-document helper; read-only status never mutates UI.
+            # Any ambiguous tabs, refusal, real HTTP 429 or missing fields
+            # must still fail closed (428), not navigate or click.
+            captcha = isinstance(state, dict) and (
+                state.get("visible_captcha_required") is True)
+            captcha_safe = captcha and (
+                state.get("browser_connected") is True
+                and type(state.get("open_tabs")) is int
+                and state["open_tabs"] == 1
+                and type(state.get("verified_tabs")) is int
+                and state["verified_tabs"] == 0
+                and state.get("selected_tab_verified") is False
+                and state.get("visible_source_rate_limited") is False
+                and state.get("last_upstream_http_status") != 429
+                and state.get("selected_tab_index") == 0)
+            if captcha and not captcha_safe:
                 return 428, b""
-            if not (browser_state_ready(state)
+            if not (captcha_safe or browser_state_ready(state)
                     or browser_state_tab_recovery_ready(state)
                     or browser_state_owner_verified_adoption_ready(state)):
                 # A visible source-owned "Too Many Requests" refusal is a
@@ -569,6 +582,10 @@ class LocalChromiumBridge:
                 # A 5-second *local* denial by the browser process must not
                 # create the production gateway's five-minute source lock.
                 return (503 if scope == "local-pacing" else 429), b""
+            if status == 428:
+                # Checkbox could not complete; keep the existing private
+                # human-verification viewer as the safe fallback.
+                return 428, b""
             if status == 425:
                 # Local browser has a visible non-HTTP refusal; 30-second
                 # user-triggered recovery is enforced by browser state.
