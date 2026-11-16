@@ -158,6 +158,51 @@ def source_rate_limit_visible(page, live_url=None):
         return False
 
 
+def _recaptcha_frame_kind(url):
+    """Allowlist Google-hosted reCAPTCHA v2 frames, not arbitrary iframes."""
+    try:
+        value = urlsplit(url)
+        if (value.scheme != "https"
+                or value.hostname not in ("www.google.com", "www.recaptcha.net")
+                or value.username is not None or value.password is not None
+                or value.port not in (None, 443)):
+            return None
+        if value.path in ("/recaptcha/api2/anchor", "/recaptcha/enterprise/anchor"):
+            return "anchor"
+        if value.path in ("/recaptcha/api2/bframe", "/recaptcha/enterprise/bframe"):
+            return "image_challenge"
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
+def simple_recaptcha_checkbox(page):
+    """Locate one visible unchecked checkbox; never solve image tiles.
+
+    No clicking or browser mutation occurs in this read-only helper.
+    """
+    try:
+        if page.is_closed() or not source_landing(live_document_url(page)):
+            return None
+        frames = page.frames
+        if any(_recaptcha_frame_kind(frame.url) == "image_challenge"
+               for frame in frames):
+            return None
+        candidates = []
+        for frame in frames:
+            if _recaptcha_frame_kind(frame.url) != "anchor":
+                continue
+            if not frame.frame_element().is_visible():
+                continue
+            checkbox = frame.locator("#recaptcha-anchor")
+            if (checkbox.count() == 1 and checkbox.is_visible()
+                    and checkbox.get_attribute("aria-checked") == "false"):
+                candidates.append(checkbox)
+        return candidates[0] if len(candidates) == 1 else None
+    except Exception:
+        return None
+
+
 def source_challenge_visible(page, live_url=None):
     """Read-only detection of recognizable human-verification UI.
 
@@ -174,6 +219,9 @@ def source_challenge_visible(page, live_url=None):
             return False
         if validated_result_html(page, live_url) is not None:
             return False
+        # Captcha checkbox text can live only in its Google cross-origin iframe.
+        if simple_recaptcha_checkbox(page) is not None:
+            return True
         body = page.locator("body").inner_text(timeout=1500)
         if not isinstance(body, str) or len(body) > 1800:
             return False
