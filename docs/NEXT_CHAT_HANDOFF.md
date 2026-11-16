@@ -1,3 +1,17 @@
+## 16 NOV 2026 — OWNER-REQUESTED ONE-SHOT SIMPLE RECAPTCHA CHECKBOX (SOURCE PILOT)
+
+Owner explicitly requested that Magnetra try the visible "I'm not a robot" checkbox without asking for a manual tap. This is a single UI attempt, not an image puzzle solver, verification token bypass, proxy rotation or a guarantee that reCAPTCHA will accept automation. The branch changes ONLY the Rock64 18896 Playwright browser backend, 8796 private Chromium bridge, synthetic offline tests and invariants; Cloudflare PWA/Worker, TPB, Flud, NexaCore, Tailscale/noVNC and other Rock64 services are not changed.
+
+Architecture: one authenticated owner-started PWA BTDigg search can enter the private Chromium search endpoint even when read-only browser-state reports a visible human challenge. Chromium requires one canonical btdig.com/search?order=0&q=... tab, zero verified result rows, no source refusal or documented HTTP 429, and exactly one visible unchecked #recaptcha-anchor in an allowlisted Google reCAPTCHA iframe on www.google.com or www.recaptcha.net. Any image-challenge bframe blocks the attempt. The top-level document is marked attempted BEFORE one Playwright click; maximum one click per document and 128 distinct attempted documents per browser process. No background status/health/watchdog interaction. After bounded same-page observation, only authentic result/magnet pairs bound to the REQUESTED query may be returned. If the CAPTCHA was on a different title tab, the regular verified form path submits the actual owner query once. Unresolved/image/ambiguous challenge returns private HTTP 428; existing HTTPS tailnet noVNC viewer remains the fallback.
+
+The same single attempt is available when an owner-started form navigation or guarded new-tab recovery encounters a visible checkbox. Genuine HTTP 429 and visible Too Many Requests refusals retain distinct existing cooldown and stopping rules. CI must NEVER send real BTDigg or CAPTCHA requests, and must not log cookies, profile, query values, magnets or credentials.
+
+Release boundary: SOURCE/TEST only. A GitHub merge does not reload the running Python 18896/8796 processes. Before any activation, perform read-only local checks and backups, then a separately approved guarded browser-only and gateway-only update in a safe window. Preserve the verified Chromium profile. No OS reboot, noVNC/Tailscale change, Plex/NexaCore restart, or Cloudflare deploy. Live CAPTCHA success is NOT proven without an owner-observed accepted checkbox and results for the requested query.
+
+Synthetic acceptance: accepted same-term checkbox -> genuine rows and zero extra navigation; prior-term Deep Water vs requested The Dog Stars -> one verified form submission to the requested term; rejected checkbox -> 428 and only one click ever for that document; image frame, foreign/hidden/ambiguous iframe, multiple tabs or HTTP 429 -> no click; browser-state remains read-only.
+
+---
+
 ## 16 NOV 2026 — BTDIGG PWA 30S SPACING BUG AFTER SUCCESS
 
 Owner confirmed actual BTDigg "The Dog Stars 1080p" result (one correctly
