@@ -8,9 +8,9 @@ CHECKER = Path(__file__).with_name("check-btdigg-browser-backend.py")
 
 
 class BrowserStatusOutcomeTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.check = runpy.run_path(str(CHECKER))["valid_recovery_outcome"]
+    def setUp(self):
+        # Store as an instance attribute so Python does not bind self.
+        self.check = runpy.run_path(str(CHECKER))["valid_recovery_outcome"]
 
     def test_checkbox_success_is_safe_diagnostic(self):
         self.assertTrue(self.check("verified_after_checkbox"))
