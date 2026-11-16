@@ -899,6 +899,36 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(len(old.context.opened),1,
                          "no automatic CAPTCHA bypass or tab rotation")
 
+    def test_new_recovery_tab_simple_checkbox_accepted_without_manual_step(self):
+        class BootMarker:
+            def boot_attempted_this_boot(self): return True
+            def remember_verified(self, _query): pass
+        now=[0.0]
+        old=FakePage(url="about:blank",valid=False)
+        created=[]
+        original=old.context.new_page
+        def challenge_new_tab():
+            new=original()
+            new.after_navigation_valid=False
+            new.body_text="Please verify you are human"
+            captcha=FakeRecaptchaFrame(new,accepted=True)
+            new.frames=[captcha]
+            created.append(captcha)
+            return new
+        old.context.new_page=challenge_new_tab
+        gateway=backend.VisibleBrowserFetcher(old,BootMarker(),clock=lambda:now[0])
+        gateway.browser_state()
+        now[0]+=30
+        self.assertEqual(gateway.fetch("Owner 2026"),(200,HTML.encode()))
+        self.assertEqual(len(created),1)
+        self.assertEqual(created[0].clicks,1)
+        self.assertTrue(old.closed)
+        self.assertIs(gateway.page,old.context.opened[0])
+        self.assertEqual(gateway.page.submit_calls,0)
+        self.assertEqual(gateway.browser_state()["pwa_tab_recovery_last_outcome"],
+                         "verified_after_checkbox")
+        self.assertTrue(gateway.browser_state()["selected_tab_verified"])
+
     def test_untrusted_navigation_discards_only_new_tab(self):
         class Marker:
             def boot_attempted_this_boot(self):
