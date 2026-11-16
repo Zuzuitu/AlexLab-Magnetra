@@ -7,7 +7,7 @@ import {webcrypto} from "node:crypto";
 const source=readFileSync(new URL("../../web/app.js",import.meta.url),"utf8");
 const magnet="magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567";
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json"}});
-function harness(fetcher,initialStorage={},query=""){
+function harness(fetcher,initialStorage={},query="",clockDate=Date,timer=(cb)=>setTimeout(cb,0)){
  const storage=new Map(Object.entries(initialStorage));
  const localStorage={
   getItem:key=>storage.get(key)??null,
@@ -30,8 +30,8 @@ function harness(fetcher,initialStorage={},query=""){
   localStorage,
   location:{origin:"https://index.alexlab.media",search:query},
   fetch:fetcher,crypto:webcrypto,URL,URLSearchParams,AbortController,
-  Response,DOMException,Date,Promise,Set,Map,
-  setTimeout:(cb)=>setTimeout(cb,0),clearTimeout,
+  Response,DOMException,Date:clockDate,Promise,Set,Map,
+  setTimeout:timer,clearTimeout,
  };
  runInNewContext(source+`
  renderResults=()=>{};
@@ -338,6 +338,101 @@ test("rapid BTDigg distinct searches wait locally and aborted waits never reach 
  assert.equal(calls,0,"cancelled, not-yet-sent searches do not hit Rock64");
 });
 
+
+
+test("BTDigg 30s gap is anchored at dispatch even when source result arrives 45s later",async()=>{
+ let now=1_700_000_000_000;
+ class FakeDate extends Date{static now(){return now;}}
+ let resolveFirst;
+ const requests=[];
+ const {api,element}=harness(async(path)=>{
+  requests.push({query:new URL(path,"https://index.alexlab.media").searchParams.get("q"),at:now});
+  if(requests.length===1)return await new Promise(resolve=>{resolveFirst=resolve;});
+  return json({results:[{id:"fixture2",provider:"btdigg",name:"Second result"}],
+   stats:[{provider:"btdigg",ok:true,count:1}],errors:[]});
+ },{},"",FakeDate);
+ element("query").value="The Dog Stars 1080p";
+ element("category").value="movies";
+ api.state.selected=new Set(["btdigg"]);
+ const first=api.search();
+ await tick();
+ assert.equal(requests.length,1);
+ assert.equal(api.btdiggPacing.nextAllowedAt,now+30_000,
+  "stamp exactly at the FIRST outgoing PWA request");
+ now+=45_000; // CAPTCHA or slow backend consumed the entire minimum interval.
+ resolveFirst(json({results:[{id:"fixture1",provider:"btdigg",name:"First result"}],
+  stats:[{provider:"btdigg",ok:true,count:1}],errors:[]}));
+ await first;
+ assert.equal(api.btdiggWaitMs("Completely different title",now),0,
+  "response completion must not start a NEW 30-second countdown");
+ element("query").value="Completely different title";
+ await api.search();
+ assert.equal(requests.length,2,"new query dispatched immediately after long first request");
+ assert.equal(requests[1].at-now,0);
+ assert.equal(api.btdiggPacing.nextAllowedAt,now+30_000);
+});
+
+test("fast successful BTDigg request retains only unelapsed portion of original 30s",async()=>{
+ let now=1_700_000_000_000;
+ class FakeDate extends Date{static now(){return now;}}
+ let resolveFirst;
+ const {api,element}=harness(async()=>new Promise(resolve=>{resolveFirst=resolve}),{},"",FakeDate);
+ element("query").value="First PSA title";
+ element("category").value="movies";
+ api.state.selected=new Set(["btdigg"]);
+ const pending=api.search();
+ await tick();
+ now+=9_000;
+ resolveFirst(json({results:[],stats:[{provider:"btdigg",ok:true,count:0}],errors:[]}));
+ await pending;
+ assert.equal(api.btdiggWaitMs("Second title",now),21_000,
+  "protect the source for remaining time only, not a fresh 30s");
+ now+=21_000;
+ assert.equal(api.btdiggWaitMs("Second title",now),0);
+});
+
+test("manual CAPTCHA after long response never re-arms a full 30s pacing penalty",async()=>{
+ let now=1_700_000_000_000;
+ class FakeDate extends Date{static now(){return now;}}
+ let release;
+ const {api,element}=harness(async()=>new Promise(resolve=>{release=resolve}),{},"",FakeDate);
+ element("query").value="Current 1080p release";
+ element("category").value="movies";
+ api.state.selected=new Set(["btdigg"]);
+ const pending=api.search();
+ await tick();
+ now+=65_000; // Owner used embedded VNC to solve source challenge.
+ release(json({results:[],stats:[{provider:"btdigg",ok:false,count:0}],
+  errors:[{provider:"btdigg",code:"BTDIGG_CAPTCHA_REQUIRED",retryable:false}]}));
+ await pending;
+ assert.equal(api.btdiggWaitMs("New search",now),0);
+ assert.equal(api.state.lastFailedSourcesCount,1);
+ assert.equal(api.btdiggCooldownRemainingMs(now),0,
+  "manual CAPTCHA is not a genuine source HTTP 429");
+});
+
+test("single guarded refusal retry timestamps second request, not slow completion",async()=>{
+ let now=1_700_000_000_000;
+ class FakeDate extends Date{static now(){return now;}}
+ const sent=[];
+ const timer=(cb)=>setTimeout(()=>{now+=30_000;cb()},0);
+ const {api,element}=harness(async(path)=>{
+  sent.push(now);
+  if(sent.length===1)return json({results:[],stats:[{provider:"btdigg",ok:false,count:0}],
+   errors:[{provider:"btdigg",code:"BTDIGG_VISIBLE_REFUSAL"}]});
+  now+=50_000; // Final response (from second request) arrives much later.
+  return json({results:[{id:"success",provider:"btdigg",name:"Fixture result"}],
+   stats:[{provider:"btdigg",ok:true,count:1}],errors:[]});
+ },{},"",FakeDate,timer);
+ element("query").value="Test BTDigg";
+ element("category").value="movies";
+ api.state.selected=new Set(["btdigg"]);
+ await api.search();
+ assert.deepEqual(sent,[1_700_000_000_000,1_700_000_030_000]);
+ assert.equal(api.btdiggWaitMs("Next title",now),0,
+  "after a slow retry, the time from its dispatch is already consumed");
+ assert.equal(api.btdiggPacing.nextAllowedAt,1_700_000_060_000);
+});
 
 test("BTDigg local pacing cannot create a persistent 429; TPB results continue on both manual searches",async()=>{
  const calls=[];
