@@ -333,19 +333,38 @@ class VisibleBrowserFetcher:
             and 100 <= http_status <= 599 else None
         )
 
-    def _adopt_recovery_tab(self, original, fresh):
-        """Retain the newly loaded BTDigg tab for inspection or CAPTCHA.
+    def _adopt_recovery_tab(self, original, fresh, *,
+                            preserve_dual_refusal=False):
+        """Adopt a verified source-owned tab; optionally retain two refusals.
 
-        Only call after verifying its URL is the canonical requested BTDigg
-        search. The fresh tab becomes authoritative BEFORE closing the old
-        stale tab. Closing the old GUI tab is best effort, not a new search.
+        With exactly two source-owned, visibly refused documents, retain BOTH
+        for the owner's comparison. Neither tab is verified; the recovery is
+        terminal and cannot automatically create a third tab. A prior blank
+        tab is always closed, and successful results still replace old tabs.
+        Return True only when the two refusal tabs were safely retained.
         """
+        keep_both = False
+        if preserve_dual_refusal:
+            try:
+                pages = [p for p in original.context.pages if not p.is_closed()]
+                keep_both = (
+                    len(pages) == 2 and original in pages and fresh in pages
+                    and source_rate_limit_visible(original)
+                    and source_rate_limit_visible(fresh)
+                    and validated_result_html(original) is None
+                    and validated_result_html(fresh) is None
+                )
+            except Exception:
+                keep_both = False
         self.page = fresh
         self.reference_page = fresh
+        if keep_both:
+            return True
         try:
             original.close()
         except Exception:
             pass
+        return False
 
     def _adopt_owner_verified_tab(self):
         """At an explicit PWA search, adopt a manually verified BTDigg tab.
@@ -457,12 +476,11 @@ class VisibleBrowserFetcher:
             self._recovery_locked = True
 
     def _recover_in_one_new_tab(self, query):
-        """One owner-requested navigation, no retry or CAPTCHA automation.
+        """One owner-requested navigation; no loop or source-rate-limit bypass.
 
-        Keep the NEW tab when it reaches the requested canonical BTDigg page,
-        even if it displays a source refusal or CAPTCHA. Close the OLD stale
-        tab, not the new evidence. If navigation never reaches that trusted
-        page, preserve the original and discard only the invalid new tab.
+        Keep both canonical refused tabs as evidence when both show the same
+        visible source denial. Otherwise replace the stale/blank tab with the
+        new source-owned tab. An untrusted new tab is always discarded.
         """
         original = self.page
         fresh = None
@@ -493,7 +511,9 @@ class VisibleBrowserFetcher:
                 self._record_recovery("source_http_429", 429)
                 self._stop_navigation(429, "upstream_http_429", 429)
                 self._recovery_failed(terminal=True)
-                self._adopt_recovery_tab(original, fresh)
+                self._adopt_recovery_tab(
+                    original, fresh, preserve_dual_refusal=True
+                )
                 fresh = None
                 return 429, b""
             if http_status != 200:
@@ -516,11 +536,13 @@ class VisibleBrowserFetcher:
                     "unverified_result_html",
                     200,
                 )
-                # Preserve a trusted new source-owned tab. On a CAPTCHA
-                # attempt its ONE visible checkbox inside the same owner
-                # search, without requesting another source document.
-                # Image puzzles or unavailable checkboxes remain human-only.
-                self._adopt_recovery_tab(original, fresh)
+                # Preserve both tabs only when BOTH show source refusals;
+                # otherwise replace the old blank/refusal as before. On a
+                # CAPTCHA, attempt only the eligible checkbox in the new tab.
+                # A retained pair is terminal; never auto-create a third tab.
+                kept_two_refusals = self._adopt_recovery_tab(
+                    original, fresh, preserve_dual_refusal=denied
+                )
                 fresh = None
                 if challenge:
                     result = self._attempt_simple_recaptcha_checkbox(query)
@@ -533,7 +555,9 @@ class VisibleBrowserFetcher:
                         return result
                     self._recovery_failed(terminal=True)
                     return 428, b""
-                self._recovery_failed(terminal=not denied)
+                self._recovery_failed(
+                    terminal=not denied or kept_two_refusals
+                )
                 return (425 if denied else 503), b""
 
             self._remember_verified(current_url, html)
