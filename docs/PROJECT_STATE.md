@@ -1,3 +1,35 @@
+## 16 NOV 2026 — BTDIGG PWA 30S SPACING BUG AFTER SUCCESS
+
+Owner confirmed actual BTDigg "The Dog Stars 1080p" result (one correctly
+classified quality alternative from UIndex, not an exact PSA). After the
+successful search, MORE than 30 seconds had already elapsed since the
+BTDigg request started, but PWA still forced a new 30-second wait before
+the next distinct search.
+
+Reviewed source shows the bug precisely: the initial PWA BTDigg dispatch
+set btdiggPacing.nextAllowedAt=Date.now()+30s, but search() then
+UNCONDITIONALLY set the same field again at response/completion, as well
+as after errors/cancellation. A slow query or manual CAPTCHA could consume
+the entire original interval, only to see it restart AFTER success.
+
+Fix stamps ONLY the outgoing initial API request and (if needed) the
+single separate guarded new-tab retry request. Successful result,
+CAPTCHA, source error, timeout, and user cancellation NEVER rearm another
+full 30-second pacing delay. Later distinct user query waits only for
+whatever remains since LAST ACTUAL REQUEST DISPATCH; e.g. a query
+returned after 45 seconds has zero additional local wait. Genuine HTTP
+429 cooldown remains a separate source-controlled gate. The backend's
+own independent 18896/8796 source guard remains authoritative.
+
+Offline JS VM synthetic clock tests cover slow 45s successes, a quick 9s
+success with 21s remaining, manual CAPTCHA response after 65s, and slow
+one-shot retry completion anchored to SECOND request start. No Rock64
+service changes, no Chromium restart, no secret logging, and no automatic
+unattended requests. Source PR/CI and a separate scoped Cloudflare PWA
+deploy are required before calling the live iPhone UX fixed.
+
+---
+
 ## 15 NOV 2026 — OWNER REQUIRES ONE AUTOMATIC NEW-TAB ATTEMPT ON VISIBLE BTDIGG REFUSAL
 
 Real iPhone PWA embedded noVNC screenshot confirms HTTPS private Tailscale
