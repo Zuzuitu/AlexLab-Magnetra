@@ -1008,6 +1008,91 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(challenged.context.opened,[])
         self.assertFalse(challenged.closed)
 
+    def test_simple_checkbox_clicked_once_and_same_query_reused(self):
+        page=FakePage(valid=False)
+        captcha=FakeRecaptchaFrame(page,accepted=True)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertTrue(gateway.browser_state()["visible_captcha_required"])
+        self.assertEqual(captcha.clicks,0,
+                         "read-only status must never click CAPTCHA")
+        status,body=gateway.fetch("The Dog Stars 2026")
+        self.assertEqual((status,body),(200,HTML.encode()))
+        self.assertEqual(captcha.clicks,1)
+        self.assertEqual(page.submit_calls,0)
+        self.assertEqual(page.goto_calls,[])
+        self.assertFalse(gateway.browser_state()["visible_captcha_required"])
+
+    def test_after_checkbox_acceptance_searches_original_requested_query(self):
+        page=FakePage(url=backend.query_url("Deep Water 2025"),valid=False)
+        captcha=FakeRecaptchaFrame(page,accepted=True)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"),
+                         (200,HTML.encode()))
+        self.assertEqual(captcha.clicks,1)
+        self.assertEqual(page.search_fills,["The Dog Stars 2026"])
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(page.goto_calls,[])
+        self.assertEqual(backend.source_query(page.url),"The Dog Stars 2026")
+
+    def test_unaccepted_checkbox_is_attempted_once_per_document(self):
+        page=FakePage(valid=False)
+        captcha=FakeRecaptchaFrame(page,accepted=False)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
+        self.assertEqual(captcha.clicks,1,"never loop or re-click document")
+        self.assertEqual(page.submit_calls,0)
+        self.assertEqual(page.goto_calls,[])
+        self.assertEqual(len(page.waits),6)
+
+    def test_captcha_image_challenge_is_never_clicked_or_solved(self):
+        page=FakePage(valid=False)
+        page.body_text="Please verify you are human"
+        anchor=FakeRecaptchaFrame(page,accepted=True)
+        image=FakeRecaptchaFrame(
+            page,url="https://www.google.com/recaptcha/api2/bframe?k=fixture")
+        page.frames=[anchor,image]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
+        self.assertEqual(anchor.clicks,0)
+        self.assertEqual(image.clicks,0)
+        self.assertEqual(page.submit_calls,0)
+
+    def test_untrusted_hidden_or_ambiguous_checkbox_never_clicks(self):
+        for variant in ("untrusted","hidden","duplicate","multiple_tabs"):
+            with self.subTest(variant=variant):
+                page=FakePage(valid=False)
+                page.body_text="I'm not a robot"
+                captcha=FakeRecaptchaFrame(page,accepted=True)
+                if variant=="untrusted":
+                    captcha.url="https://evil.example/recaptcha/api2/anchor"
+                elif variant=="hidden":
+                    captcha.visible=False
+                elif variant=="duplicate":
+                    page.frames=[FakeRecaptchaFrame(page,accepted=True)]
+                elif variant=="multiple_tabs":
+                    page.context.new_page()
+                page.frames.append(captcha)
+                gateway=backend.VisibleBrowserFetcher(page)
+                self.assertEqual(gateway.fetch("Owner query"),(428,b""))
+                self.assertEqual(captcha.clicks,0)
+                self.assertEqual(page.submit_calls,0)
+
+    def test_new_challenge_after_form_submit_attempts_checkbox_once(self):
+        page=FakePage(valid=True)
+        page.after_navigation_valid=False
+        page.body_text="Please verify you are human"
+        captcha=FakeRecaptchaFrame(page,accepted=True)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("New query"),(200,HTML.encode()))
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(captcha.clicks,1)
+        self.assertEqual(page.goto_calls,[])
+
     def test_captcha_hints_inside_verified_results_are_not_a_human_gate(self):
         page=FakePage(valid=True)
         page.body_text="A release called I'm not a robot"
