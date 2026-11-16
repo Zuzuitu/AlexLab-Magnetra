@@ -576,7 +576,9 @@ class LocalChromiumBridge:
                 return 503, b""
             path = "/v1/search?q=" + quote(query, safe="")
             status, html, mime, scope = self._read(
-                path, "text/html", SIZE_LIMIT, 11
+                # Allow the single 1.8s checkbox observation plus the
+                # existing bounded form navigation; Worker caps at 16s.
+                path, "text/html", SIZE_LIMIT, 14
             )
             if status == 429:
                 # A 5-second *local* denial by the browser process must not
