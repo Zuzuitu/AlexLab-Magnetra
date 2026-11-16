@@ -67,9 +67,14 @@ m=re.fullmatch(r"MAGNETRA_BTDIGG_TOKEN=([A-Za-z0-9_-]{48,256})\n",s)
 if m is None: raise SystemExit(1)
 r=Request("http://127.0.0.1:8796/healthz",
           headers={"Authorization":"Bearer "+m.group(1)})
-with urlopen(r,timeout=3) as response:
-    if response.status!=200 or response.read(100)!=b'{"ok":true}':
-        raise SystemExit(1)
+try:
+    with urlopen(r,timeout=3) as response:
+        if response.status!=200 or response.read(100)!=b'{"ok":true}':
+            raise SystemExit(1)
+except OSError:
+    # Expected while systemd has restarted but Python has not bound 8796.
+    # Caller retries privately; avoid noisy tracebacks for a normal startup.
+    raise SystemExit(1)
 PY
 }
 wait_health(){
