@@ -57,11 +57,15 @@ class FakePage:
         self.live_url_override=None
         self.evaluate_count=0
         self.navigation_age_ms=0.0
+        self.document_time_ms=1700000000000.0
+        self.frames=[]
 
     def evaluate(self, script):
         self.evaluate_count += 1
         if script == backend.PAGE_AGE_SCRIPT:
             return self.navigation_age_ms
+        if script == "() => performance.timeOrigin":
+            return self.document_time_ms
         assert script == "() => window.location.href"
         return self.live_url_override if self.live_url_override is not None else self.url
 
@@ -125,6 +129,41 @@ class FakePage:
 
     def is_closed(self):
         return self.closed
+
+
+class FakeRecaptchaFrame:
+    """Synthetic Google checkbox; no real CAPTCHA requests or secrets."""
+    def __init__(self, page, *, accepted=False, visible=True,
+                 url="https://www.google.com/recaptcha/api2/anchor?k=fixture"):
+        self.page=page
+        self.url=url
+        self.accepted=accepted
+        self.visible=visible
+        self.clicks=0
+
+    def frame_element(self):
+        return self
+
+    def is_visible(self):
+        return self.visible
+
+    def locator(self, selector):
+        assert selector=="#recaptcha-anchor"
+        parent=self
+        class Checkbox:
+            def count(self): return 1
+            def is_visible(self): return parent.visible
+            def get_attribute(self, name):
+                assert name=="aria-checked"
+                return "false"
+            def click(self, **kwargs):
+                assert kwargs.get("timeout")==1200
+                parent.clicks+=1
+                if parent.accepted:
+                    parent.page.valid=True
+                    parent.page.body_text=""
+                    parent.page.frames=[]
+        return Checkbox()
 
 
 class BrowserBackendTests(TestCase):
@@ -845,7 +884,7 @@ class BrowserBackendTests(TestCase):
         gateway=backend.VisibleBrowserFetcher(old,Marker(),clock=lambda:now[0])
         gateway.browser_state()
         now[0]+=30
-        self.assertEqual(gateway.fetch("The Dog Stars 2026"),(503,b""))
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"),(428,b""))
         new=old.context.opened[0]
         self.assertTrue(old.closed)
         self.assertFalse(new.closed)
@@ -856,9 +895,39 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(state["pwa_tab_recovery_last_outcome"],
                          "captcha_required")
         self.assertEqual(state["pwa_tab_recovery_attempts"],1)
-        self.assertEqual(gateway.fetch("Different query"),(503,b""))
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
         self.assertEqual(len(old.context.opened),1,
                          "no automatic CAPTCHA bypass or tab rotation")
+
+    def test_new_recovery_tab_simple_checkbox_accepted_without_manual_step(self):
+        class BootMarker:
+            def boot_attempted_this_boot(self): return True
+            def remember_verified(self, _query): pass
+        now=[0.0]
+        old=FakePage(url="about:blank",valid=False)
+        created=[]
+        original=old.context.new_page
+        def challenge_new_tab():
+            new=original()
+            new.after_navigation_valid=False
+            new.body_text="Please verify you are human"
+            captcha=FakeRecaptchaFrame(new,accepted=True)
+            new.frames=[captcha]
+            created.append(captcha)
+            return new
+        old.context.new_page=challenge_new_tab
+        gateway=backend.VisibleBrowserFetcher(old,BootMarker(),clock=lambda:now[0])
+        gateway.browser_state()
+        now[0]+=30
+        self.assertEqual(gateway.fetch("Owner 2026"),(200,HTML.encode()))
+        self.assertEqual(len(created),1)
+        self.assertEqual(created[0].clicks,1)
+        self.assertTrue(old.closed)
+        self.assertIs(gateway.page,old.context.opened[0])
+        self.assertEqual(gateway.page.submit_calls,0)
+        self.assertEqual(gateway.browser_state()["pwa_tab_recovery_last_outcome"],
+                         "verified_after_checkbox")
+        self.assertTrue(gateway.browser_state()["selected_tab_verified"])
 
     def test_untrusted_navigation_discards_only_new_tab(self):
         class Marker:
@@ -941,7 +1010,7 @@ class BrowserBackendTests(TestCase):
         gateway = backend.VisibleBrowserFetcher(challenged,clock=lambda:now[0])
         now[0] += 999999
         self.assertFalse(gateway.browser_state()["pwa_tab_recovery_ready"])
-        self.assertEqual(gateway.fetch("Requested 2026"),(503,b""))
+        self.assertEqual(gateway.fetch("Requested 2026"),(428,b""))
         self.assertEqual(challenged.context.opened,[])
         limited = FakePage(valid=False)
         limited.rate_limited = True
@@ -965,9 +1034,94 @@ class BrowserBackendTests(TestCase):
         self.assertIsNone(state["pwa_tab_recovery_reason"])
         self.assertTrue(state["new_searches_paused"])
         now[0] += 100_000
-        self.assertEqual(gateway.fetch("New owner search"),(503,b""))
+        self.assertEqual(gateway.fetch("New owner search"),(428,b""))
         self.assertEqual(challenged.context.opened,[])
         self.assertFalse(challenged.closed)
+
+    def test_simple_checkbox_clicked_once_and_same_query_reused(self):
+        page=FakePage(valid=False)
+        captcha=FakeRecaptchaFrame(page,accepted=True)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertTrue(gateway.browser_state()["visible_captcha_required"])
+        self.assertEqual(captcha.clicks,0,
+                         "read-only status must never click CAPTCHA")
+        status,body=gateway.fetch("The Dog Stars 2026")
+        self.assertEqual((status,body),(200,HTML.encode()))
+        self.assertEqual(captcha.clicks,1)
+        self.assertEqual(page.submit_calls,0)
+        self.assertEqual(page.goto_calls,[])
+        self.assertFalse(gateway.browser_state()["visible_captcha_required"])
+
+    def test_after_checkbox_acceptance_searches_original_requested_query(self):
+        page=FakePage(url=backend.query_url("Deep Water 2025"),valid=False)
+        captcha=FakeRecaptchaFrame(page,accepted=True)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"),
+                         (200,HTML.encode()))
+        self.assertEqual(captcha.clicks,1)
+        self.assertEqual(page.search_fills,["The Dog Stars 2026"])
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(page.goto_calls,[])
+        self.assertEqual(backend.source_query(page.url),"The Dog Stars 2026")
+
+    def test_unaccepted_checkbox_is_attempted_once_per_document(self):
+        page=FakePage(valid=False)
+        captcha=FakeRecaptchaFrame(page,accepted=False)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
+        self.assertEqual(captcha.clicks,1,"never loop or re-click document")
+        self.assertEqual(page.submit_calls,0)
+        self.assertEqual(page.goto_calls,[])
+        self.assertEqual(len(page.waits),6)
+
+    def test_captcha_image_challenge_is_never_clicked_or_solved(self):
+        page=FakePage(valid=False)
+        page.body_text="Please verify you are human"
+        anchor=FakeRecaptchaFrame(page,accepted=True)
+        image=FakeRecaptchaFrame(
+            page,url="https://www.google.com/recaptcha/api2/bframe?k=fixture")
+        page.frames=[anchor,image]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
+        self.assertEqual(anchor.clicks,0)
+        self.assertEqual(image.clicks,0)
+        self.assertEqual(page.submit_calls,0)
+
+    def test_untrusted_hidden_or_ambiguous_checkbox_never_clicks(self):
+        for variant in ("untrusted","hidden","duplicate","multiple_tabs"):
+            with self.subTest(variant=variant):
+                page=FakePage(valid=False)
+                page.body_text="I'm not a robot"
+                captcha=FakeRecaptchaFrame(page,accepted=True)
+                if variant=="untrusted":
+                    captcha.url="https://evil.example/recaptcha/api2/anchor"
+                elif variant=="hidden":
+                    captcha.visible=False
+                elif variant=="duplicate":
+                    page.frames=[FakeRecaptchaFrame(page,accepted=True)]
+                elif variant=="multiple_tabs":
+                    page.context.new_page()
+                page.frames.append(captcha)
+                gateway=backend.VisibleBrowserFetcher(page)
+                self.assertEqual(gateway.fetch("Owner query"),(428,b""))
+                self.assertEqual(captcha.clicks,0)
+                self.assertEqual(page.submit_calls,0)
+
+    def test_new_challenge_after_form_submit_attempts_checkbox_once(self):
+        page=FakePage(valid=True)
+        page.after_navigation_valid=False
+        page.body_text="Please verify you are human"
+        captcha=FakeRecaptchaFrame(page,accepted=True)
+        page.frames=[captcha]
+        gateway=backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("New query"),(200,HTML.encode()))
+        self.assertEqual(page.submit_calls,1)
+        self.assertEqual(captcha.clicks,1)
+        self.assertEqual(page.goto_calls,[])
 
     def test_captcha_hints_inside_verified_results_are_not_a_human_gate(self):
         page=FakePage(valid=True)

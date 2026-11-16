@@ -31,6 +31,8 @@ def good_state():
         "visible_captcha_required": False,
         "new_searches_paused": False,
         "last_navigation_status": None,
+        "last_upstream_http_status": None,
+        "selected_tab_index": 0,
     }
 
 class FakeBrowserHandler(BaseHTTPRequestHandler):
@@ -102,23 +104,45 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.searches, [])
         self.assertEqual(self.server.visits, ["/v1/browser-state"]*4)
 
-    def test_visible_human_challenge_returns_private_428_without_navigation(self):
-        # A source CAPTCHA is not a rate limit and must not become a PWA
-        # local 429 cooldown. No new source search, tab or CAPTCHA automation.
-        self.server.state={
-            **good_state(),
-            "verified_tabs":0,
-            "selected_tab_verified":False,
-            "visible_captcha_required":True,
-            "new_searches_paused":True,
-        }
+    def test_visible_human_challenge_enters_one_private_attempt_then_428(self):
+        # Private 428 is not upstream 429, and never stores source results.
+        self.server.state={**good_state(),"verified_tabs":0,
+                           "selected_tab_verified":False,
+                           "visible_captcha_required":True,
+                           "new_searches_paused":True}
+        self.server.search_status=428
         self.assertEqual(self.bridge.fetch("The dog stars 720p"),(428,b""))
-        self.assertEqual(self.server.searches,[])
-        self.assertEqual(self.server.visits,["/v1/browser-state"])
+        self.assertEqual(self.server.searches,["The dog stars 720p"])
+        self.assertEqual(self.server.visits,
+                         ["/v1/browser-state","/v1/search"])
         provider=gw.SearchProvider(fetcher=self.bridge.fetch,clock=lambda:100.0)
         self.assertEqual(provider.search("The dog stars 720p"),(428,b""))
         self.assertEqual(provider.source_retry_after_seconds(),0)
-        self.assertEqual(self.server.searches,[])
+        self.assertEqual(self.server.searches,["The dog stars 720p"]*2)
+
+    def test_one_request_can_return_verified_html_after_checkbox(self):
+        self.server.state={**good_state(),"verified_tabs":0,
+                           "selected_tab_verified":False,
+                           "visible_captcha_required":True,
+                           "new_searches_paused":True}
+        self.assertEqual(self.bridge.fetch("Owner query"),(200,HTML))
+        self.assertEqual(self.server.searches,["Owner query"])
+        self.assertEqual(self.server.visits,
+                         ["/v1/browser-state","/v1/search"])
+
+    def test_ambiguous_captcha_never_enters_private_search_endpoint(self):
+        for key,value in (
+            ("open_tabs",2),("visible_source_rate_limited",True),
+            ("last_upstream_http_status",429),("selected_tab_index",1)):
+            with self.subTest(key=key):
+                self.server.state={**good_state(),"verified_tabs":0,
+                                   "selected_tab_verified":False,
+                                   "visible_captcha_required":True,
+                                   "new_searches_paused":True,key:value}
+                before=len(self.server.searches)
+                self.assertEqual(self.bridge.fetch("Owner query"),(428,b""))
+                self.assertEqual(len(self.server.searches),before)
+
 
     def test_visible_source_refusal_is_soft_425_without_new_navigation(self):
         # HTTP 200 can show a Too Many Requests *page* without network 429.

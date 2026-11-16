@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Opt-in, loopback-only BTDigg gateway backed by a human-verified GUI browser.
 
-A visible Chromium is controlled via Playwright's local private pipe. The owner
-must verify any CAPTCHA manually through the separate Tailscale-only noVNC
-session. Never solve a CAPTCHA, change browser identity, replay imported cookies,
-retry upstream challenges or publish a debugging port.
+A visible Chromium is controlled via Playwright's local private pipe. An
+authenticated owner-initiated BTDigg search may attempt one visible Google
+reCAPTCHA checkbox click in the existing tab. Image puzzles and unresolved
+challenges still require the Tailscale-only noVNC viewer. Never forge CAPTCHA
+tokens, change browser identity, replay imported cookies, or publish CDP.
 
 Uses the EXISTING BTDigg authenticated gateway response contract and positive
 cache; no changes to the Worker, search ranking, or other source adapters.
@@ -40,8 +41,9 @@ RESULT_PAIR_SELECTOR = (
 )
 QUERY_RE = re.compile(r"[\x00-\x1f\x7f]")
 # A user-triggered PWA request may open one new tab only after a source
-# refusal has been observed for 30 seconds. No timer sends requests,
-# no CAPTCHA interaction, and each new attempt needs a user action.
+# refusal has been observed for 30 seconds. No timer sends source requests.
+# An owner-initiated search alone may attempt one simple CAPTCHA checkbox
+# click per current document; never solve image challenges or loop retries.
 PWA_TAB_RECOVERY_DELAYS = (30, 30, 30, 30)
 PAGE_AGE_SCRIPT = "() => performance.now()"
 CHALLENGE_HINTS = (
@@ -158,6 +160,51 @@ def source_rate_limit_visible(page, live_url=None):
         return False
 
 
+def _recaptcha_frame_kind(url):
+    """Allowlist Google-hosted reCAPTCHA v2 frames, not arbitrary iframes."""
+    try:
+        value = urlsplit(url)
+        if (value.scheme != "https"
+                or value.hostname not in ("www.google.com", "www.recaptcha.net")
+                or value.username is not None or value.password is not None
+                or value.port not in (None, 443)):
+            return None
+        if value.path in ("/recaptcha/api2/anchor", "/recaptcha/enterprise/anchor"):
+            return "anchor"
+        if value.path in ("/recaptcha/api2/bframe", "/recaptcha/enterprise/bframe"):
+            return "image_challenge"
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
+def simple_recaptcha_checkbox(page):
+    """Locate one visible unchecked checkbox; never solve image tiles.
+
+    No clicking or browser mutation occurs in this read-only helper.
+    """
+    try:
+        if page.is_closed() or not source_landing(live_document_url(page)):
+            return None
+        frames = page.frames
+        if any(_recaptcha_frame_kind(frame.url) == "image_challenge"
+               for frame in frames):
+            return None
+        candidates = []
+        for frame in frames:
+            if _recaptcha_frame_kind(frame.url) != "anchor":
+                continue
+            if not frame.frame_element().is_visible():
+                continue
+            checkbox = frame.locator("#recaptcha-anchor")
+            if (checkbox.count() == 1 and checkbox.is_visible()
+                    and checkbox.get_attribute("aria-checked") == "false"):
+                candidates.append(checkbox)
+        return candidates[0] if len(candidates) == 1 else None
+    except Exception:
+        return None
+
+
 def source_challenge_visible(page, live_url=None):
     """Read-only detection of recognizable human-verification UI.
 
@@ -174,6 +221,9 @@ def source_challenge_visible(page, live_url=None):
             return False
         if validated_result_html(page, live_url) is not None:
             return False
+        # Captcha checkbox text can live only in its Google cross-origin iframe.
+        if simple_recaptcha_checkbox(page) is not None:
+            return True
         body = page.locator("body").inner_text(timeout=1500)
         if not isinstance(body, str) or len(body) > 1800:
             return False
@@ -181,7 +231,7 @@ def source_challenge_visible(page, live_url=None):
         if visible in ("too many requests", "429 too many requests"):
             return False
         return any(hint in visible for hint in (
-            "i'm not a robot", "verify you are human",
+            "i'm not a robot", "i am not a robot", "verify you are human",
             "please verify you are human", "one more step",
             "checking your browser", "verify that you are human",
             "captcha verification",
@@ -273,6 +323,8 @@ class VisibleBrowserFetcher:
         self._recovery_attempts = 0
         self._recovery_last_outcome = None
         self._recovery_last_http_status = None
+        # One click per top-level document, maximum 128 different documents.
+        self._simple_checkbox_attempts = set()
 
     def _record_recovery(self, outcome, http_status=None):
         self._recovery_last_outcome = outcome
@@ -464,13 +516,24 @@ class VisibleBrowserFetcher:
                     "unverified_result_html",
                     200,
                 )
-                # The old tab is discarded even when the new source-owned
-                # page lacks magnet rows. Keep CAPTCHA visible for the owner.
-                # A visible non-HTTP refusal gets one NEW user-triggered
-                # opportunity after 30 seconds; CAPTCHA/unknown states stop.
-                self._recovery_failed(terminal=not denied)
+                # Preserve a trusted new source-owned tab. On a CAPTCHA
+                # attempt its ONE visible checkbox inside the same owner
+                # search, without requesting another source document.
+                # Image puzzles or unavailable checkboxes remain human-only.
                 self._adopt_recovery_tab(original, fresh)
                 fresh = None
+                if challenge:
+                    result = self._attempt_simple_recaptcha_checkbox(query)
+                    if result[0] == 200:
+                        self._record_recovery("verified_after_checkbox", 200)
+                        self._source_stopped = None
+                        self._recovery_locked = False
+                        self._recovery_failures = 0
+                        self._recovery_next_at = None
+                        return result
+                    self._recovery_failed(terminal=True)
+                    return 428, b""
+                self._recovery_failed(terminal=not denied)
                 return (425 if denied else 503), b""
 
             self._remember_verified(current_url, html)
@@ -634,11 +697,61 @@ class VisibleBrowserFetcher:
                 "tab_diagnostics": [],
             }
 
+    def _attempt_simple_recaptcha_checkbox(self, query):
+        """One checkbox click after an owner search; never solve image puzzles.
+
+        Calls here are synchronous in the existing Playwright-owning thread.
+        There is no background poll, browser identity change or page refresh.
+        If the source does not accept the checkbox, return private HTTP 428.
+        """
+        try:
+            state = self.browser_state()
+            if (state["open_tabs"] != 1 or state["verified_tabs"] != 0
+                    or state["visible_captcha_required"] is not True
+                    or state["visible_source_rate_limited"] is not False
+                    or state["selected_tab_index"] != 0
+                    or self._source_stopped is not None
+                    or self._last_upstream_http_status == 429):
+                return 428, b""
+            checkbox = simple_recaptcha_checkbox(self.page)
+            if checkbox is None:
+                return 428, b""
+            navigation_time = self.page.evaluate("() => performance.timeOrigin")
+            if (type(navigation_time) not in (int, float)
+                    or not math.isfinite(navigation_time)
+                    or navigation_time <= 0):
+                return 428, b""
+            marker = (id(self.page), int(navigation_time))
+            if (marker in self._simple_checkbox_attempts
+                    or len(self._simple_checkbox_attempts) >= 128):
+                return 428, b""
+            # Record BEFORE interaction; an exception cannot rearm a click.
+            self._simple_checkbox_attempts.add(marker)
+            checkbox.click(timeout=1200)
+            for _ in range(6):
+                current_url = live_document_url(self.page)
+                if (source_landing(current_url)
+                        and not source_rate_limit_visible(self.page, current_url)
+                        and validated_result_html(self.page, current_url) is not None):
+                    # Query matching and source navigation retain normal
+                    # verification rules; never return a different query's HTML.
+                    return self.fetch(query)
+                # Bounded same-tab observation only, no source search or retry.
+                self.page.wait_for_timeout(300)
+            return 428, b""
+        except Exception:
+            return 428, b""
+
     def fetch(self, query):
         try:
             query_url(query)  # Validate without initiating any source request.
             # This runs ONLY for an authenticated owner PWA /v1/search call;
             # browser-state/healthz remain strictly read-only.
+            # Attempt the single visible checkbox only on an authenticated,
+            # owner-initiated search, never from health/status or idle tasks.
+            if (self._source_stopped is None
+                    and source_challenge_visible(self.page)):
+                return self._attempt_simple_recaptcha_checkbox(query)
             self._adopt_owner_verified_tab()
             existing_page, existing_html = self._verified_existing_query(query)
             if existing_html is not None:
@@ -699,6 +812,8 @@ class VisibleBrowserFetcher:
                     return self._stop_navigation(503, "unexpected_final_query", 200)
                 html = validated_result_html(self.page)
                 if html is None:
+                    if source_challenge_visible(self.page):
+                        return self._attempt_simple_recaptcha_checkbox(query)
                     return self._stop_navigation(503, "unverified_result_html", 200)
                 self._remember_verified(live_document_url(self.page), html)
                 return 200, html
