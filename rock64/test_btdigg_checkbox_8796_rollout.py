@@ -27,6 +27,8 @@ class CheckboxGatewayRolloutTests(unittest.TestCase):
         self.assertIn('sudo install -m 0600 "$DEST" "$BACKUP"', s)
         self.assertIn('sudo install -m 0644 "$BACKUP" "$DEST"', s)
         self.assertIn('sudo systemctl restart "$SERVICE"', s)
+        self.assertIn('except OSError:', s)
+        self.assertIn('Expected while systemd has restarted', s)
         self.assertIn('BROWSER_18896=UNTOUCHED', s)
         self.assertIn("rock64/check-btdigg-browser-backend.py --browser-status", s)
         self.assertNotIn('systemctl --user restart "$USER_SERVICE"', s)
