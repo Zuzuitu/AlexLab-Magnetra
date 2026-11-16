@@ -455,20 +455,22 @@ def browser_state_tab_recovery_ready(state):
 
 
 def browser_state_owner_verified_adoption_ready(state):
-    """Permit one explicit PWA request to adopt an owner-verified second tab.
+    """Allow one explicit PWA request to adopt a verified owner-opened tab.
 
-    Exactly the owner-observed arrangement: first selected source tab shows
-    a visible non-HTTP refusal, second manual tab contains real validated
-    BTDigg title/magnet rows. Do not trust mixed CAPTCHA, ambiguous tabs,
-    legacy snapshots, or prior genuine transport HTTP 429. This check is
-    read-only; the 18896 backend independently verifies both DOMs before
-    closing the obsolete refusal tab.
+    Accepted private layouts: one refused + one verified (existing case), or
+    exactly TWO refused + ONE verified (manual third-tab CAPTCHA success).
+    All tabs must have safe canonical source diagnostics. Never navigate
+    through the gateway when a tab is challenged, unknown, ambiguous or an
+    authenticated upstream HTTP 429 was recorded. The 18896 backend must
+    independently validate actual URLs, paired HTML and requested query
+    before retiring either refused tab. Read-only state never mutates tabs.
     """
     if not isinstance(state, dict):
         return False
+    tab_count = state.get("open_tabs")
     if (state.get("browser_connected") is not True
-            or type(state.get("open_tabs")) is not int
-            or state["open_tabs"] != 2
+            or type(tab_count) is not int
+            or tab_count not in (2, 3)
             or type(state.get("verified_tabs")) is not int
             or state["verified_tabs"] != 1
             or state.get("selected_tab_verified") is not False
@@ -480,25 +482,37 @@ def browser_state_owner_verified_adoption_ready(state):
         return False
     index = state.get("selected_tab_index")
     tabs = state.get("tab_diagnostics")
-    if (type(index) is not int or index not in (0, 1)
-            or not isinstance(tabs, list) or len(tabs) != 2
+    if (type(index) is not int or not 0 <= index < tab_count
+            or not isinstance(tabs, list) or len(tabs) != tab_count
             or not all(isinstance(tab, dict) for tab in tabs)):
         return False
-    old = tabs[index]
-    manual = tabs[1 - index]
-    return (
-        old.get("page_kind") == "canonical_search"
-        and old.get("validation") == "no_paired_rows"
-        and old.get("paired_rows") == 0
-        and manual.get("page_kind") == "canonical_search"
-        and manual.get("validation") == "valid"
-        and type(manual.get("paired_rows")) is int
-        and manual["paired_rows"] > 0
-        and type(manual.get("magnet_rows")) is int
-        and manual["magnet_rows"] > 0
-        and type(manual.get("title_rows")) is int
-        and manual["title_rows"] > 0
-    )
+
+    def refused(tab):
+        return (
+            tab.get("page_kind") == "canonical_search"
+            and tab.get("validation") == "no_paired_rows"
+            and type(tab.get("paired_rows")) is int
+            and tab["paired_rows"] == 0
+            and type(tab.get("magnet_rows")) is int
+            and tab["magnet_rows"] == 0
+            and type(tab.get("title_rows")) is int
+            and tab["title_rows"] == 0
+        )
+
+    def verified(tab):
+        return (
+            tab.get("page_kind") == "canonical_search"
+            and tab.get("validation") == "valid"
+            and all(type(tab.get(k)) is int and tab[k] > 0 for k in (
+                "paired_rows", "magnet_rows", "title_rows"
+            ))
+        )
+
+    if not refused(tabs[index]):
+        return False
+    remaining = [tab for i, tab in enumerate(tabs) if i != index]
+    return (sum(verified(tab) for tab in remaining) == 1
+            and sum(refused(tab) for tab in remaining) == tab_count - 2)
 
 
 class LocalChromiumBridge:

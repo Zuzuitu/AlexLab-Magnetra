@@ -191,6 +191,81 @@ class ChromiumBridgeContract(unittest.TestCase):
         self.assertEqual(self.server.visits,
                          ["/v1/browser-state","/v1/search"])
 
+    def test_manual_verified_third_tab_passes_local_bridge_without_source_probe(self):
+        refused = {
+            "page_kind": "canonical_search", "validation": "no_paired_rows",
+            "paired_rows": 0, "title_rows": 0, "magnet_rows": 0,
+        }
+        valid = {
+            "page_kind": "canonical_search", "validation": "valid",
+            "paired_rows": 10, "title_rows": 10, "magnet_rows": 10,
+        }
+        state = {
+            **good_state(), "open_tabs": 3, "verified_tabs": 1,
+            "selected_tab_verified": False,
+            "visible_source_rate_limited": True,
+            "visible_captcha_required": False,
+            "new_searches_paused": True,
+            "selected_tab_index": 1,
+            "pwa_tab_recovery_attempts": 2,
+            "pwa_tab_recovery_last_outcome": "visible_refusal",
+            "last_upstream_http_status": None,
+            "tab_diagnostics": [dict(refused), dict(refused), dict(valid)],
+        }
+        self.server.state = state
+        self.assertFalse(gw.browser_state_ready(state))
+        self.assertTrue(gw.browser_state_owner_verified_adoption_ready(state))
+        self.assertEqual(self.bridge.fetch("The Dog Stars 2026"), (200, HTML))
+        self.assertEqual(self.server.visits,
+                         ["/v1/browser-state", "/v1/search"])
+        self.assertEqual(self.server.searches, ["The Dog Stars 2026"])
+
+    def test_third_tab_adoption_rejects_ambiguous_states_before_private_search(self):
+        refused = {
+            "page_kind": "canonical_search", "validation": "no_paired_rows",
+            "paired_rows": 0, "title_rows": 0, "magnet_rows": 0,
+        }
+        valid = {
+            "page_kind": "canonical_search", "validation": "valid",
+            "paired_rows": 10, "title_rows": 10, "magnet_rows": 10,
+        }
+        baseline = {
+            **good_state(), "open_tabs": 3, "verified_tabs": 1,
+            "selected_tab_verified": False,
+            "visible_source_rate_limited": True,
+            "visible_captcha_required": False,
+            "new_searches_paused": True,
+            "selected_tab_index": 1,
+            "tab_diagnostics": [dict(refused), dict(refused), dict(valid)],
+        }
+        alternatives = (
+            {"tab_diagnostics": [{"page_kind": "blank"}, dict(refused), dict(valid)]},
+            {"tab_diagnostics": [dict(valid), dict(refused), dict(valid)]},
+            {"selected_tab_index": 2},
+            {"verified_tabs": 2},
+            {"visible_captcha_required": True},
+            {"last_navigation_status": 429},
+            {"last_upstream_http_status": 429},
+            {"new_searches_paused": False},
+            {"open_tabs": 4},
+            {"tab_diagnostics": [dict(refused), dict(refused)]},
+            {"tab_diagnostics": [dict(refused), dict(refused),
+                                 {**valid, "magnet_rows": 0}]},
+            {"tab_diagnostics": [dict(refused),
+                                 {**refused, "title_rows": 1}, dict(valid)]},
+        )
+        for override in alternatives:
+            with self.subTest(override=override):
+                state = {**baseline, **override}
+                self.server.state = state
+                self.assertFalse(
+                    gw.browser_state_owner_verified_adoption_ready(state))
+                self.assertNotEqual(
+                    self.bridge.fetch("The Dog Stars 2026")[0], 200)
+        self.assertEqual(self.server.searches, [])
+        self.assertEqual(self.server.visits,
+                         ["/v1/browser-state"] * len(alternatives))
+
     def test_manual_adoption_gateway_rejects_unsafe_or_unverified_pair(self):
         base={
             **good_state(),

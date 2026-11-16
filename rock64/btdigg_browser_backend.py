@@ -366,45 +366,77 @@ class VisibleBrowserFetcher:
             pass
         return False
 
-    def _adopt_owner_verified_tab(self):
-        """At an explicit PWA search, adopt a manually verified BTDigg tab.
+    def _adopt_owner_verified_tab(self, requested_query=None):
+        """Adopt exactly one owner-verified tab without external navigation.
 
-        The selected old tab must visibly contain the source refusal and be
-        unverified; exactly one OTHER tab must have authentic title/magnet
-        pairs on a canonical BTDigg search page. Neither a read-only status
-        probe nor this adoption itself navigates to the source. Close the
-        stale old tab only AFTER validated results are already present.
+        Supports either a refused/verified pair or the owner's real recovery
+        case: two visibly refused BTDigg tabs plus a third, manually verified
+        tab containing actual title/magnet rows. An authenticated PWA search
+        is required; read-only status never closes tabs. For the three-tab
+        case, require the request to match the *already verified* document
+        so adoption cannot implicitly submit another source query.
         """
         try:
-            # A documented real upstream HTTP refusal is not overwritten
-            # merely by the presence of another browser tab.
             if (self._source_stopped is not None
                     or self._last_upstream_http_status == 429):
                 return False
             pages = [p for p in self.page.context.pages if not p.is_closed()]
-            if len(pages) != 2 or self.page not in pages:
+            if len(pages) not in (2, 3) or self.page not in pages:
                 return False
-            old = self.page
-            candidate = next(p for p in pages if p is not old)
-            old_url = live_document_url(old)
-            if (not source_rate_limit_visible(old, old_url)
-                    or validated_result_html(old, old_url) is not None):
+            # The currently controlled tab must be one visibly refused source
+            # page. No arbitrary, CAPTCHA, valid or blank page can be adopted
+            # from, even when another tab happens to contain results.
+            selected_url = live_document_url(self.page)
+            if (not source_rate_limit_visible(self.page, selected_url)
+                    or validated_result_html(self.page, selected_url) is not None
+                    or source_challenge_visible(self.page, selected_url)):
                 return False
-            candidate_url = live_document_url(candidate)
-            verified_html = validated_result_html(candidate, candidate_url)
-            if (verified_html is None
-                    or source_rate_limit_visible(candidate, candidate_url)
-                    or source_challenge_visible(candidate, candidate_url)):
+            refused = [self.page]
+            verified = []
+            for p in pages:
+                if p is self.page:
+                    continue
+                url = live_document_url(p)
+                html = validated_result_html(p, url)
+                if html is not None:
+                    if (source_rate_limit_visible(p, url)
+                            or source_challenge_visible(p, url)):
+                        return False
+                    verified.append((p, url, html))
+                elif (source_rate_limit_visible(p, url)
+                        and not source_challenge_visible(p, url)):
+                    refused.append(p)
+                else:
+                    # Unknown pages, additional challenges and incomplete
+                    # DOMs make the entire adoption ambiguous.
+                    return False
+            if len(verified) != 1 or len(refused) != len(pages) - 1:
                 return False
-            self._remember_verified(candidate_url, verified_html)
-            self._adopt_recovery_tab(old, candidate)
+            candidate, url, html = verified[0]
+            if len(pages) == 3 and (
+                requested_query is None
+                or not same_search_query(source_query(url), requested_query)
+            ):
+                return False
+            # All DOM checks are complete before the first mutation. The new
+            # tab becomes authoritative, then each stale refusal is closed.
+            self._remember_verified(url, html)
+            self.page = candidate
+            self.reference_page = candidate
+            for stale in refused:
+                try:
+                    stale.close()
+                except Exception:
+                    # No new navigation. An unclosed refusal stays visible
+                    # and prevents future searches through the 8796 preflight.
+                    pass
             self._record_recovery("manual_verified_tab_adopted")
             self._recovery_next_at = None
             self._recovery_failures = 0
             self._recovery_locked = False
             return True
         except Exception:
-            # A DOM/context inspection failure never closes either tab.
+            # Do not leak URLs, titles, HTML or Playwright exception details.
             return False
 
     def _refusal_page_age_seconds(self):
@@ -776,7 +808,19 @@ class VisibleBrowserFetcher:
             if (self._source_stopped is None
                     and source_challenge_visible(self.page)):
                 return self._attempt_simple_recaptcha_checkbox(query)
-            self._adopt_owner_verified_tab()
+            adopted = self._adopt_owner_verified_tab(query)
+            if not adopted:
+                # A 3+-tab context must never bypass failed adoption by
+                # scanning and returning a matching but ambiguous document.
+                # In particular, no new source request may be submitted.
+                open_pages = [
+                    p for p in self.page.context.pages if not p.is_closed()
+                ]
+                if len(open_pages) >= 3:
+                    refused = any(
+                        source_rate_limit_visible(p) for p in open_pages
+                    )
+                    return (425 if refused else 503), b""
             existing_page, existing_html = self._verified_existing_query(query)
             if existing_html is not None:
                 # A manual search in another already-open tab is safe to read;
