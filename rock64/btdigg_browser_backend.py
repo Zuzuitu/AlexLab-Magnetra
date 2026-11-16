@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Opt-in, loopback-only BTDigg gateway backed by a human-verified GUI browser.
 
-A visible Chromium is controlled via Playwright's local private pipe. The owner
-must verify any CAPTCHA manually through the separate Tailscale-only noVNC
-session. Never solve a CAPTCHA, change browser identity, replay imported cookies,
-retry upstream challenges or publish a debugging port.
+A visible Chromium is controlled via Playwright's local private pipe. An
+authenticated owner-initiated BTDigg search may attempt one visible Google
+reCAPTCHA checkbox click in the existing tab. Image puzzles and unresolved
+challenges still require the Tailscale-only noVNC viewer. Never forge CAPTCHA
+tokens, change browser identity, replay imported cookies, or publish CDP.
 
 Uses the EXISTING BTDigg authenticated gateway response contract and positive
 cache; no changes to the Worker, search ranking, or other source adapters.
@@ -40,8 +41,9 @@ RESULT_PAIR_SELECTOR = (
 )
 QUERY_RE = re.compile(r"[\x00-\x1f\x7f]")
 # A user-triggered PWA request may open one new tab only after a source
-# refusal has been observed for 30 seconds. No timer sends requests,
-# no CAPTCHA interaction, and each new attempt needs a user action.
+# refusal has been observed for 30 seconds. No timer sends source requests.
+# An owner-initiated search alone may attempt one simple CAPTCHA checkbox
+# click per current document; never solve image challenges or loop retries.
 PWA_TAB_RECOVERY_DELAYS = (30, 30, 30, 30)
 PAGE_AGE_SCRIPT = "() => performance.now()"
 CHALLENGE_HINTS = (
@@ -514,13 +516,23 @@ class VisibleBrowserFetcher:
                     "unverified_result_html",
                     200,
                 )
-                # The old tab is discarded even when the new source-owned
-                # page lacks magnet rows. Keep CAPTCHA visible for the owner.
-                # A visible non-HTTP refusal gets one NEW user-triggered
-                # opportunity after 30 seconds; CAPTCHA/unknown states stop.
-                self._recovery_failed(terminal=not denied)
+                # Preserve a trusted new source-owned tab. On a CAPTCHA
+                # attempt its ONE visible checkbox inside the same owner
+                # search, without requesting another source document.
+                # Image puzzles or unavailable checkboxes remain human-only.
                 self._adopt_recovery_tab(original, fresh)
                 fresh = None
+                if challenge:
+                    result = self._attempt_simple_recaptcha_checkbox(query)
+                    if result[0] == 200:
+                        self._source_stopped = None
+                        self._recovery_locked = False
+                        self._recovery_failures = 0
+                        self._recovery_next_at = None
+                        return result
+                    self._recovery_failed(terminal=True)
+                    return 428, b""
+                self._recovery_failed(terminal=not denied)
                 return (425 if denied else 503), b""
 
             self._remember_verified(current_url, html)
@@ -799,6 +811,8 @@ class VisibleBrowserFetcher:
                     return self._stop_navigation(503, "unexpected_final_query", 200)
                 html = validated_result_html(self.page)
                 if html is None:
+                    if source_challenge_visible(self.page):
+                        return self._attempt_simple_recaptcha_checkbox(query)
                     return self._stop_navigation(503, "unverified_result_html", 200)
                 self._remember_verified(live_document_url(self.page), html)
                 return 200, html
