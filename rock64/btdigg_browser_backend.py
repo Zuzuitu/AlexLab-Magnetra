@@ -231,7 +231,7 @@ def source_challenge_visible(page, live_url=None):
         if visible in ("too many requests", "429 too many requests"):
             return False
         return any(hint in visible for hint in (
-            "i'm not a robot", "verify you are human",
+            "i'm not a robot", "i am not a robot", "verify you are human",
             "please verify you are human", "one more step",
             "checking your browser", "verify that you are human",
             "captcha verification",
