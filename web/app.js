@@ -106,6 +106,14 @@ function clearBTDigg429(){
 // Client-side pacing only. This does not bypass the Rock64 rate limit or retry
 // failed searches; it defers one user-requested search and is abortable.
 const btdiggPacing={nextAllowedAt:0,lastGoodQuery:null,lastGoodUntil:0};
+// The minimum gap is measured from when a PWA request is DISPATCHED, not
+// when its response finally arrives. Slow upstream searches or manual
+// verification may consume the entire 30s interval. Re-arming at completion
+// incorrectly imposes a second full wait despite already elapsed time.
+function recordBTDiggRequestDispatch(at=Date.now()){
+ btdiggPacing.nextAllowedAt=Math.max(
+  btdiggPacing.nextAllowedAt,at+BTDIGG_MIN_GAP_MS);
+}
 function btdiggWaitMs(query,at=Date.now()){
  if(query===btdiggPacing.lastGoodQuery&&at<btdiggPacing.lastGoodUntil)return 0;
  return Math.max(0,btdiggPacing.nextAllowedAt-at);
@@ -799,6 +807,7 @@ async function fetchBTDiggWithOneGuardedNewTab(url,query,signal,
  if(signal.aborted||document.visibilityState==="hidden"||
     btdiggCooldownRemainingMs()>0)return initial;
  $("notice").textContent=tr("BTDigg: attempting one new browser tab…");
+ recordBTDiggRequestDispatch();
  // No recursive retry and no source request after this second attempt.
  return await request(url,{signal});
 }
@@ -835,8 +844,8 @@ async function search(){
    }else try{
      if(id==="btdigg"){
       await waitForBTDigg(query,controller.signal);
-      // Guard even a cancelled HTTP request: Rock64 may still be working.
-      btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
+      // Stamp the outgoing request, not its eventual response.
+      recordBTDiggRequestDispatch();
      }
      const data=id==="btdigg"
       ?await fetchBTDiggWithOneGuardedNewTab(url.pathname+url.search,query,controller.signal)
@@ -875,17 +884,17 @@ async function search(){
        btdiggPacing.lastGoodQuery=query;
        btdiggPacing.lastGoodUntil=Date.now()+20*60*1000;
       }
-      btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
      }
     }catch(e){
      if(controller.signal.aborted){
-      if(id==="btdigg")btdiggPacing.nextAllowedAt=
-       Math.max(btdiggPacing.nextAllowedAt,Date.now()+BTDIGG_MIN_GAP_MS);
+      // A dispatched request already has its timestamp; never reset the
+      // clock when the user cancels after a slow response.
       return;
      }
      failures.push({provider:id,error:e.message,message:tr("Magnetra could not reach this provider through the API.")});
      state.sessionAudit[id]={state:"error",count:0,at:new Date().toLocaleString(currentLanguage())};
-     if(id==="btdigg")btdiggPacing.nextAllowedAt=Date.now()+BTDIGG_MIN_GAP_MS;
+     // No new source dispatch happens here. A timeout is not permission
+     // to invent another cooldown period on top of elapsed time.
     }
     if(controller.signal.aborted)return;
     completed++;
