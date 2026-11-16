@@ -57,11 +57,15 @@ class FakePage:
         self.live_url_override=None
         self.evaluate_count=0
         self.navigation_age_ms=0.0
+        self.document_time_ms=1700000000000.0
+        self.frames=[]
 
     def evaluate(self, script):
         self.evaluate_count += 1
         if script == backend.PAGE_AGE_SCRIPT:
             return self.navigation_age_ms
+        if script == "() => performance.timeOrigin":
+            return self.document_time_ms
         assert script == "() => window.location.href"
         return self.live_url_override if self.live_url_override is not None else self.url
 
@@ -125,6 +129,41 @@ class FakePage:
 
     def is_closed(self):
         return self.closed
+
+
+class FakeRecaptchaFrame:
+    """Synthetic Google checkbox; no real CAPTCHA requests or secrets."""
+    def __init__(self, page, *, accepted=False, visible=True,
+                 url="https://www.google.com/recaptcha/api2/anchor?k=fixture"):
+        self.page=page
+        self.url=url
+        self.accepted=accepted
+        self.visible=visible
+        self.clicks=0
+
+    def frame_element(self):
+        return self
+
+    def is_visible(self):
+        return self.visible
+
+    def locator(self, selector):
+        assert selector=="#recaptcha-anchor"
+        parent=self
+        class Checkbox:
+            def count(self): return 1
+            def is_visible(self): return parent.visible
+            def get_attribute(self, name):
+                assert name=="aria-checked"
+                return "false"
+            def click(self, **kwargs):
+                assert kwargs.get("timeout")==1200
+                parent.clicks+=1
+                if parent.accepted:
+                    parent.page.valid=True
+                    parent.page.body_text=""
+                    parent.page.frames=[]
+        return Checkbox()
 
 
 class BrowserBackendTests(TestCase):
@@ -845,7 +884,7 @@ class BrowserBackendTests(TestCase):
         gateway=backend.VisibleBrowserFetcher(old,Marker(),clock=lambda:now[0])
         gateway.browser_state()
         now[0]+=30
-        self.assertEqual(gateway.fetch("The Dog Stars 2026"),(503,b""))
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"),(428,b""))
         new=old.context.opened[0]
         self.assertTrue(old.closed)
         self.assertFalse(new.closed)
@@ -856,7 +895,7 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(state["pwa_tab_recovery_last_outcome"],
                          "captcha_required")
         self.assertEqual(state["pwa_tab_recovery_attempts"],1)
-        self.assertEqual(gateway.fetch("Different query"),(503,b""))
+        self.assertEqual(gateway.fetch("Different query"),(428,b""))
         self.assertEqual(len(old.context.opened),1,
                          "no automatic CAPTCHA bypass or tab rotation")
 
@@ -941,7 +980,7 @@ class BrowserBackendTests(TestCase):
         gateway = backend.VisibleBrowserFetcher(challenged,clock=lambda:now[0])
         now[0] += 999999
         self.assertFalse(gateway.browser_state()["pwa_tab_recovery_ready"])
-        self.assertEqual(gateway.fetch("Requested 2026"),(503,b""))
+        self.assertEqual(gateway.fetch("Requested 2026"),(428,b""))
         self.assertEqual(challenged.context.opened,[])
         limited = FakePage(valid=False)
         limited.rate_limited = True
@@ -965,7 +1004,7 @@ class BrowserBackendTests(TestCase):
         self.assertIsNone(state["pwa_tab_recovery_reason"])
         self.assertTrue(state["new_searches_paused"])
         now[0] += 100_000
-        self.assertEqual(gateway.fetch("New owner search"),(503,b""))
+        self.assertEqual(gateway.fetch("New owner search"),(428,b""))
         self.assertEqual(challenged.context.opened,[])
         self.assertFalse(challenged.closed)
 
