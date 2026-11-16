@@ -18,6 +18,22 @@ STATE = Path.home() / ".local" / "state" / "magnetra-btdigg-browser"
 TOKEN_FILE = STATE / "gateway.token"
 PREFERENCES_FILE = STATE / "profile" / "Default" / "Preferences"
 
+# Only fixed, nonsecret outcome codes may leave the local Chromium gateway.
+# Include the accepted one-click recovery result emitted by PR #302.
+ALLOWED_RECOVERY_OUTCOMES = frozenset((
+    "started", "no_navigation_response", "untrusted_navigation",
+    "source_http_429", "source_http_non200", "visible_refusal",
+    "captcha_required", "unverified_result_html", "verified_results",
+    "verified_after_checkbox", "navigation_exception",
+    "manual_verified_tab_adopted",
+))
+
+
+def valid_recovery_outcome(value):
+    return value is None or (
+        type(value) is str and value in ALLOWED_RECOVERY_OUTCOMES
+    )
+
 
 def local_profile_exit_state(path=None):
     """Read only two nonsecret Chromium profile markers. No browser requests.
@@ -204,17 +220,9 @@ def main():
                     attempts = state["pwa_tab_recovery_attempts"]
                     outcome = state.get("pwa_tab_recovery_last_outcome")
                     http = state.get("pwa_tab_recovery_last_http_status")
-                    allowed = {
-                        None, "started", "no_navigation_response",
-                        "untrusted_navigation", "source_http_429",
-                        "source_http_non200", "visible_refusal",
-                        "captcha_required", "unverified_result_html",
-                        "verified_results", "navigation_exception",
-                        "manual_verified_tab_adopted",
-                    }
                     if (type(attempts) is not int
                             or not 0 <= attempts <= 1_000_000
-                            or outcome not in allowed
+                            or not valid_recovery_outcome(outcome)
                             or (http is not None and (
                                 type(http) is not int
                                 or not 100 <= http <= 599))):
