@@ -321,6 +321,8 @@ class VisibleBrowserFetcher:
         self._recovery_attempts = 0
         self._recovery_last_outcome = None
         self._recovery_last_http_status = None
+        # One click per top-level document, maximum 128 different documents.
+        self._simple_checkbox_attempts = set()
 
     def _record_recovery(self, outcome, http_status=None):
         self._recovery_last_outcome = outcome
@@ -682,11 +684,61 @@ class VisibleBrowserFetcher:
                 "tab_diagnostics": [],
             }
 
+    def _attempt_simple_recaptcha_checkbox(self, query):
+        """One checkbox click after an owner search; never solve image puzzles.
+
+        Calls here are synchronous in the existing Playwright-owning thread.
+        There is no background poll, browser identity change or page refresh.
+        If the source does not accept the checkbox, return private HTTP 428.
+        """
+        try:
+            state = self.browser_state()
+            if (state["open_tabs"] != 1 or state["verified_tabs"] != 0
+                    or state["visible_captcha_required"] is not True
+                    or state["visible_source_rate_limited"] is not False
+                    or state["selected_tab_index"] != 0
+                    or self._source_stopped is not None
+                    or self._last_upstream_http_status == 429):
+                return 428, b""
+            checkbox = simple_recaptcha_checkbox(self.page)
+            if checkbox is None:
+                return 428, b""
+            navigation_time = self.page.evaluate("() => performance.timeOrigin")
+            if (type(navigation_time) not in (int, float)
+                    or not math.isfinite(navigation_time)
+                    or navigation_time <= 0):
+                return 428, b""
+            marker = (id(self.page), int(navigation_time))
+            if (marker in self._simple_checkbox_attempts
+                    or len(self._simple_checkbox_attempts) >= 128):
+                return 428, b""
+            # Record BEFORE interaction; an exception cannot rearm a click.
+            self._simple_checkbox_attempts.add(marker)
+            checkbox.click(timeout=1200)
+            for _ in range(6):
+                current_url = live_document_url(self.page)
+                if (source_landing(current_url)
+                        and not source_rate_limit_visible(self.page, current_url)
+                        and validated_result_html(self.page, current_url) is not None):
+                    # Query matching and source navigation retain normal
+                    # verification rules; never return a different query's HTML.
+                    return self.fetch(query)
+                # Bounded same-tab observation only, no source search or retry.
+                self.page.wait_for_timeout(300)
+            return 428, b""
+        except Exception:
+            return 428, b""
+
     def fetch(self, query):
         try:
             query_url(query)  # Validate without initiating any source request.
             # This runs ONLY for an authenticated owner PWA /v1/search call;
             # browser-state/healthz remain strictly read-only.
+            # Attempt the single visible checkbox only on an authenticated,
+            # owner-initiated search, never from health/status or idle tasks.
+            if (self._source_stopped is None
+                    and source_challenge_visible(self.page)):
+                return self._attempt_simple_recaptcha_checkbox(query)
             self._adopt_owner_verified_tab()
             existing_page, existing_html = self._verified_existing_query(query)
             if existing_html is not None:
