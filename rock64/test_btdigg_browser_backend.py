@@ -1172,6 +1172,14 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(state["checkbox_last_outcome"], "verified_after_click")
         self.assertEqual(state["checkbox_click_count"], 1)
 
+    def test_long_challenge_page_heading_still_detected(self):
+        page = FakePage(valid=False)
+        page.body_text = "One more step. Please complete the security check." + (
+            " Additional site explanation." * 100
+        )
+        self.assertTrue(backend.source_challenge_visible(page))
+        self.assertFalse(page.valid)
+
     def test_missing_checkbox_is_bounded_and_diagnosed_without_navigation(self):
         page = FakePage(valid=False)
         page.body_text = "One more step"
