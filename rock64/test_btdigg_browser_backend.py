@@ -484,6 +484,8 @@ class BrowserBackendTests(TestCase):
             "pwa_tab_recovery_attempts": 0,
             "pwa_tab_recovery_last_outcome": None,
             "pwa_tab_recovery_last_http_status": None,
+            "checkbox_last_outcome": "not_attempted",
+            "checkbox_click_count": 0,
             "selected_tab_index": 0,
             "tab_diagnostics": [{
                 "page_kind": "canonical_search",
