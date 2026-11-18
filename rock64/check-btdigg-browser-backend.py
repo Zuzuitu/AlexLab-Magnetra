@@ -29,6 +29,19 @@ ALLOWED_RECOVERY_OUTCOMES = frozenset((
 ))
 
 
+# Private, non-identifying one-click diagnostics from the new live backend.
+ALLOWED_CHECKBOX_OUTCOMES = frozenset((
+    "not_attempted", "unsafe_context", "image_challenge",
+    "checkbox_not_visible", "invalid_document", "already_attempted",
+    "click_started", "verified_after_click", "verified_other_query",
+    "clicked_not_verified", "click_failed", "inspection_failed",
+))
+
+
+def valid_checkbox_outcome(value):
+    return type(value) is str and value in ALLOWED_CHECKBOX_OUTCOMES
+
+
 def valid_recovery_outcome(value):
     return value is None or (
         type(value) is str and value in ALLOWED_RECOVERY_OUTCOMES
@@ -232,6 +245,18 @@ def main():
                         "pwa_tab_recovery_last_outcome": outcome,
                         "pwa_tab_recovery_last_http_status": http,
                     })
+            if ("checkbox_last_outcome" in state
+                    or "checkbox_click_count" in state):
+                outcome = state.get("checkbox_last_outcome")
+                count = state.get("checkbox_click_count")
+                if (not valid_checkbox_outcome(outcome)
+                        or type(count) is not int
+                        or not 0 <= count <= 128):
+                    raise ValueError("invalid checkbox diagnostic")
+                result["browser_state"].update({
+                    "checkbox_last_outcome": outcome,
+                    "checkbox_click_count": count,
+                })
             # New browser versions disclose only fixed, secret-free reason codes.
             reasons = {
                 "search_input_missing", "no_navigation_response", "upstream_http_429",

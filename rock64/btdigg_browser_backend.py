@@ -187,8 +187,12 @@ def simple_recaptcha_checkbox(page):
         if page.is_closed() or not source_landing(live_document_url(page)):
             return None
         frames = page.frames
+        # Google can pre-create a hidden image-challenge iframe before the
+        # owner sees a puzzle. A hidden bframe is NOT a visible puzzle; refusing
+        # the checkbox merely because it exists makes simple verification fail.
+        # Never interact when the actual image challenge is visible.
         if any(_recaptcha_frame_kind(frame.url) == "image_challenge"
-               for frame in frames):
+               and frame.frame_element().is_visible() for frame in frames):
             return None
         candidates = []
         for frame in frames:
@@ -225,9 +229,13 @@ def source_challenge_visible(page, live_url=None):
         if simple_recaptcha_checkbox(page) is not None:
             return True
         body = page.locator("body").inner_text(timeout=1500)
-        if not isinstance(body, str) or len(body) > 1800:
+        if not isinstance(body, str):
             return False
-        visible = " ".join(body.casefold().split())
+        # Only inspect a bounded prefix. A source verification page can
+        # include long explanatory/footer text while the "One more step"
+        # heading and checkbox are at the top of the visible document.
+        # Verified result rows were ruled out above.
+        visible = " ".join(body[:1800].casefold().split())
         if visible in ("too many requests", "429 too many requests"):
             return False
         return any(hint in visible for hint in (
@@ -325,6 +333,9 @@ class VisibleBrowserFetcher:
         self._recovery_last_http_status = None
         # One click per top-level document, maximum 128 different documents.
         self._simple_checkbox_attempts = set()
+        # Private, fixed-category diagnostics; no URLs, sitekeys or tokens.
+        self._checkbox_last_outcome = "not_attempted"
+        self._checkbox_click_count = 0
 
     def _record_recovery(self, outcome, http_status=None):
         self._recovery_last_outcome = outcome
@@ -726,6 +737,8 @@ class VisibleBrowserFetcher:
                 "pwa_tab_recovery_last_http_status": (
                     self._recovery_last_http_status
                 ),
+                "checkbox_last_outcome": self._checkbox_last_outcome,
+                "checkbox_click_count": self._checkbox_click_count,
                 "selected_tab_index": selected_index,
                 "tab_diagnostics": tab_diagnostics,
             }
@@ -749,16 +762,19 @@ class VisibleBrowserFetcher:
                 "pwa_tab_recovery_last_http_status": (
                     self._recovery_last_http_status
                 ),
+                "checkbox_last_outcome": self._checkbox_last_outcome,
+                "checkbox_click_count": self._checkbox_click_count,
                 "selected_tab_index": -1,
                 "tab_diagnostics": [],
             }
 
     def _attempt_simple_recaptcha_checkbox(self, query):
-        """One checkbox click after an owner search; never solve image puzzles.
+        """One guarded Google checkbox click in the owner's ongoing search.
 
-        Calls here are synchronous in the existing Playwright-owning thread.
-        There is no background poll, browser identity change or page refresh.
-        If the source does not accept the checkbox, return private HTTP 428.
+        Wait briefly for an asynchronously mounted checkbox, because the
+        challenge heading can render before Google's anchor iframe. Hidden
+        image-challenge iframes are ignored, but a visible puzzle is never
+        clicked or solved. No refresh, new tab, offsite request or loop retry.
         """
         try:
             state = self.browser_state()
@@ -768,34 +784,72 @@ class VisibleBrowserFetcher:
                     or state["selected_tab_index"] != 0
                     or self._source_stopped is not None
                     or self._last_upstream_http_status == 429):
+                self._checkbox_last_outcome = "unsafe_context"
                 return 428, b""
-            checkbox = simple_recaptcha_checkbox(self.page)
+            checkbox = None
+            # Allow up to 1.2 seconds for Google's asynchronous iframe mount.
+            # This is an observation of the current source-owned document;
+            # it never navigates or sends another BTDigg request.
+            for attempt in range(7):
+                if any(
+                    _recaptcha_frame_kind(frame.url) == "image_challenge"
+                    and frame.frame_element().is_visible()
+                    for frame in self.page.frames
+                ):
+                    self._checkbox_last_outcome = "image_challenge"
+                    return 428, b""
+                checkbox = simple_recaptcha_checkbox(self.page)
+                if checkbox is not None:
+                    break
+                if attempt < 6:
+                    self.page.wait_for_timeout(200)
             if checkbox is None:
+                self._checkbox_last_outcome = "checkbox_not_visible"
                 return 428, b""
             navigation_time = self.page.evaluate("() => performance.timeOrigin")
             if (type(navigation_time) not in (int, float)
                     or not math.isfinite(navigation_time)
                     or navigation_time <= 0):
+                self._checkbox_last_outcome = "invalid_document"
                 return 428, b""
             marker = (id(self.page), int(navigation_time))
             if (marker in self._simple_checkbox_attempts
                     or len(self._simple_checkbox_attempts) >= 128):
+                self._checkbox_last_outcome = "already_attempted"
                 return 428, b""
-            # Record BEFORE interaction; an exception cannot rearm a click.
+            # Record BEFORE interaction; exceptions cannot rearm the click.
             self._simple_checkbox_attempts.add(marker)
+            self._checkbox_last_outcome = "click_started"
+            self._checkbox_click_count += 1
             checkbox.click(timeout=1200)
             for _ in range(6):
                 current_url = live_document_url(self.page)
                 if (source_landing(current_url)
                         and not source_rate_limit_visible(self.page, current_url)
                         and validated_result_html(self.page, current_url) is not None):
-                    # Query matching and source navigation retain normal
-                    # verification rules; never return a different query's HTML.
-                    return self.fetch(query)
-                # Bounded same-tab observation only, no source search or retry.
+                    # Return ONLY the original requested query's verified HTML,
+                    # or perform its already authorized same-tab form submit.
+                    result = self.fetch(query)
+                    if result[0] == 200:
+                        self._checkbox_last_outcome = "verified_after_click"
+                    else:
+                        self._checkbox_last_outcome = "verified_other_query"
+                    return result
+                if any(
+                    _recaptcha_frame_kind(frame.url) == "image_challenge"
+                    and frame.frame_element().is_visible()
+                    for frame in self.page.frames
+                ):
+                    self._checkbox_last_outcome = "image_challenge"
+                    return 428, b""
                 self.page.wait_for_timeout(300)
+            self._checkbox_last_outcome = "clicked_not_verified"
             return 428, b""
         except Exception:
+            if self._checkbox_last_outcome == "click_started":
+                self._checkbox_last_outcome = "click_failed"
+            else:
+                self._checkbox_last_outcome = "inspection_failed"
             return 428, b""
 
     def fetch(self, query):

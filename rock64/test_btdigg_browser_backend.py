@@ -484,6 +484,8 @@ class BrowserBackendTests(TestCase):
             "pwa_tab_recovery_attempts": 0,
             "pwa_tab_recovery_last_outcome": None,
             "pwa_tab_recovery_last_http_status": None,
+            "checkbox_last_outcome": "not_attempted",
+            "checkbox_click_count": 0,
             "selected_tab_index": 0,
             "tab_diagnostics": [{
                 "page_kind": "canonical_search",
@@ -1127,6 +1129,71 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(page.goto_calls,[])
         self.assertFalse(gateway.browser_state()["visible_captcha_required"])
 
+    def test_hidden_google_bframe_does_not_block_real_visible_checkbox(self):
+        # Google may keep the image-challenge iframe mounted but hidden.
+        # The visible anchor must still be eligible for the single click.
+        page = FakePage(valid=False)
+        page.body_text = "One more step"
+        anchor = FakeRecaptchaFrame(page, accepted=True)
+        hidden_bframe = FakeRecaptchaFrame(
+            page, visible=False,
+            url="https://www.google.com/recaptcha/api2/bframe?k=fixture",
+        )
+        page.frames = [anchor, hidden_bframe]
+        fetcher = backend.VisibleBrowserFetcher(page)
+        self.assertTrue(fetcher.browser_state()["visible_captcha_required"])
+        self.assertEqual(anchor.clicks, 0, "read-only status does not click")
+        self.assertEqual(fetcher.fetch("The Dog Stars 2026")[0], 200)
+        self.assertEqual(anchor.clicks, 1)
+        self.assertEqual(hidden_bframe.clicks, 0)
+        state = fetcher.browser_state()
+        self.assertEqual(state["checkbox_last_outcome"], "verified_after_click")
+        self.assertEqual(state["checkbox_click_count"], 1)
+        self.assertFalse(state["visible_captcha_required"])
+
+    def test_delayed_google_anchor_loads_after_heading_and_is_clicked(self):
+        # An owner PWA search may see the challenge title before Google's
+        # iframe finishes asynchronous rendering. No extra source navigation.
+        page = FakePage(valid=False)
+        page.body_text = "One more step"
+        anchor = FakeRecaptchaFrame(page, accepted=True)
+        def google_loads_late(millis):
+            page.waits.append(millis)
+            if len(page.waits) == 2:
+                page.frames.append(anchor)
+        page.wait_for_timeout = google_loads_late
+        gateway = backend.VisibleBrowserFetcher(page)
+        self.assertTrue(gateway.browser_state()["visible_captcha_required"])
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"),
+                         (200, HTML.encode()))
+        self.assertEqual(anchor.clicks, 1)
+        self.assertEqual(page.waits[:2], [200, 200])
+        self.assertEqual(page.goto_calls, [])
+        self.assertEqual(page.submit_calls, 0)
+        state = gateway.browser_state()
+        self.assertEqual(state["checkbox_last_outcome"], "verified_after_click")
+        self.assertEqual(state["checkbox_click_count"], 1)
+
+    def test_long_challenge_page_heading_still_detected(self):
+        page = FakePage(valid=False)
+        page.body_text = "One more step. Please complete the security check." + (
+            " Additional site explanation." * 100
+        )
+        self.assertTrue(backend.source_challenge_visible(page))
+        self.assertFalse(page.valid)
+
+    def test_missing_checkbox_is_bounded_and_diagnosed_without_navigation(self):
+        page = FakePage(valid=False)
+        page.body_text = "One more step"
+        gateway = backend.VisibleBrowserFetcher(page)
+        self.assertEqual(gateway.fetch("The Dog Stars 2026"), (428, b""))
+        self.assertEqual(page.waits, [200] * 6)
+        self.assertEqual(gateway.browser_state()["checkbox_last_outcome"],
+                         "checkbox_not_visible")
+        self.assertEqual(gateway.browser_state()["checkbox_click_count"], 0)
+        self.assertEqual(page.goto_calls, [])
+        self.assertEqual(page.submit_calls, 0)
+
     def test_after_checkbox_acceptance_searches_original_requested_query(self):
         page=FakePage(url=backend.query_url("Deep Water 2025"),valid=False)
         captcha=FakeRecaptchaFrame(page,accepted=True)
@@ -1148,6 +1215,9 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(gateway.fetch("Different query"),(428,b""))
         self.assertEqual(gateway.fetch("Different query"),(428,b""))
         self.assertEqual(captcha.clicks,1,"never loop or re-click document")
+        self.assertEqual(gateway.browser_state()["checkbox_last_outcome"],
+                         "already_attempted")
+        self.assertEqual(gateway.browser_state()["checkbox_click_count"], 1)
         self.assertEqual(page.submit_calls,0)
         self.assertEqual(page.goto_calls,[])
         self.assertEqual(len(page.waits),6)
@@ -1163,6 +1233,9 @@ class BrowserBackendTests(TestCase):
         self.assertEqual(gateway.fetch("Different query"),(428,b""))
         self.assertEqual(anchor.clicks,0)
         self.assertEqual(image.clicks,0)
+        self.assertEqual(gateway.browser_state()["checkbox_last_outcome"],
+                         "image_challenge")
+        self.assertEqual(gateway.browser_state()["checkbox_click_count"], 0)
         self.assertEqual(page.submit_calls,0)
 
     def test_untrusted_hidden_or_ambiguous_checkbox_never_clicks(self):
