@@ -229,9 +229,13 @@ def source_challenge_visible(page, live_url=None):
         if simple_recaptcha_checkbox(page) is not None:
             return True
         body = page.locator("body").inner_text(timeout=1500)
-        if not isinstance(body, str) or len(body) > 1800:
+        if not isinstance(body, str):
             return False
-        visible = " ".join(body.casefold().split())
+        # Only inspect a bounded prefix. A source verification page can
+        # include long explanatory/footer text while the "One more step"
+        # heading and checkbox are at the top of the visible document.
+        # Verified result rows were ruled out above.
+        visible = " ".join(body[:1800].casefold().split())
         if visible in ("too many requests", "429 too many requests"):
             return False
         return any(hint in visible for hint in (
