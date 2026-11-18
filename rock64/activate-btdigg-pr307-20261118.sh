@@ -17,9 +17,9 @@ esac
 cd "$(dirname "$0")/.." || fail 'Repository missing.'
 [[ "$(pwd -P)" == /home/runner/magnetra-cffi-live-20261028 ]] ||
   fail 'Wrong checkout.'
-[[ "$(git branch --show-current)" == main &&
-   "$(git rev-parse HEAD)" == 8b9b634691226cb3f87967297c4ac56e905ae1b3 ]] ||
-  fail 'Unexpected branch or commit.'
+[[ "$(git branch --show-current)" == main ]] || fail 'Expected main.'
+git merge-base --is-ancestor 8b9b634691226cb3f87967297c4ac56e905ae1b3 HEAD ||
+  fail 'PR #307 commit not in deployed main ancestry.'
 [[ -z "$(git status --porcelain --untracked-files=no)" ]] ||
   fail 'Local tracked changes; no mutation.'
 src=rock64/btdigg_gateway.py
