@@ -1,0 +1,46 @@
+name: Magnetra 309 staged rollout
+on:
+  workflow_dispatch:
+    inputs:
+      release_action:
+        type: choice
+        options: [READ_ONLY, PROMOTE_REVIEWED_309]
+        default: READ_ONLY
+        required: true
+      expected_active_version:
+        description: Active version UUID from the read-only run; required only for promotion.
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magnetra-production-traffic-change
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify offline before production access
+        run: |
+          python3 scripts/check-project-invariants.py
+          python3 -m unittest discover -s scripts -p 'test_release_magnetra_one_tap_309.py'
+          node --test worker/test/*.test.mjs
+      - name: Check or promote only the staged version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_ACTION: ${{ inputs.release_action }}
+          EXPECTED_OLD: ${{ inputs.expected_active_version }}
+        run: python3 scripts/release_magnetra_one_tap_309.py
