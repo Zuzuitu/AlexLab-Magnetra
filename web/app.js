@@ -236,6 +236,11 @@ function openBTDiggVerification(mode="captcha"){
  $("btdiggVerificationStatus").textContent="";
  openDialog("btdiggVerificationDialog");
 }
+// This is called only by the user's verification/inspection button.
+function openBTDiggViewerFromAction(code){
+ openBTDiggVerification(btdiggVerificationModeForCode(code));
+ if($("btdiggNovncOrigin").value)activateBTDiggViewer();
+}
 function activateBTDiggViewer(){
  const origin=validatedBTDiggViewerOrigin($("btdiggNovncOrigin").value);
  if(!origin){
@@ -743,8 +748,7 @@ function renderProviderErrors(failures,warnings=[]){
     tr(failure.code==="BTDIGG_VISIBLE_REFUSAL"
      ?"Inspect BTDigg refusal in Magnetra":"Verify BTDigg inside Magnetra"));
    action.type="button";
-   action.addEventListener("click",()=>openBTDiggVerification(
-    btdiggVerificationModeForCode(failure.code)));
+   action.addEventListener("click",()=>openBTDiggViewerFromAction(failure.code));
    entry.append(action);
   }
   details.append(entry);

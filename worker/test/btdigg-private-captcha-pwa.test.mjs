@@ -35,7 +35,7 @@ function fixture(){
  globalThis.test={
    validatedBTDiggViewerOrigin,btdiggPrivateViewerUrl,
    activateBTDiggViewer,disconnectBTDiggViewer,
-   openBTDiggVerification,finishBTDiggVerification,
+   openBTDiggVerification,openBTDiggViewerFromAction,finishBTDiggVerification,
    btdiggVerificationModeForCode,btdiggVisibleRefusalOnly,
    fetchBTDiggWithOneGuardedNewTab,
  };
@@ -90,6 +90,29 @@ test("user click opens only HTTPS iframe and close tears down remote desktop",()
  ui.openBTDiggVerification();
  assert.equal(input.value,"https://rock64.example.ts.net:8444");
  assert.equal(frame.src,"about:blank","no automatic remote reconnect");
+});
+
+test("one explicit verification action opens the saved private viewer, never a source search",()=>{
+ const {ui,element,store}=fixture();
+ const key="magnetra.btdigg-private-viewer.v1";
+ const frame=element("btdiggViewerFrame");
+ ui.openBTDiggViewerFromAction("BTDIGG_CAPTCHA_REQUIRED");
+ assert.equal(frame.src,"","first use requires setup");
+ assert.equal(element("btdiggViewerContainer").hidden,true);
+ store.set(key,JSON.stringify("https://invalid.example:8444"));
+ ui.openBTDiggViewerFromAction("BTDIGG_CAPTCHA_REQUIRED");
+ assert.equal(frame.src,"","revalidate saved addresses before loading");
+ const origin="https://rock64.example.ts.net:8444";
+ store.set(key,JSON.stringify(origin));
+ for(const code of ["BTDIGG_CAPTCHA_REQUIRED","BTDIGG_VISIBLE_REFUSAL"]){
+  ui.openBTDiggViewerFromAction(code);
+  assert.equal(frame.src,origin+"/vnc.html?autoconnect=1&resize=scale");
+  assert.equal(element("btdiggViewerContainer").hidden,false);
+  const refusal=code==="BTDIGG_VISIBLE_REFUSAL";
+  assert.equal(element("btdiggVerificationRetry").hidden,refusal);
+  ui.finishBTDiggVerification(refusal);
+  assert.equal(frame.src,"about:blank");
+ }
 });
 
 test("manual-only verification UI has no source polling or open web proxy",()=>{
