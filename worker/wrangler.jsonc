@@ -20,5 +20,15 @@
       "binding": "FLUD_RELAY",
       "service": "flud-remote-relay"
     }
+  ],
+  "ratelimits": [
+    {
+      "name": "MAGNETRA_API_RATE",
+      "namespace_id": "2026102507",
+      "simple": {
+        "limit": 90,
+        "period": 60
+      }
+    }
   ]
 }
